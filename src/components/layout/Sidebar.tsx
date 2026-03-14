@@ -5,7 +5,7 @@ import { type ReactElement, useCallback, useEffect, useState } from 'react'
 import ColorPicker from '@/components/ui/ColorPicker'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { usePipeline } from '@/contexts/PipelineContext'
-import { useSession } from '@/contexts/SessionContext'
+import { getStoredPrinterId, useSession } from '@/contexts/SessionContext'
 import { listPrinters, setSessionPrinter } from '@/lib/api'
 import type { Printer } from '@/types/models'
 
@@ -26,6 +26,15 @@ export default function Sidebar (): ReactElement {
 	useEffect(() => {
 		listPrinters().then(setPrinters).catch(() => {})
 	}, [])
+
+	useEffect(() => {
+		if (printers.length === 0 || printer) { return }
+		const storedId = getStoredPrinterId()
+		if (storedId) {
+			const found = printers.find(p => p.id === storedId) ?? null
+			if (found) { setPrinter(found) }
+		}
+	}, [printers, printer, setPrinter])
 
 	const handleNewSession = useCallback(() => {
 		clearAll()

@@ -11,8 +11,8 @@ export default function DebugPage (): ReactElement {
 	const [filaments, setFilaments] = useState<Filament[]>([])
 	const [printer, setPrinter] = useState('')
 	const [filament, setFilament] = useState('')
-	const [bedWidth, setBedWidth] = useState(219)
-	const [bedDepth, setBedDepth] = useState(219)
+	const [bedWidth, setBedWidth] = useState(250)
+	const [bedDepth, setBedDepth] = useState(250)
 	const [boxSize, setBoxSize] = useState(100)
 	const [padding, setPadding] = useState(5)
 	const [squareSize, setSquareSize] = useState(5)
@@ -21,10 +21,28 @@ export default function DebugPage (): ReactElement {
 	const [gcodeUrl, setGcodeUrl] = useState<string | null>(null)
 	const [bitmapUrl, setBitmapUrl] = useState<string | null>(null)
 
+	const selectedPrinter = printers.find(p => p.id === printer)
+
 	useEffect(() => {
-		listPrinters().then(p => { setPrinters(p); if (p.length) { setPrinter(p[0].id) } }).catch(() => {})
+		listPrinters().then(p => {
+			setPrinters(p)
+			if (p.length) {
+				setPrinter(p[0].id)
+				setBedWidth(p[0].nominal_bed_width)
+				setBedDepth(p[0].nominal_bed_depth)
+			}
+		}).catch(() => {})
 		listFilaments().then(f => { setFilaments(f); if (f.length) { setFilament(f[0].id) } }).catch(() => {})
 	}, [])
+
+	const handlePrinterChange = (id: string) => {
+		setPrinter(id)
+		const p = printers.find(pr => pr.id === id)
+		if (p) {
+			setBedWidth(p.nominal_bed_width)
+			setBedDepth(p.nominal_bed_depth)
+		}
+	}
 
 	const handleGenerate = async () => {
 		setGenerating(true)
@@ -64,13 +82,29 @@ export default function DebugPage (): ReactElement {
 			<div className="w-full max-w-md space-y-6">
 				<div>
 					<h1 className="text-xl font-semibold text-fg">{'Calibration Generator'}</h1>
-					<p className="mt-1 text-sm text-fg-muted">{'Generates 4 physical and projected squares to calibrate alignment.'}</p>
+					<p className="mt-1 text-sm text-fg-muted">{'Generates alignment squares to calibrate inkjet-to-PLA offset.'}</p>
 				</div>
+
+				{selectedPrinter && (
+					<div className="rounded-2xl bg-surface-card p-4 shadow-sm space-y-2">
+						<h2 className="text-sm font-medium text-fg">{'Inkjet Offset'}</h2>
+						<div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm text-fg-secondary">
+							<span>{'Nominal bed'}</span>
+							<span className="text-fg">{selectedPrinter.nominal_bed_width} {'×'} {selectedPrinter.nominal_bed_depth} {'mm'}</span>
+							<span>{'Usable area'}</span>
+							<span className="text-fg">{selectedPrinter.bed_width} {'×'} {selectedPrinter.bed_depth} {'mm'}</span>
+							<span>{'Offset X'}</span>
+							<span className="text-fg">{selectedPrinter.inkjet_offset_x} {'mm'}</span>
+							<span>{'Offset Y'}</span>
+							<span className="text-fg">{selectedPrinter.inkjet_offset_y} {'mm'}</span>
+						</div>
+					</div>
+				)}
 
 				<div className="rounded-2xl bg-surface-card p-6 shadow-sm space-y-4">
 					<div className="flex items-center justify-between gap-4">
 						<label className="text-sm text-fg-secondary">{'Printer'}</label>
-						<select value={printer} onChange={e => setPrinter(e.target.value)} title="Printer" className="rounded-lg border border-border bg-surface-card px-2.5 py-1.5 text-sm text-fg">
+						<select value={printer} onChange={e => handlePrinterChange(e.target.value)} title="Printer" className="rounded-lg border border-border bg-surface-card px-2.5 py-1.5 text-sm text-fg">
 							{printers.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
 						</select>
 					</div>
@@ -110,6 +144,17 @@ export default function DebugPage (): ReactElement {
 							)}
 						</div>
 					)}
+				</div>
+
+				<div className="rounded-2xl bg-surface-card p-4 shadow-sm space-y-3">
+					<h2 className="text-sm font-medium text-fg">{'Calibration Procedure'}</h2>
+					<ol className="list-decimal list-inside text-sm text-fg-secondary space-y-1.5">
+						<li>{'Print the G-code — four PLA square outlines will appear on the bed.'}</li>
+						<li>{'Run the sweep with the bitmap — the inkjet deposits four filled squares.'}</li>
+						<li>{'Measure the X and Y distance between each PLA outline and its ink square.'}</li>
+						<li>{'Average the four measurements — this is your inkjet offset.'}</li>
+						<li>{'Update the offset in the printer configuration.'}</li>
+					</ol>
 				</div>
 
 				<Link href="/" className="inline-block text-sm text-accent hover:underline">{'← Back to main'}</Link>

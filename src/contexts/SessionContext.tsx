@@ -13,6 +13,22 @@ import {
 import { getSession, listSessions } from '@/lib/api'
 import type { PipelineStage, Printer, SessionMeta } from '@/types/models'
 
+const PRINTER_COOKIE = 'printer-id'
+
+export function getStoredPrinterId (): string {
+	if (typeof document === 'undefined') { return '' }
+	const match = document.cookie.match(/(?:^|; )printer-id=([^;]*)/)
+	return match ? decodeURIComponent(match[1]) : ''
+}
+
+function storePrinterId (id: string): void {
+	if (!id) {
+		document.cookie = `${PRINTER_COOKIE}=;path=/;max-age=0;SameSite=Lax`
+		return
+	}
+	document.cookie = `${PRINTER_COOKIE}=${encodeURIComponent(id)};path=/;max-age=31536000;SameSite=Lax`
+}
+
 interface SessionContextValue {
 	sessions: SessionMeta[]
 	currentSession: SessionMeta | null
@@ -68,7 +84,12 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 	const [currentSession, setCurrentSession] = useState<SessionMeta | null>(null)
 	const [activeStage, setActiveStage] = useState<PipelineStage>('design')
 	const [loading, setLoading] = useState(false)
-	const [printer, setPrinter] = useState<Printer | null>(null)
+	const [printer, _setPrinter] = useState<Printer | null>(null)
+
+	const setPrinter = useCallback((p: Printer | null) => {
+		_setPrinter(p)
+		storePrinterId(p?.id ?? '')
+	}, [])
 
 	const refreshSessions = useCallback(async () => {
 		const list = await listSessions()
