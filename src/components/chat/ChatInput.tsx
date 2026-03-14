@@ -6,9 +6,11 @@ interface ChatInputProps {
 	onSend: (message: string) => void
 	disabled?: boolean
 	placeholder?: string
+	streaming?: boolean
+	onStop?: () => void
 }
 
-export default function ChatInput ({ onSend, disabled, placeholder }: ChatInputProps): ReactElement {
+export default function ChatInput ({ onSend, disabled, placeholder, streaming, onStop }: ChatInputProps): ReactElement {
 	const [value, setValue] = useState('')
 
 	const handleSubmit = useCallback((e: FormEvent) => {
@@ -27,15 +29,27 @@ export default function ChatInput ({ onSend, disabled, placeholder }: ChatInputP
 				onChange={e => { setValue(e.target.value) }}
 				disabled={disabled}
 				placeholder={placeholder ?? 'Describe your device…'}
-				className="flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-200 placeholder-neutral-500 outline-none focus:border-blue-500 disabled:opacity-50"
+				className="flex-1 rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-700 placeholder-stone-500 outline-none focus:border-[#5672a0] disabled:opacity-50 transition-colors"
 			/>
-			<button
-				type="submit"
-				disabled={disabled || !value.trim()}
-				className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-			>
-				{'Send'}
-			</button>
+			{streaming
+				? (
+					<button
+						type="button"
+						onClick={onStop}
+						className="rounded-xl bg-[#b05050] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#9a4040] transition-colors"
+					>
+						{'Stop'}
+					</button>
+				)
+				: (
+					<button
+						type="submit"
+						disabled={disabled || !value.trim()}
+						className="rounded-xl bg-[#5672a0] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#4a6391] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+					>
+						{'Send'}
+					</button>
+				)}
 		</form>
 	)
 }

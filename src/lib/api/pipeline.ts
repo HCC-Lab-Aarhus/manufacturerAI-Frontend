@@ -9,102 +9,122 @@ import type {
 
 import apiClient from './client'
 
+const sid = (id: string) => encodeURIComponent(id)
+
 export async function runPlacement (sessionId: string): Promise<PlacementResult> {
-	const { data } = await apiClient.post<PlacementResult>('/api/session/placement', null, {
-		params: { session: sessionId }
-	})
+	const { data } = await apiClient.post<PlacementResult>(
+		`/api/v2/sessions/${sid(sessionId)}/manufacture/placement`
+	)
 	return data
 }
 
 export async function getPlacementResult (sessionId: string): Promise<PlacementResult> {
-	const { data } = await apiClient.get<PlacementResult>('/api/session/placement/result', {
-		params: { session: sessionId }
-	})
+	const { data } = await apiClient.get<PlacementResult>(
+		`/api/v2/sessions/${sid(sessionId)}/manufacture/placement`
+	)
 	return data
 }
 
 export async function runRouting (sessionId: string): Promise<RoutingResult> {
-	const { data } = await apiClient.post<RoutingResult>('/api/session/routing', null, {
-		params: { session: sessionId }
-	})
+	const { data } = await apiClient.post<RoutingResult>(
+		`/api/v2/sessions/${sid(sessionId)}/manufacture/routing`
+	)
 	return data
 }
 
 export async function getRoutingResult (sessionId: string): Promise<RoutingResult> {
-	const { data } = await apiClient.get<RoutingResult>('/api/session/routing/result', {
-		params: { session: sessionId }
-	})
+	const { data } = await apiClient.get<RoutingResult>(
+		`/api/v2/sessions/${sid(sessionId)}/manufacture/routing`
+	)
 	return data
 }
 
 export async function generateBitmap (sessionId: string): Promise<void> {
-	await apiClient.post('/api/session/bitmap/generate', null, {
-		params: { session: sessionId }
-	})
+	await apiClient.post(`/api/v2/sessions/${sid(sessionId)}/manufacture/bitmap`)
 }
 
 export async function getBitmap (sessionId: string): Promise<BitmapResult> {
-	const { data } = await apiClient.get<BitmapResult>('/api/session/bitmap', {
-		params: { session: sessionId }
-	})
+	const { data } = await apiClient.get<BitmapResult>(
+		`/api/v2/sessions/${sid(sessionId)}/manufacture/bitmap`
+	)
 	return data
 }
 
 export async function generateScad (sessionId: string): Promise<ScadResult> {
-	const { data } = await apiClient.post<ScadResult>('/api/session/scad', null, {
-		params: { session: sessionId }
-	})
+	const { data } = await apiClient.post<ScadResult>(
+		`/api/v2/sessions/${sid(sessionId)}/manufacture/scad`
+	)
 	return data
 }
 
 export async function getScadResult (sessionId: string): Promise<ScadResult> {
-	const { data } = await apiClient.get<ScadResult>('/api/session/scad/result', {
-		params: { session: sessionId }
-	})
+	const { data } = await apiClient.get<ScadResult>(
+		`/api/v2/sessions/${sid(sessionId)}/manufacture/scad`
+	)
 	return data
 }
 
 export async function startCompile (sessionId: string, force = false): Promise<CompileStatus> {
-	const { data } = await apiClient.post<CompileStatus>('/api/session/scad/compile', null, {
-		params: { session: sessionId, ...(force ? { force: 'true' } : {}) }
-	})
+	const { data } = await apiClient.post<CompileStatus>(
+		`/api/v2/sessions/${sid(sessionId)}/manufacture/compile`,
+		null,
+		{ params: force ? { force: 'true' } : undefined }
+	)
 	return data
 }
 
 export async function pollCompile (sessionId: string): Promise<CompileStatus> {
-	const { data } = await apiClient.get<CompileStatus>('/api/session/scad/compile', {
-		params: { session: sessionId }
-	})
+	const { data } = await apiClient.get<CompileStatus>(
+		`/api/v2/sessions/${sid(sessionId)}/manufacture/compile`
+	)
 	return data
 }
 
 export function getStlDownloadUrl (sessionId: string): string {
 	const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
-	return `${base}/api/session/scad/stl?session=${encodeURIComponent(sessionId)}`
+	return `${base}/api/v2/sessions/${sid(sessionId)}/manufacture/stl`
 }
 
 export async function startGCode (
 	sessionId: string,
 	options?: { force?: boolean; filament?: string; silverink_only?: boolean }
 ): Promise<void> {
-	await apiClient.post('/api/session/gcode', null, {
-		params: {
-			session: sessionId,
-			...(options?.force ? { force: 'true' } : {}),
-			...(options?.filament ? { filament: options.filament } : {}),
-			...(options?.silverink_only ? { silverink_only: 'true' } : {})
+	await apiClient.post(
+		`/api/v2/sessions/${sid(sessionId)}/manufacture/gcode`,
+		null,
+		{
+			params: {
+				...(options?.force ? { force: 'true' } : {}),
+				...(options?.filament ? { filament: options.filament } : {}),
+				...(options?.silverink_only ? { silverink_only: 'true' } : {})
+			}
 		}
-	})
+	)
 }
 
 export async function pollGCode (sessionId: string): Promise<GCodeStatus> {
-	const { data } = await apiClient.get<GCodeStatus>('/api/session/gcode', {
-		params: { session: sessionId }
-	})
+	const { data } = await apiClient.get<GCodeStatus>(
+		`/api/v2/sessions/${sid(sessionId)}/manufacture/gcode`
+	)
 	return data
 }
 
 export function getGCodeDownloadUrl (sessionId: string, format: 'gcode' | 'bgcode' = 'gcode'): string {
 	const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
-	return `${base}/api/session/gcode/download?session=${encodeURIComponent(sessionId)}&format=${format}`
+	return `${base}/api/v2/sessions/${sid(sessionId)}/manufacture/gcode/download?format=${format}`
+}
+
+export function getBundleDownloadUrl (sessionId: string): string {
+	const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+	return `${base}/api/v2/sessions/${sid(sessionId)}/manufacture/bundle`
+}
+
+export function getBitmapDownloadUrl (sessionId: string): string {
+	const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+	return `${base}/api/v2/sessions/${sid(sessionId)}/manufacture/bitmap`
+}
+
+export function getPrintJobDownloadUrl (sessionId: string): string {
+	const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+	return `${base}/api/v2/sessions/${sid(sessionId)}/manufacture/print-job`
 }

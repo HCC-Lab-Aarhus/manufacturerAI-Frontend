@@ -6,6 +6,7 @@ import { useError } from '@/contexts/ErrorContext/ErrorContext'
 import { usePipeline } from '@/contexts/PipelineContext'
 import { useSession } from '@/contexts/SessionContext'
 import { streamDesign, getDesignConversation, getDesignResult } from '@/lib/api'
+import { createSession } from '@/lib/api/sessions'
 import type { SSEEventType } from '@/types/events'
 import type { DesignSpec, TokenUsage } from '@/types/models'
 
@@ -27,6 +28,7 @@ export function useDesignAgent () {
 	const [streaming, setStreaming] = useState(false)
 	const [tokenUsage, setTokenUsage] = useState<TokenUsage | null>(null)
 	const abortRef = useRef<AbortController | null>(null)
+	const sentFirstRef = useRef(false)
 	const idCounter = useRef(0)
 	const nextId = useCallback((prefix: string) => `${prefix}-${++idCounter.current}`, [])
 
@@ -70,14 +72,19 @@ export function useDesignAgent () {
 		})
 
 		setStreaming(true)
+		sentFirstRef.current = true
+
+		let sessionId = currentSession?.id
+		if (!sessionId) {
+			const { session_id } = await createSession()
+			sessionId = session_id
+			refreshSessions()
+			selectSession(sessionId)
+		}
 
 		const handleEvent = (type: SSEEventType, data: unknown) => {
 			const d = data as Record<string, unknown>
 			switch (type) {
-				case 'session_created':
-					refreshSessions()
-					selectSession(d.session_id as string)
-					break
 				case 'thinking_start':
 					appendMessage({
 						id: nextId('thinking'),
@@ -155,11 +162,12 @@ export function useDesignAgent () {
 					refreshSession()
 				}
 			},
-			currentSession?.id
+			sessionId
 		)
 	}, [streaming, currentSession, appendMessage, updateLastAssistant, updateLastThinking, setDesign, refreshSession, refreshSessions, selectSession, addError, nextId])
 
 	const loadConversation = useCallback(async (sessionId: string) => {
+		if (sentFirstRef.current) { return }
 		try {
 			const [convo, design] = await Promise.all([
 				getDesignConversation(sessionId),

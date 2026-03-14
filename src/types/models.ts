@@ -93,9 +93,9 @@ export interface PinPosition {
 export interface PlacedComponent {
 	catalog_id: string
 	instance_id: string
-	x: number
-	y: number
-	rotation?: number
+	x_mm: number
+	y_mm: number
+	rotation_deg?: number
 	pin_positions: PinPosition
 	body?: CatalogBody
 	pins?: CatalogPin[]
@@ -141,17 +141,13 @@ export interface BitmapResult {
 	trace_width_mm: number
 }
 
-export type PipelineStage =
-	| 'design'
-	| 'circuit'
-	| 'placement'
-	| 'routing'
-	| 'scad'
-	| 'gcode'
+export type PipelineStage = 'design' | 'circuit' | 'manufacture'
 
-export type StageStatus = 'pending' | 'complete' | 'error'
+export type ManufactureStep = 'placement' | 'routing' | 'bitmap' | 'scad' | 'compile' | 'gcode'
 
-export type PipelineState = Partial<Record<PipelineStage, StageStatus>>
+export type StageStatus = 'pending' | 'complete' | 'done' | 'error'
+
+export type PipelineState = Record<string, StageStatus | string>
 
 export interface SessionMeta {
 	id: string

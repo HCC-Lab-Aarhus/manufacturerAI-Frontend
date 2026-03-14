@@ -12,7 +12,7 @@ export default function TokenMeter ({ usage }: TokenMeterProps): ReactElement | 
 	if (!usage) { return null }
 
 	return (
-		<div className="flex items-center gap-2 text-xs text-neutral-400">
+		<div className="flex items-center gap-2 text-xs text-stone-600">
 			<meter
 				min={0}
 				max={usage.budget}

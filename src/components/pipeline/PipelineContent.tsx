@@ -6,18 +6,12 @@ import { useSession } from '@/contexts/SessionContext'
 
 import CircuitPanel from './CircuitPanel'
 import DesignPanel from './DesignPanel'
-import GCodePanel from './GCodePanel'
-import PlacementPanel from './PlacementPanel'
-import RoutingPanel from './RoutingPanel'
-import ScadPanel from './ScadPanel'
+import ManufacturePanel from './ManufacturePanel'
 
 const PANELS: Record<string, () => ReactElement> = {
 	design: DesignPanel,
 	circuit: CircuitPanel,
-	placement: PlacementPanel,
-	routing: RoutingPanel,
-	scad: ScadPanel,
-	gcode: GCodePanel
+	manufacture: ManufacturePanel
 }
 
 export default function PipelineContent (): ReactElement {

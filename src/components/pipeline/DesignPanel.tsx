@@ -4,7 +4,6 @@ import { type ReactElement, useEffect } from 'react'
 
 import ChatInput from '@/components/chat/ChatInput'
 import ChatLog from '@/components/chat/ChatLog'
-import TokenMeter from '@/components/ui/TokenMeter'
 import { useSession } from '@/contexts/SessionContext'
 import { useDesignAgent } from '@/hooks/useDesignAgent'
 
@@ -13,7 +12,6 @@ export default function DesignPanel (): ReactElement {
 	const {
 		messages,
 		streaming,
-		tokenUsage,
 		sendMessage,
 		loadConversation,
 		cancel
@@ -25,30 +23,28 @@ export default function DesignPanel (): ReactElement {
 		}
 	}, [currentSession?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
+	const hasMessages = messages.length > 0
+
 	return (
 		<div className="flex h-full flex-col">
-			<div className="flex items-center justify-between border-b border-neutral-800 px-4 py-2">
-				<h2 className="text-sm font-semibold text-neutral-200">{'Design Agent'}</h2>
-				<div className="flex items-center gap-3">
-					<TokenMeter usage={tokenUsage} />
-					{streaming && (
-						<button
-							onClick={cancel}
-							className="rounded px-2 py-1 text-xs text-red-400 hover:bg-red-900/30 transition-colors"
-						>
-							{'Stop'}
-						</button>
-					)}
+			{hasMessages ? (
+				<ChatLog messages={messages} />
+			) : (
+				<div className="flex flex-1 flex-col items-center justify-center gap-4 text-stone-600">
+					<h2 className="text-xl font-semibold text-stone-600">{'ManufacturerAI'}</h2>
+					<p className="max-w-md text-center text-sm">
+						{'Describe what hardware device you want to build and the design agent will help you create it.'}
+					</p>
 				</div>
-			</div>
+			)}
 
-			<ChatLog messages={messages} />
-
-			<div className="border-t border-neutral-800 p-3">
+			<div className={`border-t border-stone-200 p-3 ${!hasMessages ? 'mx-auto w-full max-w-xl' : ''}`}>
 				<ChatInput
 					onSend={sendMessage}
 					disabled={streaming}
 					placeholder="Describe your device…"
+					streaming={streaming}
+					onStop={cancel}
 				/>
 			</div>
 		</div>

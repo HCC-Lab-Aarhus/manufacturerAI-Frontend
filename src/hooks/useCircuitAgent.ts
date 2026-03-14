@@ -19,6 +19,8 @@ export function useCircuitAgent () {
 	const [messages, setMessages] = useState<ChatEntry[]>([])
 	const [streaming, setStreaming] = useState(false)
 	const abortRef = useRef<AbortController | null>(null)
+	const idCounter = useRef(0)
+	const nextId = useCallback((prefix: string) => `${prefix}-${++idCounter.current}`, [])
 
 	const appendMessage = useCallback((entry: ChatEntry) => {
 		setMessages(prev => [...prev, entry])
@@ -60,7 +62,7 @@ export function useCircuitAgent () {
 			switch (type) {
 				case 'thinking_start':
 					appendMessage({
-						id: `thinking-${Date.now()}`,
+						id: nextId('thinking'),
 						role: 'thinking',
 						content: '',
 						isStreaming: true
@@ -71,7 +73,7 @@ export function useCircuitAgent () {
 					break
 				case 'message_start':
 					appendMessage({
-						id: `assistant-${Date.now()}`,
+						id: nextId('assistant'),
 						role: 'assistant',
 						content: '',
 						isStreaming: true
@@ -87,7 +89,7 @@ export function useCircuitAgent () {
 					break
 				case 'tool_call':
 					appendMessage({
-						id: `tool-call-${Date.now()}`,
+						id: nextId('tool-call'),
 						role: 'tool_call',
 						content: JSON.stringify(d.input, null, 2),
 						toolName: d.name as string
@@ -95,7 +97,7 @@ export function useCircuitAgent () {
 					break
 				case 'tool_result':
 					appendMessage({
-						id: `tool-result-${Date.now()}`,
+						id: nextId('tool-result'),
 						role: 'tool_result',
 						content: d.content as string,
 						toolName: d.name as string,
@@ -127,7 +129,7 @@ export function useCircuitAgent () {
 				}
 			}
 		)
-	}, [streaming, currentSession, appendMessage, updateLastAssistant, updateLastThinking, setCircuit, refreshSession, addError])
+	}, [streaming, currentSession, appendMessage, updateLastAssistant, updateLastThinking, setCircuit, refreshSession, addError, nextId])
 
 	const loadConversation = useCallback(async (sessionId: string) => {
 		try {

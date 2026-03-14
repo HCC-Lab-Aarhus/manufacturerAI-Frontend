@@ -5,13 +5,10 @@ import type { ReactElement } from 'react'
 import { isStageAccessible, useSession } from '@/contexts/SessionContext'
 import type { PipelineStage } from '@/types/models'
 
-const STAGES: { id: PipelineStage; label: string; icon: string }[] = [
-	{ id: 'design', label: 'Design', icon: '✏️' },
-	{ id: 'circuit', label: 'Circuit', icon: '⚡' },
-	{ id: 'placement', label: 'Place', icon: '📐' },
-	{ id: 'routing', label: 'Route', icon: '🔗' },
-	{ id: 'scad', label: 'SCAD', icon: '🧊' },
-	{ id: 'gcode', label: 'G-Code', icon: '🖨️' }
+const STAGES: { id: PipelineStage; label: string }[] = [
+	{ id: 'design', label: 'Design' },
+	{ id: 'circuit', label: 'Circuit' },
+	{ id: 'manufacture', label: 'Manufacture' }
 ]
 
 export default function PipelineTabs (): ReactElement {
@@ -19,32 +16,33 @@ export default function PipelineTabs (): ReactElement {
 	const pipelineState = currentSession?.pipeline_state ?? {}
 
 	return (
-		<nav className="flex border-b border-neutral-800 bg-neutral-950">
+		<nav className="flex border-b border-stone-200 bg-[#f0eeea]">
 			{STAGES.map(stage => {
 				const accessible = isStageAccessible(stage.id, pipelineState)
 				const isActive = activeStage === stage.id
-				const isComplete = pipelineState[stage.id] === 'complete'
+				const status = pipelineState[stage.id]
+				const isComplete = status === 'complete' || status === 'done'
 
 				return (
 					<button
 						key={stage.id}
 						onClick={() => { if (accessible) { setActiveStage(stage.id) } }}
 						disabled={!accessible}
-						className={`relative flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${
+						className={`relative flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium transition-colors ${
 							isActive
-								? 'text-blue-400'
+								? 'text-[#485a7a]'
 								: accessible
-									? 'text-neutral-400 hover:text-neutral-200'
-									: 'cursor-not-allowed text-neutral-600'
+									? 'text-stone-600 hover:text-stone-700'
+									: 'cursor-not-allowed text-stone-500'
 						}`}
 					>
-						<span className="text-xs">{stage.icon}</span>
+
 						<span>{stage.label}</span>
 						{isComplete && (
-							<span className="ml-1 text-xs text-green-500">{'✓'}</span>
+							<span className="ml-1 text-xs text-[#358045]">{'✓'}</span>
 						)}
 						{isActive && (
-							<span className="absolute inset-x-0 bottom-0 h-0.5 bg-blue-500" />
+							<span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#5672a0]" />
 						)}
 					</button>
 				)

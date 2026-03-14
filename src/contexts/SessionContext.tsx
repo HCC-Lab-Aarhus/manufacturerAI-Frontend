@@ -45,16 +45,22 @@ export function useSession (): SessionContextValue {
 	return useContext(SessionContext)
 }
 
-const STAGE_ORDER: PipelineStage[] = ['design', 'circuit', 'placement', 'routing', 'scad', 'gcode']
+const STAGE_ORDER: PipelineStage[] = ['design', 'circuit', 'manufacture']
 
 export function isStageAccessible (
 	stage: PipelineStage,
 	pipelineState: SessionMeta['pipeline_state']
 ): boolean {
 	if (stage === 'design') { return true }
-	const idx = STAGE_ORDER.indexOf(stage)
-	const prev = STAGE_ORDER[idx - 1]
-	return pipelineState[prev] === 'complete'
+	if (stage === 'circuit') {
+		const s = pipelineState.design
+		return s === 'complete' || s === 'done'
+	}
+	if (stage === 'manufacture') {
+		const s = pipelineState.circuit
+		return s === 'complete' || s === 'done'
+	}
+	return true
 }
 
 export function SessionProvider ({ children }: { children: ReactNode }) {
