@@ -13,6 +13,7 @@ export interface CalibrationParams {
 export interface CalibrationResult {
 	gcode: string
 	bitmap: string
+	contract: Record<string, unknown>
 }
 
 export async function generateCalibration (params: CalibrationParams): Promise<CalibrationResult> {

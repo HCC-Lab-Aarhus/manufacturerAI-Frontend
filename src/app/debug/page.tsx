@@ -20,6 +20,7 @@ export default function DebugPage (): ReactElement {
 	const [error, setError] = useState('')
 	const [gcodeUrl, setGcodeUrl] = useState<string | null>(null)
 	const [bitmapUrl, setBitmapUrl] = useState<string | null>(null)
+	const [contractUrl, setContractUrl] = useState<string | null>(null)
 
 	const selectedPrinter = printers.find(p => p.id === printer)
 
@@ -49,6 +50,7 @@ export default function DebugPage (): ReactElement {
 		setError('')
 		setGcodeUrl(null)
 		setBitmapUrl(null)
+		setContractUrl(null)
 		try {
 			const data = await generateCalibration({
 				printer, filament, bed_width: bedWidth, bed_depth: bedDepth,
@@ -56,6 +58,7 @@ export default function DebugPage (): ReactElement {
 			})
 			setGcodeUrl(URL.createObjectURL(new Blob([data.gcode], { type: 'text/plain' })))
 			setBitmapUrl(URL.createObjectURL(new Blob([data.bitmap], { type: 'text/plain' })))
+			setContractUrl(URL.createObjectURL(new Blob([JSON.stringify(data.contract, null, 2)], { type: 'application/json' })))
 		} catch (e) {
 			setError(e instanceof Error ? e.message : 'Generation failed')
 		} finally {
@@ -130,16 +133,23 @@ export default function DebugPage (): ReactElement {
 
 					{error && <p className="text-sm text-danger text-center">{error}</p>}
 
-					{(gcodeUrl || bitmapUrl) && (
-						<div className="flex gap-3 pt-2">
-							{gcodeUrl && (
-								<a href={gcodeUrl} download="debug_calibration.gcode" className="flex-1 rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-accent-hover transition-colors">
-									{'Download G-code'}
-								</a>
-							)}
-							{bitmapUrl && (
-								<a href={bitmapUrl} download="trace_bitmap.txt" className="flex-1 rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-accent-hover transition-colors">
-									{'Download Bitmap'}
+					{(gcodeUrl || bitmapUrl || contractUrl) && (
+						<div className="flex flex-col gap-3 pt-2">
+							<div className="flex gap-3">
+								{gcodeUrl && (
+									<a href={gcodeUrl} download="debug_calibration.gcode" className="flex-1 rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-accent-hover transition-colors">
+										{'Download G-code'}
+									</a>
+								)}
+								{bitmapUrl && (
+									<a href={bitmapUrl} download="trace_bitmap.txt" className="flex-1 rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-accent-hover transition-colors">
+										{'Download Bitmap'}
+									</a>
+								)}
+							</div>
+							{contractUrl && (
+								<a href={contractUrl} download="print_job.json" className="rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-accent-hover transition-colors">
+									{'Download Contract (print_job.json)'}
 								</a>
 							)}
 						</div>
