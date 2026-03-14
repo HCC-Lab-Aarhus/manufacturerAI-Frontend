@@ -12,9 +12,12 @@ import {
 	startCompile,
 	pollCompile,
 	startGCode,
-	pollGCode
+	pollGCode,
+	getPlacementResult,
+	getRoutingResult,
+	getBitmap
 } from '@/lib/api'
-import type { ManufactureStep } from '@/types/models'
+import type { ManufactureStep, PlacementResult, RoutingResult, BitmapResult, GCodeStatus } from '@/types/models'
 
 export type StepStatus = 'pending' | 'running' | 'done' | 'error' | 'skipped'
 
@@ -61,12 +64,22 @@ export function useManufacture () {
 	)
 	const [running, setRunning] = useState(false)
 	const [currentStep, setCurrentStep] = useState<ManufactureStep | null>(null)
+	const [placementResult, setPlacementResult] = useState<PlacementResult | null>(null)
+	const [routingResult, setRoutingResult] = useState<RoutingResult | null>(null)
+	const [bitmapResult, setBitmapResult] = useState<BitmapResult | null>(null)
+	const [gcodeStatus, setGcodeStatus] = useState<GCodeStatus | null>(null)
 	const cancelRef = useRef(false)
 	const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
 	useEffect(() => {
 		if (!running) {
 			setSteps(initSteps(currentSession?.artifacts ?? {}))
+		}
+		if (currentSession?.id) {
+			const a = currentSession.artifacts ?? {}
+			if (a.placement) getPlacementResult(currentSession.id).then(setPlacementResult).catch(() => {})
+			if (a.routing) getRoutingResult(currentSession.id).then(setRoutingResult).catch(() => {})
+			if (a.routing) getBitmap(currentSession.id).then(setBitmapResult).catch(() => {})
 		}
 	}, [currentSession?.id, currentSession?.artifacts, running])
 
@@ -84,7 +97,7 @@ export function useManufacture () {
 		}
 	}, [])
 
-	const runPipeline = useCallback(async (fromStep?: ManufactureStep) => {
+	const runPipeline = useCallback(async (fromStep?: ManufactureStep, options?: { filament?: string; silverink_only?: boolean }) => {
 		if (!currentSession || running) { return }
 
 		cancelRef.current = false
@@ -120,7 +133,8 @@ export function useManufacture () {
 			if (shouldRun('placement')) {
 				setCurrentStep('placement')
 				updateStep('placement', { status: 'running' })
-				await runPlacement(sessionId)
+				const pr = await runPlacement(sessionId)
+				setPlacementResult(pr)
 				updateStep('placement', { status: 'done' })
 			} else {
 				updateStep('placement', { status: 'done', message: 'Using existing' })
@@ -131,7 +145,8 @@ export function useManufacture () {
 			if (shouldRun('routing')) {
 				setCurrentStep('routing')
 				updateStep('routing', { status: 'running' })
-				await runRouting(sessionId)
+				const rr = await runRouting(sessionId)
+				setRoutingResult(rr)
 				updateStep('routing', { status: 'done' })
 			} else {
 				updateStep('routing', { status: 'done', message: 'Using existing' })
@@ -142,6 +157,8 @@ export function useManufacture () {
 			setCurrentStep('bitmap')
 			updateStep('bitmap', { status: 'running' })
 			await generateBitmap(sessionId)
+			const br = await getBitmap(sessionId)
+			setBitmapResult(br)
 			updateStep('bitmap', { status: 'done' })
 
 			// SCAD
@@ -196,7 +213,11 @@ export function useManufacture () {
 			if (cancelRef.current) { throw new CancelError() }
 			setCurrentStep('gcode')
 			updateStep('gcode', { status: 'running' })
-			await startGCode(sessionId, { force: true })
+			await startGCode(sessionId, {
+				force: true,
+				filament: options?.filament || undefined,
+				silverink_only: options?.silverink_only
+			})
 			await new Promise<void>((resolve, reject) => {
 				pollRef.current = setInterval(async () => {
 					if (cancelRef.current) {
@@ -207,6 +228,7 @@ export function useManufacture () {
 					}
 					try {
 						const s = await pollGCode(sessionId)
+						setGcodeStatus(s)
 						if (s.status === 'done') {
 							if (pollRef.current) { clearInterval(pollRef.current) }
 							pollRef.current = null
@@ -261,6 +283,10 @@ export function useManufacture () {
 		running,
 		currentStep,
 		allDone,
+		placementResult,
+		routingResult,
+		bitmapResult,
+		gcodeStatus,
 		runPipeline,
 		stop
 	}

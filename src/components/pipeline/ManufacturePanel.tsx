@@ -1,13 +1,19 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { type ReactElement, useEffect, useState } from 'react'
 
 import { useSession } from '@/contexts/SessionContext'
 import type { StepStatus, ManufactureStepState } from '@/hooks/useManufacture'
 import { useManufacture } from '@/hooks/useManufacture'
-import { getBundleDownloadUrl, getGCodeDownloadUrl, getBitmapDownloadUrl, getPrintJobDownloadUrl } from '@/lib/api'
+import { getBundleDownloadUrl, getGCodeDownloadUrl, getBitmapDownloadUrl, getPrintJobDownloadUrl, getStlDownloadUrl } from '@/lib/api'
 import { listFilaments } from '@/lib/api'
 import type { Filament } from '@/types/models'
+
+const PlacementViewport = dynamic(() => import('@/components/viewport/PlacementViewport'), { ssr: false })
+const RoutingViewport = dynamic(() => import('@/components/viewport/RoutingViewport'), { ssr: false })
+const BitmapViewport = dynamic(() => import('@/components/viewport/BitmapViewport'), { ssr: false })
+const Scene3D = dynamic(() => import('@/components/viewport/Scene3D'), { ssr: false })
 
 const STEP_ICONS: Record<string, string> = {
 	placement: 'PLC',
@@ -20,9 +26,9 @@ const STEP_ICONS: Record<string, string> = {
 
 const STATUS_STYLES: Record<StepStatus, string> = {
 	pending: 'text-stone-600',
-	running: 'text-[#5672a0]',
-	done: 'text-[#358045]',
-	error: 'text-[#b05050]',
+	running: 'text-accent',
+	done: 'text-success',
+	error: 'text-danger',
 	skipped: 'text-stone-600'
 }
 
@@ -44,7 +50,7 @@ function StepRow ({ s }: { s: ManufactureStepState }): ReactElement {
 				{s.label}
 			</span>
 			{s.status === 'running' && (
-				<span className="size-3 animate-spin rounded-full border-2 border-[#5672a0] border-t-transparent" />
+				<span className="size-3 animate-spin rounded-full border-2 border-accent border-t-transparent" />
 			)}
 			<span className={`text-sm font-bold ${STATUS_STYLES[s.status]}`}>
 				{STATUS_BADGE[s.status]}
@@ -56,11 +62,15 @@ function StepRow ({ s }: { s: ManufactureStepState }): ReactElement {
 	)
 }
 
+type ViewTab = 'steps' | 'placement' | 'routing' | 'bitmap' | '3d'
+
 export default function ManufacturePanel (): ReactElement {
 	const { currentSession } = useSession()
-	const { steps, running, allDone, runPipeline, stop } = useManufacture()
+	const { steps, running, allDone, placementResult, routingResult, bitmapResult, gcodeStatus, runPipeline, stop } = useManufacture()
 	const [filaments, setFilaments] = useState<Filament[]>([])
 	const [selectedFilament, setSelectedFilament] = useState<string>('')
+	const [silverinkOnly, setSilverinkOnly] = useState(false)
+	const [viewTab, setViewTab] = useState<ViewTab>('steps')
 
 	useEffect(() => {
 		listFilaments().then(setFilaments).catch(() => {})
@@ -71,14 +81,48 @@ export default function ManufacturePanel (): ReactElement {
 	const firstIncomplete = steps.find(s => s.status !== 'done')
 	const canResume = !running && firstIncomplete && steps.some(s => s.status === 'done')
 
+	const VIEW_TABS: { key: ViewTab; label: string; enabled: boolean }[] = [
+		{ key: 'steps', label: 'Steps', enabled: true },
+		{ key: 'placement', label: 'Placement', enabled: !!placementResult },
+		{ key: 'routing', label: 'Routing', enabled: !!routingResult },
+		{ key: 'bitmap', label: 'Bitmap', enabled: !!bitmapResult },
+		{ key: '3d', label: '3D', enabled: !!placementResult }
+	]
+
 	return (
 		<div className="flex h-full flex-col">
-			<div className="flex items-center justify-end px-6 py-3">
+			<div className="flex items-center justify-between border-b border-stone-200 px-4 py-1.5">
+				<div className="flex items-center gap-1">
+					{VIEW_TABS.map(t => (
+						<button
+							key={t.key}
+							onClick={() => setViewTab(t.key)}
+							disabled={!t.enabled}
+							className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+								viewTab === t.key ? 'bg-accent text-white' : 'text-stone-600 hover:bg-stone-100'
+							} disabled:opacity-30`}
+						>
+							{t.label}
+						</button>
+					))}
+				</div>
 				<div className="flex items-center gap-3">
+					{!running && !allDone && (
+						<label className="flex items-center gap-1.5 text-xs text-stone-600">
+							<input
+								type="checkbox"
+								checked={silverinkOnly}
+								onChange={e => setSilverinkOnly(e.target.checked)}
+								className="rounded border-stone-300"
+							/>
+							SilverInk only
+						</label>
+					)}
 					{filaments.length > 0 && !running && !allDone && (
 						<select
 							value={selectedFilament}
 							onChange={e => setSelectedFilament(e.target.value)}
+							title="Filament"
 							className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs text-stone-600"
 						>
 							<option value="">Default filament</option>
@@ -90,22 +134,22 @@ export default function ManufacturePanel (): ReactElement {
 					{running ? (
 						<button
 							onClick={stop}
-							className="rounded-xl bg-[#b05050] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#9a4040] transition-colors"
+							className="rounded-xl bg-danger px-4 py-1.5 text-sm font-medium text-white hover:bg-danger/80 transition-colors"
 						>
 							Stop
 						</button>
 					) : allDone ? (
-						<span className="text-sm font-medium text-[#358045]">Complete</span>
+						<span className="text-sm font-medium text-success">Complete</span>
 					) : canResume ? (
 						<button
-							onClick={() => runPipeline(firstIncomplete!.step)}
+							onClick={() => runPipeline(firstIncomplete!.step, { filament: selectedFilament || undefined, silverink_only: silverinkOnly })}
 							className="rounded-xl bg-[#7c8dbd] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#6674a6] transition-colors"
 						>
 							Resume from {firstIncomplete!.label}
 						</button>
 					) : (
 						<button
-							onClick={() => runPipeline()}
+							onClick={() => runPipeline(undefined, { filament: selectedFilament || undefined, silverink_only: silverinkOnly })}
 							className="rounded-xl bg-[#7c8dbd] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#6674a6] transition-colors"
 						>
 							Start Manufacturing
@@ -114,49 +158,97 @@ export default function ManufacturePanel (): ReactElement {
 				</div>
 			</div>
 
-			<div className="flex-1 overflow-y-auto p-6">
-				<div className="mx-auto flex max-w-lg flex-col gap-1">
-					{steps.map(s => (
-						<StepRow key={s.step} s={s} />
-					))}
-				</div>
-
-				{allDone && sessionId && (
-					<div className="mx-auto mt-8 max-w-lg rounded-2xl bg-[#efeee9] p-6">
-						<h3 className="mb-4 text-sm font-semibold text-stone-700">Output Files</h3>
-						<div className="flex flex-col gap-2">
-							<a
-								href={getGCodeDownloadUrl(sessionId)}
-								download
-								className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
-							>
-								<span className="flex-1 font-medium">enclosure_staged.gcode</span>
-								<span className="text-xs text-stone-600">PLA + pause markers</span>
-							</a>
-							<a
-								href={getBitmapDownloadUrl(sessionId)}
-								download
-								className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
-							>
-								<span className="flex-1 font-medium">trace_bitmap.txt</span>
-								<span className="text-xs text-stone-600">Nozzle-native resolution</span>
-							</a>
-							<a
-								href={getPrintJobDownloadUrl(sessionId)}
-								download
-								className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
-							>
-								<span className="flex-1 font-medium">print_job.json</span>
-								<span className="text-xs text-stone-600">Print manifest</span>
-							</a>
-							<a
-								href={getBundleDownloadUrl(sessionId)}
-								download
-								className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-[#358045] px-6 py-3 text-sm font-semibold text-white hover:bg-[#2d6e3b] transition-colors"
-							>
-								Download Bundle (.zip)
-							</a>
+			<div className="flex-1 overflow-hidden">
+				{viewTab === 'placement' && placementResult ? (
+					<PlacementViewport placement={placementResult} className="w-full h-full" />
+				) : viewTab === 'routing' && routingResult ? (
+					<RoutingViewport routing={routingResult} className="w-full h-full" />
+				) : viewTab === 'bitmap' && bitmapResult ? (
+					<BitmapViewport bitmap={bitmapResult} className="w-full h-full" />
+				) : viewTab === '3d' && placementResult ? (
+					<Scene3D
+						placement={placementResult}
+						routing={routingResult}
+						stlUrl={allDone && sessionId ? getStlDownloadUrl(sessionId) : undefined}
+						className="w-full h-full"
+					/>
+				) : (
+					<div className="overflow-y-auto p-6 h-full">
+						<div className="mx-auto flex max-w-lg flex-col gap-1">
+							{steps.map(s => (
+								<StepRow key={s.step} s={s} />
+							))}
 						</div>
+
+						{gcodeStatus?.stages && gcodeStatus.stages.length > 0 && (
+							<div className="mx-auto mt-4 max-w-lg rounded-xl bg-[#efeee9] p-4">
+								<h4 className="mb-2 text-xs font-semibold text-stone-600">G-Code Stages</h4>
+								{gcodeStatus.stages.map((stage, i) => (
+									<div key={i} className="flex items-center gap-2 py-1 text-xs text-stone-600">
+										<span className={stage.status === 'done' ? 'text-success' : stage.status === 'error' ? 'text-danger' : ''}>{stage.status === 'done' ? '✓' : stage.status === 'error' ? '✗' : '○'}</span>
+										<span className="font-medium">{stage.name}</span>
+										{stage.message && <span className="text-stone-400">{stage.message}</span>}
+									</div>
+								))}
+							</div>
+						)}
+
+						{allDone && sessionId && (
+							<div className="mx-auto mt-8 max-w-lg rounded-2xl bg-[#efeee9] p-6">
+								<h3 className="mb-4 text-sm font-semibold text-stone-700">Output Files</h3>
+								<div className="flex flex-col gap-2">
+									<a
+										href={getGCodeDownloadUrl(sessionId)}
+										download
+										className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+									>
+										<span className="flex-1 font-medium">enclosure_staged.gcode</span>
+										<span className="text-xs text-stone-600">PLA + pause markers</span>
+									</a>
+									{gcodeStatus?.has_bgcode && (
+										<a
+											href={getGCodeDownloadUrl(sessionId, 'bgcode')}
+											download
+											className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+										>
+											<span className="flex-1 font-medium">enclosure_staged.bgcode</span>
+											<span className="text-xs text-stone-600">Binary G-code</span>
+										</a>
+									)}
+									<a
+										href={getStlDownloadUrl(sessionId)}
+										download
+										className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+									>
+										<span className="flex-1 font-medium">enclosure.stl</span>
+										<span className="text-xs text-stone-600">3D model</span>
+									</a>
+									<a
+										href={getBitmapDownloadUrl(sessionId)}
+										download
+										className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+									>
+										<span className="flex-1 font-medium">trace_bitmap.txt</span>
+										<span className="text-xs text-stone-600">Nozzle-native resolution</span>
+									</a>
+									<a
+										href={getPrintJobDownloadUrl(sessionId)}
+										download
+										className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+									>
+										<span className="flex-1 font-medium">print_job.json</span>
+										<span className="text-xs text-stone-600">Print manifest</span>
+									</a>
+									<a
+										href={getBundleDownloadUrl(sessionId)}
+										download
+										className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-success px-6 py-3 text-sm font-semibold text-white hover:bg-success/80 transition-colors"
+									>
+										Download Bundle (.zip)
+									</a>
+								</div>
+							</div>
+						)}
 					</div>
 				)}
 			</div>
