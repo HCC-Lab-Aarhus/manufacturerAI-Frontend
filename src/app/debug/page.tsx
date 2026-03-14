@@ -11,8 +11,6 @@ export default function DebugPage (): ReactElement {
 	const [filaments, setFilaments] = useState<Filament[]>([])
 	const [printer, setPrinter] = useState('')
 	const [filament, setFilament] = useState('')
-	const [bedWidth, setBedWidth] = useState(250)
-	const [bedDepth, setBedDepth] = useState(250)
 	const [boxSize, setBoxSize] = useState(100)
 	const [padding, setPadding] = useState(5)
 	const [squareSize, setSquareSize] = useState(5)
@@ -21,6 +19,8 @@ export default function DebugPage (): ReactElement {
 	const [gcodeUrl, setGcodeUrl] = useState<string | null>(null)
 	const [bitmapUrl, setBitmapUrl] = useState<string | null>(null)
 	const [contractUrl, setContractUrl] = useState<string | null>(null)
+	const [gcodeFilename, setGcodeFilename] = useState('calibration.gcode')
+	const [bitmapFilename, setBitmapFilename] = useState('calibration_bitmap.txt')
 
 	const selectedPrinter = printers.find(p => p.id === printer)
 
@@ -29,8 +29,6 @@ export default function DebugPage (): ReactElement {
 			setPrinters(p)
 			if (p.length) {
 				setPrinter(p[0].id)
-				setBedWidth(p[0].nominal_bed_width)
-				setBedDepth(p[0].nominal_bed_depth)
 			}
 		}).catch(() => {})
 		listFilaments().then(f => { setFilaments(f); if (f.length) { setFilament(f[0].id) } }).catch(() => {})
@@ -38,11 +36,6 @@ export default function DebugPage (): ReactElement {
 
 	const handlePrinterChange = (id: string) => {
 		setPrinter(id)
-		const p = printers.find(pr => pr.id === id)
-		if (p) {
-			setBedWidth(p.nominal_bed_width)
-			setBedDepth(p.nominal_bed_depth)
-		}
 	}
 
 	const handleGenerate = async () => {
@@ -53,9 +46,11 @@ export default function DebugPage (): ReactElement {
 		setContractUrl(null)
 		try {
 			const data = await generateCalibration({
-				printer, filament, bed_width: bedWidth, bed_depth: bedDepth,
+				printer, filament,
 				box_size: boxSize, padding, square_size: squareSize
 			})
+			setGcodeFilename(String(data.contract.gcode_file || 'calibration.gcode'))
+			setBitmapFilename(String(data.contract.bitmap_file || 'calibration_bitmap.txt'))
 			setGcodeUrl(URL.createObjectURL(new Blob([data.gcode], { type: 'text/plain' })))
 			setBitmapUrl(URL.createObjectURL(new Blob([data.bitmap], { type: 'text/plain' })))
 			setContractUrl(URL.createObjectURL(new Blob([JSON.stringify(data.contract, null, 2)], { type: 'application/json' })))
@@ -117,8 +112,6 @@ export default function DebugPage (): ReactElement {
 							{filaments.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
 						</select>
 					</div>
-					{field('Bed Width (mm)', bedWidth, setBedWidth)}
-					{field('Bed Depth (mm)', bedDepth, setBedDepth)}
 					{field('Bounding Box (mm)', boxSize, setBoxSize)}
 					{field('Padding (mm)', padding, setPadding, 0.5)}
 					{field('Square Size (mm)', squareSize, setSquareSize, 0.5)}
@@ -137,12 +130,12 @@ export default function DebugPage (): ReactElement {
 						<div className="flex flex-col gap-3 pt-2">
 							<div className="flex gap-3">
 								{gcodeUrl && (
-									<a href={gcodeUrl} download="debug_calibration.gcode" className="flex-1 rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-accent-hover transition-colors">
+									<a href={gcodeUrl} download={gcodeFilename} className="flex-1 rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-accent-hover transition-colors">
 										{'Download G-code'}
 									</a>
 								)}
 								{bitmapUrl && (
-									<a href={bitmapUrl} download="trace_bitmap.txt" className="flex-1 rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-accent-hover transition-colors">
+									<a href={bitmapUrl} download={bitmapFilename} className="flex-1 rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-accent-hover transition-colors">
 										{'Download Bitmap'}
 									</a>
 								)}

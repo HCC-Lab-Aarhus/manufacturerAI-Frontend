@@ -3,8 +3,6 @@ import apiClient from './client'
 export interface CalibrationParams {
 	printer: string
 	filament: string
-	bed_width: number
-	bed_depth: number
 	box_size: number
 	padding: number
 	square_size: number
