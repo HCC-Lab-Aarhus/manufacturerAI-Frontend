@@ -165,6 +165,10 @@ export interface Printer {
 	label: string
 	bed_width: number
 	bed_depth: number
+	nominal_bed_width: number
+	nominal_bed_depth: number
+	inkjet_offset_x: number
+	inkjet_offset_y: number
 	max_z_mm: number
 }
 
