@@ -16,7 +16,7 @@ const Scene3D = dynamic(() => import('@/components/viewport/Scene3D'), { ssr: fa
 
 export default function DesignPanel (): ReactElement {
 	const { currentSession } = useSession()
-	const { design } = usePipeline()
+	const { design, setDesign } = usePipeline()
 	const {
 		messages,
 		streaming,
@@ -26,7 +26,7 @@ export default function DesignPanel (): ReactElement {
 		cancel
 	} = useDesignAgent()
 
-	const [viewMode, setViewMode] = useState<'chat' | '2d' | '3d'>('chat')
+	const [viewMode, setViewMode] = useState<'chat' | 'design'>('chat')
 
 	useEffect(() => {
 		if (currentSession) {
@@ -49,32 +49,33 @@ export default function DesignPanel (): ReactElement {
 						Chat
 					</button>
 					<button
-						onClick={() => setViewMode('2d')}
+						onClick={() => setViewMode('design')}
 						disabled={!design}
 						className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-							viewMode === '2d' ? 'bg-accent text-white' : 'text-fg-secondary hover:bg-surface-hover'
+							viewMode === 'design' ? 'bg-accent text-white' : 'text-fg-secondary hover:bg-surface-hover'
 						} disabled:opacity-30`}
 					>
-						2D
-					</button>
-					<button
-						onClick={() => setViewMode('3d')}
-						disabled={!design}
-						className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-							viewMode === '3d' ? 'bg-accent text-white' : 'text-fg-secondary hover:bg-surface-hover'
-						} disabled:opacity-30`}
-					>
-						3D
+						Design
 					</button>
 				</div>
 				<TokenMeter usage={tokenUsage} />
 			</div>
 
 			<div className="flex-1 overflow-hidden">
-				{viewMode === '2d' && design ? (
-					<DesignViewport design={design as DesignSpec & { pcb_contour?: [number, number][] }} className="w-full h-full" />
-				) : viewMode === '3d' && design ? (
-					<Scene3D placement={null} routing={null} className="w-full h-full" />
+				{viewMode === 'design' && design ? (
+					<div className="flex h-full">
+						<div className="flex-1 border-r border-border overflow-hidden">
+							<DesignViewport
+								design={design as DesignSpec & { pcb_contour?: [number, number][] }}
+								sessionId={currentSession?.id}
+								onDesignUpdate={setDesign}
+								className="w-full h-full"
+							/>
+						</div>
+						<div className="flex-1 overflow-hidden">
+							<Scene3D design={design} className="w-full h-full" />
+						</div>
+					</div>
 				) : (
 					<div className="flex h-full flex-col">
 						{hasMessages ? (

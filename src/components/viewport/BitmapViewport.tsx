@@ -2,7 +2,7 @@
 
 import { type ReactElement, useEffect, useRef, useState } from 'react'
 
-import { SCALE, netColor } from '@/lib/viewport'
+import { SCALE, netColor, normalizeOutline } from '@/lib/viewport'
 import type { BitmapResult } from '@/types/models'
 
 interface Props {
@@ -15,7 +15,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 	const [showBitmap, setShowBitmap] = useState(true)
 
 	const { bed_width, bed_depth, bed_offset_x, bed_offset_y, bitmap_cols, bitmap_rows, bitmap_b64 } = bitmap
-	const outline = bitmap.outline?.points ?? []
+	const outline = normalizeOutline(bitmap.outline)
 	const components = bitmap.components ?? []
 	const traces = bitmap.traces ?? []
 	const traceWidth = (bitmap.trace_width_mm ?? 0.3) * SCALE

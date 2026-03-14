@@ -7,9 +7,7 @@ export interface OutlineVertex {
 	z_bottom?: number | null
 }
 
-export interface Outline {
-	points: OutlineVertex[]
-}
+export type Outline = OutlineVertex[] | { points: OutlineVertex[] }
 
 export interface TopSurface {
 	type: 'flat' | 'dome' | 'ridge'
@@ -90,6 +88,15 @@ export interface PinPosition {
 	[pinId: string]: [number, number]
 }
 
+export interface HeightGrid {
+	origin_x: number
+	origin_y: number
+	step_mm: number
+	rows: number
+	cols: number
+	grid: (number | null)[][]
+}
+
 export interface PlacedComponent {
 	catalog_id: string
 	instance_id: string
@@ -100,6 +107,9 @@ export interface PlacedComponent {
 	body?: CatalogBody
 	pins?: CatalogPin[]
 	mounting_style?: string
+	ui_placement?: boolean
+	cap_diameter_mm?: number
+	cap_clearance_mm?: number
 }
 
 export interface PlacementResult {
@@ -107,8 +117,8 @@ export interface PlacementResult {
 	enclosure: Enclosure
 	components: PlacedComponent[]
 	nets: Net[]
-	height_grid?: number[][]
-	bottom_height_grid?: number[][]
+	height_grid?: HeightGrid | null
+	bottom_height_grid?: HeightGrid | null
 	pcb_contour?: [number, number][]
 }
 

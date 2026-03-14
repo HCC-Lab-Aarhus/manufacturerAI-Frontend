@@ -14,15 +14,23 @@ interface Props {
 	label?: string
 	dimmed?: boolean
 	highlight?: boolean
+	dragValid?: 'valid' | 'invalid' | 'pending' | null
 }
 
-export default function ComponentIcon ({ x, y, rotation = 0, body, pins, label, dimmed, highlight }: Props): ReactElement {
+const DRAG_FILLS: Record<string, { fill: string; stroke: string }> = {
+	valid:   { fill: 'rgba(52,211,153,0.25)', stroke: '#34d399' },
+	invalid: { fill: 'rgba(239,68,68,0.25)',  stroke: '#ef4444' },
+	pending: { fill: 'rgba(251,191,36,0.20)', stroke: '#fbbf24' },
+}
+
+export default function ComponentIcon ({ x, y, rotation = 0, body, pins, label, dimmed, highlight, dragValid }: Props): ReactElement {
 	const cx = x * SCALE
 	const cy = y * SCALE
 	const opacity = dimmed ? 0.3 : 1
 
-	const bodyFill = highlight ? 'rgba(86,114,160,0.15)' : 'rgba(61,58,54,0.08)'
-	const bodyStroke = highlight ? '#5672a0' : '#6b6560'
+	const dv = dragValid ? DRAG_FILLS[dragValid] : null
+	const bodyFill = dv?.fill ?? (highlight ? 'rgba(86,114,160,0.15)' : 'rgba(61,58,54,0.08)')
+	const bodyStroke = dv?.stroke ?? (highlight ? '#5672a0' : '#6b6560')
 
 	return (
 		<g transform={`translate(${cx},${cy}) rotate(${rotation})`} opacity={opacity}>

@@ -1,5 +1,14 @@
+import type { Outline, OutlineVertex } from '@/types/models'
+
 const SCALE = 4
 const PAD = 40
+
+export function normalizeOutline (raw: Outline | null | undefined): OutlineVertex[] {
+	if (!raw) { return [] }
+	if (Array.isArray(raw)) { return raw }
+	if (Array.isArray(raw.points)) { return raw.points }
+	return []
+}
 
 export interface NormalisedOutline {
 	verts: [number, number][]
@@ -31,11 +40,12 @@ export function expandOutlineVertices (
 	defaultZ: number,
 	zBotRaw: (number | null)[] | null = null,
 	segs = 6
-): { pts: [number, number][]; zs: number[]; zbots: number[] } {
+): { pts: [number, number][]; zs: number[]; zbots: number[]; cornerIndices: number[] } {
 	const n = verts.length
 	const pts: [number, number][] = []
 	const zs: number[] = []
 	const zbots: number[] = []
+	const cornerIndices: number[] = []
 
 	for (let i = 0; i < n; i++) {
 		const prev = (i - 1 + n) % n
@@ -51,6 +61,7 @@ export function expandOutlineVertices (
 		const eOut = corners[i].ease_out ?? 0
 
 		if (eIn === 0 && eOut === 0) {
+			cornerIndices.push(pts.length)
 			pts.push(C); zs.push(zC); zbots.push(bC)
 			continue
 		}
@@ -60,18 +71,23 @@ export function expandOutlineVertices (
 		const lenP = Math.hypot(dPx, dPy)
 		const lenN = Math.hypot(dNx, dNy)
 		if (lenP === 0 || lenN === 0) {
+			cornerIndices.push(pts.length)
 			pts.push(C); zs.push(zC); zbots.push(bC)
 			continue
 		}
 
-		const tIn = Math.min(eIn / lenP, 0.5)
-		const tOut = Math.min(eOut / lenN, 0.5)
+		const safeIn = Math.min(eIn, lenP * 0.45)
+		const safeOut = Math.min(eOut, lenN * 0.45)
+		const tIn = safeIn / lenP
+		const tOut = safeOut / lenN
 		const A: [number, number] = [C[0] + dPx * tIn, C[1] + dPy * tIn]
 		const B: [number, number] = [C[0] + dNx * tOut, C[1] + dNy * tOut]
 		const zA = zC + (zP - zC) * tIn
 		const zB = zC + (zN - zC) * tOut
 		const bA = bC + (bP - bC) * tIn
 		const bB = bC + (bN - bC) * tOut
+
+		cornerIndices.push(pts.length + Math.floor(segs / 2))
 
 		for (let s = 0; s <= segs; s++) {
 			const t = s / segs
@@ -84,7 +100,7 @@ export function expandOutlineVertices (
 		}
 	}
 
-	return { pts, zs, zbots }
+	return { pts, zs, zbots, cornerIndices }
 }
 
 export function buildOutlinePath (outline: { x: number; y: number; ease_in?: number; ease_out?: number }[]): string {
@@ -147,3 +163,57 @@ export function netColor (index: number, total: number): string {
 }
 
 export { SCALE, PAD }
+
+export function snapToEdge (
+	up: { x_mm: number; y_mm: number; edge_index?: number | null },
+	verts: [number, number][],
+	zTops: (number | null)[] = [],
+	defaultZ = 25
+): { x: number; y: number; z: number; rot: number } {
+	const n = verts.length
+	const i = up.edge_index ?? 0
+	const v0 = verts[i]
+	const v1 = verts[(i + 1) % n]
+
+	const ex = v1[0] - v0[0]
+	const ey = v1[1] - v0[1]
+	const edgeLen = Math.hypot(ex, ey)
+	if (edgeLen === 0) return { x: up.x_mm, y: up.y_mm, z: defaultZ, rot: 0 }
+
+	const dx = ex / edgeLen
+	const dy = ey / edgeLen
+	const px = up.x_mm - v0[0]
+	const py = up.y_mm - v0[1]
+	let t = (px * dx + py * dy) / edgeLen
+	t = Math.max(0, Math.min(1, t))
+
+	const x = v0[0] + t * ex
+	const y = v0[1] + t * ey
+	const z0 = zTops[i] ?? defaultZ
+	const z1 = zTops[(i + 1) % n] ?? defaultZ
+	const z = z0 + t * (z1 - z0)
+	const angle = Math.atan2(ey, ex) * 180 / Math.PI
+	const normalAngle = angle - 90
+	const rot = ((Math.round(normalAngle / 90) * 90) % 360 + 360) % 360
+
+	return { x, y, z, rot }
+}
+
+export function nearestEdge (x: number, y: number, verts: [number, number][]): { edgeIndex: number; t: number; snapX: number; snapY: number; dist: number } {
+	let best = { edgeIndex: 0, t: 0.5, snapX: x, snapY: y, dist: Infinity }
+	const n = verts.length
+	for (let i = 0; i < n; i++) {
+		const v0 = verts[i], v1 = verts[(i + 1) % n]
+		const ex = v1[0] - v0[0], ey = v1[1] - v0[1]
+		const lenSq = ex * ex + ey * ey
+		if (lenSq < 1e-12) continue
+		let t = ((x - v0[0]) * ex + (y - v0[1]) * ey) / lenSq
+		t = Math.max(0, Math.min(1, t))
+		const sx = v0[0] + t * ex, sy = v0[1] + t * ey
+		const d = Math.hypot(x - sx, y - sy)
+		if (d < best.dist) {
+			best = { edgeIndex: i, t, snapX: Math.round(sx * 10) / 10, snapY: Math.round(sy * 10) / 10, dist: d }
+		}
+	}
+	return best
+}

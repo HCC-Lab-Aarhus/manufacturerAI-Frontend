@@ -2,7 +2,7 @@
 
 import type { ReactElement } from 'react'
 
-import { SCALE, netColor } from '@/lib/viewport'
+import { SCALE, netColor, normalizeOutline } from '@/lib/viewport'
 import type { RoutingResult } from '@/types/models'
 
 import ComponentIcon from './ComponentIcon'
@@ -14,7 +14,7 @@ interface Props {
 }
 
 export default function RoutingViewport ({ routing, className }: Props): ReactElement {
-	const outline = routing.outline?.points ?? []
+	const outline = normalizeOutline(routing.outline)
 	const components = routing.components ?? []
 	const traces = routing.traces ?? []
 	const traceWidth = (routing.trace_width_mm ?? 0.3) * SCALE
