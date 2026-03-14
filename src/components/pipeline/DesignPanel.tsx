@@ -38,12 +38,12 @@ export default function DesignPanel (): ReactElement {
 
 	return (
 		<div className="flex h-full flex-col">
-			<div className="flex items-center justify-between border-b border-stone-200 px-4 py-1.5">
+			<div className="flex items-center justify-between border-b border-border px-4 py-1.5">
 				<div className="flex items-center gap-1">
 					<button
 						onClick={() => setViewMode('chat')}
 						className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-							viewMode === 'chat' ? 'bg-accent text-white' : 'text-stone-600 hover:bg-stone-100'
+							viewMode === 'chat' ? 'bg-accent text-white' : 'text-fg-secondary hover:bg-surface-hover'
 						}`}
 					>
 						Chat
@@ -52,7 +52,7 @@ export default function DesignPanel (): ReactElement {
 						onClick={() => setViewMode('2d')}
 						disabled={!design}
 						className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-							viewMode === '2d' ? 'bg-accent text-white' : 'text-stone-600 hover:bg-stone-100'
+							viewMode === '2d' ? 'bg-accent text-white' : 'text-fg-secondary hover:bg-surface-hover'
 						} disabled:opacity-30`}
 					>
 						2D
@@ -61,7 +61,7 @@ export default function DesignPanel (): ReactElement {
 						onClick={() => setViewMode('3d')}
 						disabled={!design}
 						className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-							viewMode === '3d' ? 'bg-accent text-white' : 'text-stone-600 hover:bg-stone-100'
+							viewMode === '3d' ? 'bg-accent text-white' : 'text-fg-secondary hover:bg-surface-hover'
 						} disabled:opacity-30`}
 					>
 						3D
@@ -80,8 +80,8 @@ export default function DesignPanel (): ReactElement {
 						{hasMessages ? (
 							<ChatLog messages={messages} />
 						) : (
-							<div className="flex flex-1 flex-col items-center justify-center gap-4 text-stone-600">
-								<h2 className="text-xl font-semibold text-stone-600">{'ManufacturerAI'}</h2>
+						<div className="flex flex-1 flex-col items-center justify-center gap-4 text-fg-secondary">
+							<h2 className="text-xl font-semibold text-fg-secondary">{'ManufacturerAI'}</h2>
 								<p className="max-w-md text-center text-sm">
 									{'Describe what hardware device you want to build and the design agent will help you create it.'}
 								</p>
@@ -92,7 +92,7 @@ export default function DesignPanel (): ReactElement {
 			</div>
 
 			{(viewMode === 'chat') && (
-				<div className={`border-t border-stone-200 p-3 ${!hasMessages ? 'mx-auto w-full max-w-xl' : ''}`}>
+				<div className={`border-t border-border p-3 ${!hasMessages ? 'mx-auto w-full max-w-xl' : ''}`}>
 					<ChatInput
 						onSend={sendMessage}
 						disabled={streaming}

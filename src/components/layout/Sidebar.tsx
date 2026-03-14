@@ -2,6 +2,7 @@
 
 import { type ReactElement, useCallback, useEffect, useState } from 'react'
 
+import ColorPicker from '@/components/ui/ColorPicker'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { usePipeline } from '@/contexts/PipelineContext'
 import { useSession } from '@/contexts/SessionContext'
@@ -48,16 +49,16 @@ export default function Sidebar (): ReactElement {
 	}, []) // eslint-disable-line react-hooks/exhaustive-deps
 
 	return (
-		<aside className="flex h-full w-64 shrink-0 flex-col border-r border-stone-200 bg-[#f0eeea]">
+		<aside className="flex h-full w-64 shrink-0 flex-col border-r border-border bg-surface-alt">
 			<div className="p-4 pb-3">
-				<h1 className="text-lg font-bold text-stone-700">{'ManufacturerAI'}</h1>
-				<p className="text-xs text-stone-600">{'Hardware design pipeline'}</p>
+				<h1 className="text-lg font-bold text-fg">{'ManufacturerAI'}</h1>
+				<p className="text-xs text-fg-secondary">{'Hardware design pipeline'}</p>
 			</div>
 
 			<div className="px-3 pb-3">
 				<button
 					onClick={handleNewSession}
-					className="w-full rounded-lg bg-[#5672a0] px-3 py-2 text-sm font-medium text-white hover:bg-[#4a6391] transition-colors"
+					className="w-full rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover transition-colors"
 				>
 					{'+ New Session'}
 				</button>
@@ -65,13 +66,13 @@ export default function Sidebar (): ReactElement {
 
 			{printers.length > 0 && (
 				<div className="px-3 pb-3">
-					<label className="text-xs text-stone-600">{'Printer'}</label>
+					<label className="text-xs text-fg-secondary">{'Printer'}</label>
 					<select
 						title="Select printer"
 						value={printer?.id ?? currentSession?.printer_id ?? ''}
 						onChange={e => { handlePrinterChange(e.target.value) }}
 						disabled={!currentSession}
-						className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-sm text-stone-600 outline-none disabled:opacity-50"
+						className="mt-1 w-full rounded-lg border border-border bg-surface-card px-2 py-1.5 text-sm text-fg-secondary outline-none disabled:opacity-50"
 					>
 						<option value="">{'Select printer…'}</option>
 						{printers.map(p => (
@@ -83,13 +84,13 @@ export default function Sidebar (): ReactElement {
 
 			<div className="flex-1 overflow-y-auto">
 				<div className="p-3">
-					<p className="mb-2 text-xs font-medium text-stone-600 uppercase tracking-wider">{'Sessions'}</p>
+					<p className="mb-2 text-xs font-medium text-fg-secondary uppercase tracking-wider">{'Sessions'}</p>
 					{loading && sessions.length === 0 ? (
 						<div className="flex justify-center py-4">
 							<LoadingSpinner size="sm" />
 						</div>
 					) : sessions.length === 0 ? (
-						<p className="text-xs text-stone-600 text-center py-4">{'No sessions yet'}</p>
+						<p className="text-xs text-fg-secondary text-center py-4">{'No sessions yet'}</p>
 					) : (
 						<ul className="space-y-1">
 							{sessions.map(s => (
@@ -98,14 +99,14 @@ export default function Sidebar (): ReactElement {
 										onClick={() => { handleSelectSession(s.id) }}
 										className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
 											currentSession?.id === s.id
-										? 'bg-[#dde3f0] text-[#485a7a]'
-										: 'text-stone-600 hover:bg-stone-100 hover:text-stone-700'
+										? 'bg-surface-active text-accent-text'
+										: 'text-fg-secondary hover:bg-surface-hover hover:text-fg'
 										}`}
 									>
 										<span className="block truncate font-medium">
 											{s.name ?? s.description ?? s.id}
 										</span>
-										<span className="block text-xs text-stone-600">
+										<span className="block text-xs text-fg-secondary">
 											{new Date(s.created).toLocaleString()}
 										</span>
 									</button>
@@ -114,6 +115,10 @@ export default function Sidebar (): ReactElement {
 						</ul>
 					)}
 				</div>
+			</div>
+
+			<div className="border-t border-border px-3 py-3">
+				<ColorPicker />
 			</div>
 		</aside>
 	)

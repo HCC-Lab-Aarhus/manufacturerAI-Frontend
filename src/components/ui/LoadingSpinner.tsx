@@ -17,9 +17,9 @@ export default function LoadingSpinner ({ size = 'md', label }: LoadingSpinnerPr
 	return (
 		<div className="flex items-center gap-2">
 			<div
-				className={`animate-spin rounded-full border-stone-300 border-t-[#5672a0] ${sizeClasses[size]}`}
+				className={`animate-spin rounded-full border-border-light border-t-accent ${sizeClasses[size]}`}
 			/>
-			{label && <span className="text-sm text-stone-600">{label}</span>}
+			{label && <span className="text-sm text-fg-secondary">{label}</span>}
 		</div>
 	)
 }

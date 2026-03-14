@@ -44,18 +44,18 @@ function ComponentCard ({ component, onSelect }: { component: CatalogComponent; 
 	return (
 		<button
 			onClick={onSelect}
-			className="rounded-2xl bg-white p-4 text-left shadow-sm hover:shadow-md transition-shadow w-full"
+			className="rounded-2xl bg-surface-card p-4 text-left shadow-sm hover:shadow-md transition-shadow w-full"
 		>
-			<h3 className="text-sm font-semibold text-stone-800">{component.name}</h3>
-			<p className="mt-1 text-xs text-stone-500 line-clamp-2">{component.description}</p>
+			<h3 className="text-sm font-semibold text-fg">{component.name}</h3>
+			<p className="mt-1 text-xs text-fg-muted line-clamp-2">{component.description}</p>
 			<div className="mt-2 flex flex-wrap gap-1.5">
-				<span className="rounded bg-[#efeee9] px-1.5 py-0.5 text-[10px] uppercase text-stone-500">
-					{component.body.shape}{' '}{component.body.width_mm ?? component.body.diameter_mm}{'\u00d7'}{component.body.length_mm ?? component.body.diameter_mm}{'mm'}
+				<span className="rounded bg-surface-chip px-1.5 py-0.5 text-[10px] uppercase text-fg-muted">
+					{component.body.shape}{' '}{component.body.width_mm ?? component.body.diameter_mm}{'×'}{component.body.length_mm ?? component.body.diameter_mm}{'mm'}
 				</span>
-				<span className="rounded bg-[#efeee9] px-1.5 py-0.5 text-[10px] uppercase text-stone-500">
+				<span className="rounded bg-surface-chip px-1.5 py-0.5 text-[10px] uppercase text-fg-muted">
 					{component.mounting.style}
 				</span>
-				<span className="rounded bg-[#efeee9] px-1.5 py-0.5 text-[10px] uppercase text-stone-500">
+				<span className="rounded bg-surface-chip px-1.5 py-0.5 text-[10px] uppercase text-fg-muted">
 					{component.pins.length}{' pins'}
 				</span>
 			</div>
@@ -66,13 +66,13 @@ function ComponentCard ({ component, onSelect }: { component: CatalogComponent; 
 function ComponentDetail ({ component, onClose }: { component: CatalogComponent; onClose: () => void }): ReactElement {
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
-			<div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl" onClick={e => e.stopPropagation()}>
+			<div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-surface-card p-6 shadow-xl" onClick={e => e.stopPropagation()}>
 				<div className="flex items-start justify-between">
 					<div>
-						<h2 className="text-lg font-semibold text-stone-800">{component.name}</h2>
-						<p className="mt-1 text-sm text-stone-500">{component.description}</p>
+						<h2 className="text-lg font-semibold text-fg">{component.name}</h2>
+						<p className="mt-1 text-sm text-fg-muted">{component.description}</p>
 					</div>
-					<button onClick={onClose} className="text-stone-400 hover:text-stone-700 text-xl leading-none">{'\u00d7'}</button>
+					<button onClick={onClose} className="text-fg-muted hover:text-fg text-xl leading-none">{'×'}</button>
 				</div>
 
 				<div className="mt-4 flex justify-center">
@@ -81,8 +81,8 @@ function ComponentDetail ({ component, onClose }: { component: CatalogComponent;
 
 				<div className="mt-4 space-y-3">
 					<section>
-						<h4 className="text-xs font-semibold uppercase text-stone-400">{'Body'}</h4>
-						<div className="mt-1 text-sm text-stone-700">
+						<h4 className="text-xs font-semibold uppercase text-fg-muted">{'Body'}</h4>
+						<div className="mt-1 text-sm text-fg">
 							{`${component.body.shape}, ${component.body.height_mm}mm tall`}
 							{component.body.width_mm && `, ${component.body.width_mm}\u00d7${component.body.length_mm}mm`}
 							{component.body.diameter_mm && `, \u2300${component.body.diameter_mm}mm`}
@@ -90,21 +90,21 @@ function ComponentDetail ({ component, onClose }: { component: CatalogComponent;
 					</section>
 
 					<section>
-						<h4 className="text-xs font-semibold uppercase text-stone-400">{'Mounting'}</h4>
-						<div className="mt-1 text-sm text-stone-700">
+						<h4 className="text-xs font-semibold uppercase text-fg-muted">{'Mounting'}</h4>
+						<div className="mt-1 text-sm text-fg">
 							{`${component.mounting.style} \u2014 keepout ${component.mounting.keepout_margin_mm}mm`}
 							{component.mounting.blocks_routing && ' (blocks routing)'}
 						</div>
 					</section>
 
 					<section>
-						<h4 className="text-xs font-semibold uppercase text-stone-400">{'Pins ('}{component.pins.length}{')'}</h4>
+						<h4 className="text-xs font-semibold uppercase text-fg-muted">{'Pins ('}{component.pins.length}{')'}</h4>
 						<div className="mt-1 space-y-1">
 							{component.pins.map(pin => (
-								<div key={pin.id} className="flex items-center gap-2 text-xs text-stone-600">
+								<div key={pin.id} className="flex items-center gap-2 text-xs text-fg-secondary">
 									<span className={`inline-block size-2 rounded-full ${pin.direction === 'in' ? 'bg-blue-500' : pin.direction === 'out' ? 'bg-red-500' : 'bg-yellow-500'}`} />
 									<span className="font-mono font-semibold">{pin.label}</span>
-									<span className="text-stone-400">{'\u2014'}</span>
+									<span className="text-fg-muted">{'—'}</span>
 									<span>{pin.description}</span>
 								</div>
 							))}
@@ -113,10 +113,10 @@ function ComponentDetail ({ component, onClose }: { component: CatalogComponent;
 
 					{component.pin_groups && component.pin_groups.length > 0 && (
 						<section>
-							<h4 className="text-xs font-semibold uppercase text-stone-400">{'Pin Groups'}</h4>
+							<h4 className="text-xs font-semibold uppercase text-fg-muted">{'Pin Groups'}</h4>
 							<div className="mt-1 space-y-1">
 								{component.pin_groups.map(g => (
-									<div key={g.id} className="text-xs text-stone-600">
+									<div key={g.id} className="text-xs text-fg-secondary">
 										<span className="font-semibold">{g.id}</span>{': '}{g.pin_ids.join(', ')}
 										{g.description && ` \u2014 ${g.description}`}
 									</div>
@@ -147,7 +147,7 @@ export default function CatalogPage (): ReactElement {
 	if (loading) {
 		return (
 			<div className="flex h-screen items-center justify-center bg-surface">
-				<span className="text-sm text-stone-500">{'Loading catalog\u2026'}</span>
+				<span className="text-sm text-fg-muted">{'Loading catalog…'}</span>
 			</div>
 		)
 	}
@@ -157,8 +157,8 @@ export default function CatalogPage (): ReactElement {
 			<div className="mx-auto max-w-4xl">
 				<div className="flex items-center justify-between">
 					<div>
-						<h1 className="text-xl font-semibold text-stone-800">{'Component Catalog'}</h1>
-						<p className="mt-1 text-sm text-stone-500">{uiComponents.length + internalComponents.length}{' components available'}</p>
+						<h1 className="text-xl font-semibold text-fg">{'Component Catalog'}</h1>
+						<p className="mt-1 text-sm text-fg-muted">{uiComponents.length + internalComponents.length}{' components available'}</p>
 					</div>
 					<Link href="/" className="text-sm text-accent hover:underline">{'\u2190 Back to main'}</Link>
 				</div>
@@ -168,12 +168,12 @@ export default function CatalogPage (): ReactElement {
 					value={filter}
 					onChange={e => setFilter(e.target.value)}
 					placeholder="Filter components\u2026"
-					className="mt-4 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-700 placeholder:text-stone-400"
+					className="mt-4 w-full rounded-xl border border-border bg-surface-card px-4 py-2.5 text-sm text-fg placeholder:text-fg-muted"
 				/>
 
 				{filteredUI.length > 0 && (
 					<section className="mt-6">
-						<h2 className="mb-3 text-sm font-semibold text-stone-600">{'UI Components'}</h2>
+						<h2 className="mb-3 text-sm font-semibold text-fg-secondary">{'UI Components'}</h2>
 						<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
 							{filteredUI.map(c => (
 								<ComponentCard key={c.id} component={c} onSelect={() => setSelected(c)} />
@@ -184,7 +184,7 @@ export default function CatalogPage (): ReactElement {
 
 				{filteredInternal.length > 0 && (
 					<section className="mt-6">
-						<h2 className="mb-3 text-sm font-semibold text-stone-600">{'Internal Components'}</h2>
+						<h2 className="mb-3 text-sm font-semibold text-fg-secondary">{'Internal Components'}</h2>
 						<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
 							{filteredInternal.map(c => (
 								<ComponentCard key={c.id} component={c} onSelect={() => setSelected(c)} />
@@ -194,7 +194,7 @@ export default function CatalogPage (): ReactElement {
 				)}
 
 				{filteredUI.length === 0 && filteredInternal.length === 0 && (
-					<p className="mt-8 text-center text-sm text-stone-500">{'No components match "'}{filter}{'"'}</p>
+					<p className="mt-8 text-center text-sm text-fg-muted">{'No components match "'}{filter}{'"'}</p>
 				)}
 			</div>
 

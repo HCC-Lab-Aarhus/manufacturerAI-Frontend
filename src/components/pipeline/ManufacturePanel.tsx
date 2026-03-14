@@ -25,11 +25,11 @@ const STEP_ICONS: Record<string, string> = {
 }
 
 const STATUS_STYLES: Record<StepStatus, string> = {
-	pending: 'text-stone-600',
+	pending: 'text-fg-secondary',
 	running: 'text-accent',
 	done: 'text-success',
 	error: 'text-danger',
-	skipped: 'text-stone-600'
+	skipped: 'text-fg-secondary'
 }
 
 const STATUS_BADGE: Record<StepStatus, string> = {
@@ -43,9 +43,9 @@ const STATUS_BADGE: Record<StepStatus, string> = {
 function StepRow ({ s }: { s: ManufactureStepState }): ReactElement {
 	return (
 		<div className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-colors ${
-			s.status === 'running' ? 'bg-[#e8ecf4]' : ''
+			s.status === 'running' ? 'bg-surface-active' : ''
 		}`}>
-			<span className="text-xs font-mono font-semibold text-stone-600 w-8">{STEP_ICONS[s.step]}</span>
+			<span className="text-xs font-mono font-semibold text-fg-secondary w-8">{STEP_ICONS[s.step]}</span>
 			<span className={`flex-1 text-sm font-medium ${STATUS_STYLES[s.status]}`}>
 				{s.label}
 			</span>
@@ -56,7 +56,7 @@ function StepRow ({ s }: { s: ManufactureStepState }): ReactElement {
 				{STATUS_BADGE[s.status]}
 			</span>
 			{s.message && (
-				<span className="text-xs text-stone-600">{s.message}</span>
+				<span className="text-xs text-fg-secondary">{s.message}</span>
 			)}
 		</div>
 	)
@@ -91,7 +91,7 @@ export default function ManufacturePanel (): ReactElement {
 
 	return (
 		<div className="flex h-full flex-col">
-			<div className="flex items-center justify-between border-b border-stone-200 px-4 py-1.5">
+			<div className="flex items-center justify-between border-b border-border px-4 py-1.5">
 				<div className="flex items-center gap-1">
 					{VIEW_TABS.map(t => (
 						<button
@@ -99,7 +99,7 @@ export default function ManufacturePanel (): ReactElement {
 							onClick={() => setViewTab(t.key)}
 							disabled={!t.enabled}
 							className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-								viewTab === t.key ? 'bg-accent text-white' : 'text-stone-600 hover:bg-stone-100'
+								viewTab === t.key ? 'bg-accent text-white' : 'text-fg-secondary hover:bg-surface-hover'
 							} disabled:opacity-30`}
 						>
 							{t.label}
@@ -108,12 +108,12 @@ export default function ManufacturePanel (): ReactElement {
 				</div>
 				<div className="flex items-center gap-3">
 					{!running && !allDone && (
-						<label className="flex items-center gap-1.5 text-xs text-stone-600">
+						<label className="flex items-center gap-1.5 text-xs text-fg-secondary">
 							<input
 								type="checkbox"
 								checked={silverinkOnly}
 								onChange={e => setSilverinkOnly(e.target.checked)}
-								className="rounded border-stone-300"
+								className="rounded border-border-light"
 							/>
 							SilverInk only
 						</label>
@@ -123,7 +123,7 @@ export default function ManufacturePanel (): ReactElement {
 							value={selectedFilament}
 							onChange={e => setSelectedFilament(e.target.value)}
 							title="Filament"
-							className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs text-stone-600"
+							className="rounded-lg border border-border bg-surface-card px-2 py-1.5 text-xs text-fg-secondary"
 						>
 							<option value="">Default filament</option>
 							{filaments.map(f => (
@@ -143,14 +143,14 @@ export default function ManufacturePanel (): ReactElement {
 					) : canResume ? (
 						<button
 							onClick={() => runPipeline(firstIncomplete!.step, { filament: selectedFilament || undefined, silverink_only: silverinkOnly })}
-							className="rounded-xl bg-[#7c8dbd] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#6674a6] transition-colors"
+							className="rounded-xl bg-accent-muted px-4 py-1.5 text-sm font-medium text-white hover:bg-accent-hover transition-colors"
 						>
 							Resume from {firstIncomplete!.label}
 						</button>
 					) : (
 						<button
 							onClick={() => runPipeline(undefined, { filament: selectedFilament || undefined, silverink_only: silverinkOnly })}
-							className="rounded-xl bg-[#7c8dbd] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#6674a6] transition-colors"
+							className="rounded-xl bg-accent-muted px-4 py-1.5 text-sm font-medium text-white hover:bg-accent-hover transition-colors"
 						>
 							Start Manufacturing
 						</button>
@@ -181,63 +181,63 @@ export default function ManufacturePanel (): ReactElement {
 						</div>
 
 						{gcodeStatus?.stages && gcodeStatus.stages.length > 0 && (
-							<div className="mx-auto mt-4 max-w-lg rounded-xl bg-[#efeee9] p-4">
-								<h4 className="mb-2 text-xs font-semibold text-stone-600">G-Code Stages</h4>
+							<div className="mx-auto mt-4 max-w-lg rounded-xl bg-surface-chip p-4">
+								<h4 className="mb-2 text-xs font-semibold text-fg-secondary">G-Code Stages</h4>
 								{gcodeStatus.stages.map((stage, i) => (
-									<div key={i} className="flex items-center gap-2 py-1 text-xs text-stone-600">
+									<div key={i} className="flex items-center gap-2 py-1 text-xs text-fg-secondary">
 										<span className={stage.status === 'done' ? 'text-success' : stage.status === 'error' ? 'text-danger' : ''}>{stage.status === 'done' ? '✓' : stage.status === 'error' ? '✗' : '○'}</span>
 										<span className="font-medium">{stage.name}</span>
-										{stage.message && <span className="text-stone-400">{stage.message}</span>}
+										{stage.message && <span className="text-fg-muted">{stage.message}</span>}
 									</div>
 								))}
 							</div>
 						)}
 
 						{allDone && sessionId && (
-							<div className="mx-auto mt-8 max-w-lg rounded-2xl bg-[#efeee9] p-6">
-								<h3 className="mb-4 text-sm font-semibold text-stone-700">Output Files</h3>
+							<div className="mx-auto mt-8 max-w-lg rounded-2xl bg-surface-chip p-6">
+								<h3 className="mb-4 text-sm font-semibold text-fg">Output Files</h3>
 								<div className="flex flex-col gap-2">
 									<a
 										href={getGCodeDownloadUrl(sessionId)}
 										download
-										className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+										className="flex items-center gap-3 rounded-xl bg-surface-card px-4 py-3 text-sm text-fg hover:bg-surface-hover transition-colors"
 									>
 										<span className="flex-1 font-medium">enclosure_staged.gcode</span>
-										<span className="text-xs text-stone-600">PLA + pause markers</span>
+										<span className="text-xs text-fg-secondary">PLA + pause markers</span>
 									</a>
 									{gcodeStatus?.has_bgcode && (
 										<a
 											href={getGCodeDownloadUrl(sessionId, 'bgcode')}
 											download
-											className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+											className="flex items-center gap-3 rounded-xl bg-surface-card px-4 py-3 text-sm text-fg hover:bg-surface-hover transition-colors"
 										>
 											<span className="flex-1 font-medium">enclosure_staged.bgcode</span>
-											<span className="text-xs text-stone-600">Binary G-code</span>
+											<span className="text-xs text-fg-secondary">Binary G-code</span>
 										</a>
 									)}
 									<a
 										href={getStlDownloadUrl(sessionId)}
 										download
-										className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+										className="flex items-center gap-3 rounded-xl bg-surface-card px-4 py-3 text-sm text-fg hover:bg-surface-hover transition-colors"
 									>
 										<span className="flex-1 font-medium">enclosure.stl</span>
-										<span className="text-xs text-stone-600">3D model</span>
+										<span className="text-xs text-fg-secondary">3D model</span>
 									</a>
 									<a
 										href={getBitmapDownloadUrl(sessionId)}
 										download
-										className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+										className="flex items-center gap-3 rounded-xl bg-surface-card px-4 py-3 text-sm text-fg hover:bg-surface-hover transition-colors"
 									>
 										<span className="flex-1 font-medium">trace_bitmap.txt</span>
-										<span className="text-xs text-stone-600">Nozzle-native resolution</span>
+										<span className="text-xs text-fg-secondary">Nozzle-native resolution</span>
 									</a>
 									<a
 										href={getPrintJobDownloadUrl(sessionId)}
 										download
-										className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+										className="flex items-center gap-3 rounded-xl bg-surface-card px-4 py-3 text-sm text-fg hover:bg-surface-hover transition-colors"
 									>
 										<span className="flex-1 font-medium">print_job.json</span>
-										<span className="text-xs text-stone-600">Print manifest</span>
+										<span className="text-xs text-fg-secondary">Print manifest</span>
 									</a>
 									<a
 										href={getBundleDownloadUrl(sessionId)}

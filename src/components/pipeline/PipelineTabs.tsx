@@ -16,7 +16,7 @@ export default function PipelineTabs (): ReactElement {
 	const pipelineState = currentSession?.pipeline_state ?? {}
 
 	return (
-		<nav className="flex border-b border-stone-200 bg-[#f0eeea]">
+		<nav className="flex border-b border-border bg-surface-alt">
 			{STAGES.map(stage => {
 				const accessible = isStageAccessible(stage.id, pipelineState)
 				const isActive = activeStage === stage.id
@@ -30,19 +30,19 @@ export default function PipelineTabs (): ReactElement {
 						disabled={!accessible}
 						className={`relative flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium transition-colors ${
 							isActive
-								? 'text-[#485a7a]'
+								? 'text-accent-text'
 								: accessible
-									? 'text-stone-600 hover:text-stone-700'
-									: 'cursor-not-allowed text-stone-500'
+									? 'text-fg-secondary hover:text-fg'
+									: 'cursor-not-allowed text-fg-muted'
 						}`}
 					>
 
 						<span>{stage.label}</span>
 						{isComplete && (
-							<span className="ml-1 text-xs text-[#358045]">{'✓'}</span>
+							<span className="ml-1 text-xs text-success">{'✓'}</span>
 						)}
 						{isActive && (
-							<span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#5672a0]" />
+							<span className="absolute inset-x-0 bottom-0 h-0.5 bg-accent" />
 						)}
 					</button>
 				)

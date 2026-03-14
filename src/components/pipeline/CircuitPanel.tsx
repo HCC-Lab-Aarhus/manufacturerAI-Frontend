@@ -31,7 +31,7 @@ export default function CircuitPanel (): ReactElement {
 
 	if (!hasDesign) {
 		return (
-			<div className="flex h-full items-center justify-center text-stone-600 text-sm">
+			<div className="flex h-full items-center justify-center text-fg-secondary text-sm">
 				{'Complete the Design stage first'}
 			</div>
 		)
@@ -39,12 +39,12 @@ export default function CircuitPanel (): ReactElement {
 
 	return (
 		<div className="flex h-full flex-col">
-			<div className="flex items-center justify-between border-b border-stone-200 px-4 py-1.5">
+			<div className="flex items-center justify-between border-b border-border px-4 py-1.5">
 				<div className="flex items-center gap-1">
 					<button
 						onClick={() => setViewMode('chat')}
 						className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-							viewMode === 'chat' ? 'bg-accent text-white' : 'text-stone-600 hover:bg-stone-100'
+							viewMode === 'chat' ? 'bg-accent text-white' : 'text-fg-secondary hover:bg-surface-hover'
 						}`}
 					>
 						Chat
@@ -53,7 +53,7 @@ export default function CircuitPanel (): ReactElement {
 						onClick={() => setViewMode('details')}
 						disabled={!circuit}
 						className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-							viewMode === 'details' ? 'bg-accent text-white' : 'text-stone-600 hover:bg-stone-100'
+							viewMode === 'details' ? 'bg-accent text-white' : 'text-fg-secondary hover:bg-surface-hover'
 						} disabled:opacity-30`}
 					>
 						Details
@@ -65,7 +65,7 @@ export default function CircuitPanel (): ReactElement {
 							<LoadingSpinner size="sm" label="Generating circuit…" />
 							<button
 								onClick={cancel}
-								className="rounded px-2 py-1 text-xs text-danger hover:bg-rose-50 transition-colors"
+								className="rounded px-2 py-1 text-xs text-danger hover:bg-danger/10 transition-colors"
 							>
 								{'Stop'}
 							</button>
@@ -87,16 +87,16 @@ export default function CircuitPanel (): ReactElement {
 					<div className="overflow-y-auto p-6 h-full">
 						<div className="mx-auto max-w-2xl space-y-6">
 							<section>
-								<h3 className="mb-3 text-sm font-semibold text-stone-700">
+								<h3 className="mb-3 text-sm font-semibold text-fg">
 									Components ({circuit.components.length})
 								</h3>
 								<div className="space-y-2">
 									{circuit.components.map(c => (
-										<div key={c.instance_id} className="flex items-center gap-3 rounded-xl bg-[#efeee9] px-4 py-2.5">
+										<div key={c.instance_id} className="flex items-center gap-3 rounded-xl bg-surface-chip px-4 py-2.5">
 											<span className="font-mono text-xs font-semibold text-accent">{c.instance_id}</span>
-											<span className="text-sm text-stone-700">{c.catalog_id}</span>
+											<span className="text-sm text-fg">{c.catalog_id}</span>
 											{c.mounting_style && (
-												<span className="rounded bg-stone-200 px-1.5 py-0.5 text-[10px] uppercase text-stone-500">{c.mounting_style}</span>
+												<span className="rounded bg-surface-hover px-1.5 py-0.5 text-[10px] uppercase text-fg-muted">{c.mounting_style}</span>
 											)}
 										</div>
 									))}
@@ -104,16 +104,16 @@ export default function CircuitPanel (): ReactElement {
 							</section>
 
 							<section>
-								<h3 className="mb-3 text-sm font-semibold text-stone-700">
+								<h3 className="mb-3 text-sm font-semibold text-fg">
 									Nets ({circuit.nets.length})
 								</h3>
 								<div className="space-y-2">
 									{circuit.nets.map(n => (
-										<div key={n.id} className="rounded-xl bg-[#efeee9] px-4 py-2.5">
+										<div key={n.id} className="rounded-xl bg-surface-chip px-4 py-2.5">
 											<span className="font-mono text-xs font-semibold text-accent">{n.id}</span>
 											<div className="mt-1 flex flex-wrap gap-1.5">
 												{n.pins.map(pin => (
-													<span key={pin} className="rounded bg-white px-1.5 py-0.5 text-[11px] font-mono text-stone-600">{pin}</span>
+													<span key={pin} className="rounded bg-surface-card px-1.5 py-0.5 text-[11px] font-mono text-fg-secondary">{pin}</span>
 												))}
 											</div>
 										</div>

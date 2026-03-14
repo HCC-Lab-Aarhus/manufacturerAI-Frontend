@@ -14,7 +14,7 @@ interface Props {
 
 export default function OutlineSVG ({ outline, pcbContour, children, className }: Props): ReactElement {
 	if (!outline || outline.length < 3) {
-		return <div className="flex items-center justify-center text-stone-600 text-sm p-8">{'No outline data'}</div>
+		return <div className="flex items-center justify-center text-fg-secondary text-sm p-8">{'No outline data'}</div>
 	}
 
 	const vb = svgViewBox(outline)

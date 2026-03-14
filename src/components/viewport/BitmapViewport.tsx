@@ -67,7 +67,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 
 	return (
 		<div className={className ?? 'w-full h-full flex flex-col'}>
-			<div className="flex items-center gap-4 px-3 py-1.5 text-xs text-stone-600 border-b border-stone-200">
+			<div className="flex items-center gap-4 px-3 py-1.5 text-xs text-fg-secondary border-b border-border">
 				<label className="flex items-center gap-1.5">
 					<input type="checkbox" checked={showBitmap} onChange={e => setShowBitmap(e.target.checked)} className="accent-success" />
 					{'Show bitmap overlay'}
