@@ -28,6 +28,7 @@ export function useDesignAgent () {
 	const [streaming, setStreaming] = useState(false)
 	const [tokenUsage, setTokenUsage] = useState<TokenUsage | null>(null)
 	const abortRef = useRef<AbortController | null>(null)
+	const streamingRef = useRef(false)
 	const sentFirstRef = useRef(false)
 	const idCounter = useRef(0)
 	const nextId = useCallback((prefix: string) => `${prefix}-${++idCounter.current}`, [])
@@ -72,6 +73,7 @@ export function useDesignAgent () {
 		})
 
 		setStreaming(true)
+		streamingRef.current = true
 		sentFirstRef.current = true
 
 		let sessionId = currentSession?.id
@@ -155,9 +157,11 @@ export function useDesignAgent () {
 				onEvent: handleEvent,
 				onError: (err) => {
 					addError(err)
+					streamingRef.current = false
 					setStreaming(false)
 				},
 				onDone: () => {
+					streamingRef.current = false
 					setStreaming(false)
 					refreshSession()
 				}
@@ -167,6 +171,7 @@ export function useDesignAgent () {
 	}, [streaming, currentSession, appendMessage, updateLastAssistant, updateLastThinking, setDesign, refreshSession, refreshSessions, selectSession, addError, nextId])
 
 	const loadConversation = useCallback(async (sessionId: string) => {
+		if (streamingRef.current) return
 		sentFirstRef.current = false
 		try {
 			const [convo, design] = await Promise.all([
@@ -227,6 +232,7 @@ export function useDesignAgent () {
 
 	const cancel = useCallback(() => {
 		abortRef.current?.abort()
+		streamingRef.current = false
 		setStreaming(false)
 	}, [])
 
