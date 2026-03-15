@@ -77,6 +77,7 @@ export default function DebugPage (): ReactElement {
 
 	return (
 		<div className="flex h-screen items-start justify-center bg-surface p-8">
+			<Link href="/" className="absolute left-4 top-4 text-sm text-accent hover:underline">{'← Back to main'}</Link>
 			<div className="w-full max-w-md space-y-6">
 				<div>
 					<h1 className="text-xl font-semibold text-fg">{'Calibration Generator'}</h1>
@@ -160,7 +161,6 @@ export default function DebugPage (): ReactElement {
 					</ol>
 				</div>
 
-				<Link href="/" className="inline-block text-sm text-accent hover:underline">{'← Back to main'}</Link>
 			</div>
 		</div>
 	)

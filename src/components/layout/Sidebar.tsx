@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { type ReactElement, useCallback, useEffect, useState } from 'react'
 
 import ColorPicker from '@/components/ui/ColorPicker'
@@ -126,8 +127,11 @@ export default function Sidebar (): ReactElement {
 				</div>
 			</div>
 
-			<div className="border-t border-border px-3 py-3">
+			<div className="border-t border-border px-3 py-3 space-y-2">
 				<ColorPicker />
+				<Link href="/debug" className="block text-xs text-fg-muted hover:text-accent transition-colors">
+					{'Calibration Debug →'}
+				</Link>
 			</div>
 		</aside>
 	)
