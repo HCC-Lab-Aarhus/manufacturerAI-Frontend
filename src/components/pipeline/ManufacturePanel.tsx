@@ -216,19 +216,9 @@ export default function ManufacturePanel (): ReactElement {
 										download
 										className="flex items-center gap-3 rounded-xl bg-surface-card px-4 py-3 text-sm text-fg hover:bg-surface-hover transition-colors"
 									>
-										<span className="flex-1 font-medium">enclosure_staged.gcode</span>
-										<span className="text-xs text-fg-secondary">PLA + pause markers</span>
-									</a>
-									{gcodeStatus?.has_bgcode && (
-										<a
-											href={getGCodeDownloadUrl(sessionId, 'bgcode')}
-											download
-											className="flex items-center gap-3 rounded-xl bg-surface-card px-4 py-3 text-sm text-fg hover:bg-surface-hover transition-colors"
-										>
-											<span className="flex-1 font-medium">enclosure_staged.bgcode</span>
-											<span className="text-xs text-fg-secondary">Binary G-code</span>
-										</a>
-									)}
+									<span className="flex-1 font-medium">enclosure.gcode</span>
+									<span className="text-xs text-fg-secondary">PLA + pause markers</span>
+								</a>
 									<a
 										href={getStlDownloadUrl(sessionId)}
 										download

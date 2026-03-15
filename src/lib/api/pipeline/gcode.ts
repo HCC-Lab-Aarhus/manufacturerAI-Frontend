@@ -27,7 +27,7 @@ export async function pollGCode (sessionId: string): Promise<GCodeStatus> {
 	return data
 }
 
-export function getGCodeDownloadUrl (sessionId: string, format: 'gcode' | 'bgcode' = 'gcode'): string {
+export function getGCodeDownloadUrl (sessionId: string): string {
 	const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
-	return `${base}/api/v2/sessions/${sid(sessionId)}/manufacture/gcode/download?format=${format}`
+	return `${base}/api/v2/sessions/${sid(sessionId)}/manufacture/gcode/download`
 }

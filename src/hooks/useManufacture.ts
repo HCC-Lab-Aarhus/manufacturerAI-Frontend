@@ -72,7 +72,8 @@ export function useManufacture () {
 			if (a.routing) getRoutingResult(currentSession.id).then(setRoutingResult).catch(() => {})
 			if (a.routing) getBitmap(currentSession.id).then(setBitmapResult).catch(() => {})
 		}
-	}, [currentSession?.id, currentSession?.artifacts, running])
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [currentSession?.id, currentSession?.artifacts])
 
 	const updateStep = useCallback((step: ManufactureStep, update: Partial<ManufactureStepState>) => {
 		setSteps(prev => prev.map(s =>
@@ -98,6 +99,7 @@ export function useManufacture () {
 		const artifacts = currentSession.artifacts
 		const allSteps: ManufactureStep[] = ['placement', 'routing', 'bitmap', 'scad', 'compile', 'gcode']
 		const startIdx = fromStep ? allSteps.indexOf(fromStep) : 0
+		let activeStep: ManufactureStep | null = null
 
 		setSteps(prev => prev.map((s, i) => {
 			if (i < startIdx) { return s }
@@ -115,6 +117,7 @@ export function useManufacture () {
 			// Placement
 			if (cancelRef.current) { throw new CancelError() }
 			if (shouldRun('placement')) {
+				activeStep = 'placement'
 				setCurrentStep('placement')
 				updateStep('placement', { status: 'running' })
 				const pr = await runPlacement(sessionId)
@@ -127,6 +130,7 @@ export function useManufacture () {
 			// Routing
 			if (cancelRef.current) { throw new CancelError() }
 			if (shouldRun('routing')) {
+				activeStep = 'routing'
 				setCurrentStep('routing')
 				updateStep('routing', { status: 'running' })
 				const rr = await runRouting(sessionId)
@@ -139,6 +143,7 @@ export function useManufacture () {
 			// Bitmap
 			if (cancelRef.current) { throw new CancelError() }
 			if (shouldRun('bitmap')) {
+				activeStep = 'bitmap'
 				setCurrentStep('bitmap')
 				updateStep('bitmap', { status: 'running' })
 				await generateBitmap(sessionId)
@@ -152,6 +157,7 @@ export function useManufacture () {
 			// SCAD
 			if (cancelRef.current) { throw new CancelError() }
 			if (shouldRun('scad')) {
+				activeStep = 'scad'
 				setCurrentStep('scad')
 				updateStep('scad', { status: 'running' })
 				await generateScad(sessionId)
@@ -163,6 +169,7 @@ export function useManufacture () {
 			// Compile
 			if (cancelRef.current) { throw new CancelError() }
 			if (shouldRun('compile')) {
+				activeStep = 'compile'
 				setCurrentStep('compile')
 				updateStep('compile', { status: 'running' })
 				const compileResult = await startCompile(sessionId, true)
@@ -203,6 +210,7 @@ export function useManufacture () {
 
 			// G-code
 			if (cancelRef.current) { throw new CancelError() }
+			activeStep = 'gcode'
 			setCurrentStep('gcode')
 			updateStep('gcode', { status: 'running' })
 			await startGCode(sessionId, {
@@ -242,22 +250,24 @@ export function useManufacture () {
 			await refreshSession()
 		} catch (err) {
 			if (err instanceof CancelError) {
-				if (currentStep) {
-					updateStep(currentStep, { status: 'pending', message: 'Cancelled' })
+				if (activeStep) {
+					updateStep(activeStep, { status: 'pending', message: 'Cancelled' })
 				}
 			} else {
 				const { message, responsibleAgent } = extractPipelineError(err)
-				if (currentStep) {
-					updateStep(currentStep, { status: 'error', message, responsibleAgent })
+				if (activeStep) {
+					updateStep(activeStep, { status: 'error', message, responsibleAgent })
 				}
-				addError(message)
+				if (!responsibleAgent) {
+					addError(message)
+				}
 			}
 		} finally {
 			setRunning(false)
 			setCurrentStep(null)
 			pollRef.current = null
 		}
-	}, [currentSession, running, updateStep, refreshSession, addError, currentStep])
+	}, [currentSession, running, updateStep, refreshSession, addError])
 
 	useEffect(() => {
 		return () => {

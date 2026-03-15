@@ -280,7 +280,6 @@ export interface GCodeStatus {
 	status: 'pending' | 'running' | 'done' | 'error'
 	message?: string
 	stages?: GCodeStageInfo[]
-	has_bgcode?: boolean
 	gcode_bytes?: number
 }
 
