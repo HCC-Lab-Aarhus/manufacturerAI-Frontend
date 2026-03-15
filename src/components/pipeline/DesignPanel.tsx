@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { type ReactElement, useEffect, useState } from 'react'
+import { type ReactElement, useCallback, useEffect, useRef, useState } from 'react'
 
 import ChatInput from '@/components/chat/ChatInput'
 import ChatLog from '@/components/chat/ChatLog'
@@ -27,6 +27,19 @@ export default function DesignPanel (): ReactElement {
 	} = useDesignAgent()
 
 	const [viewMode, setViewMode] = useState<'chat' | 'design'>('chat')
+
+	const scene3dDesignRef = useRef(design)
+	const [scene3dDesign, setScene3dDesign] = useState(design)
+	const scene3dTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+	const handleDesignUpdate = useCallback((d: DesignSpec | null) => {
+		setDesign(d)
+		scene3dDesignRef.current = d
+		if (scene3dTimerRef.current) clearTimeout(scene3dTimerRef.current)
+		scene3dTimerRef.current = setTimeout(() => {
+			setScene3dDesign(scene3dDesignRef.current)
+		}, 500)
+	}, [setDesign])
 
 	useEffect(() => {
 		if (currentSession) {
@@ -68,12 +81,12 @@ export default function DesignPanel (): ReactElement {
 							<DesignViewport
 								design={design as DesignSpec & { pcb_contour?: [number, number][] }}
 								sessionId={currentSession?.id}
-								onDesignUpdate={setDesign}
-								className="w-full h-full"
-							/>
-						</div>
-						<div className="flex-1 overflow-hidden">
-							<Scene3D design={design} className="w-full h-full" />
+							onDesignUpdate={handleDesignUpdate}
+							className="w-full h-full"
+						/>
+					</div>
+					<div className="flex-1 overflow-hidden">
+						<Scene3D design={scene3dDesign} className="w-full h-full" />
 						</div>
 					</div>
 				) : (

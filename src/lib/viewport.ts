@@ -212,7 +212,7 @@ export function nearestEdge (x: number, y: number, verts: [number, number][]): {
 		const sx = v0[0] + t * ex, sy = v0[1] + t * ey
 		const d = Math.hypot(x - sx, y - sy)
 		if (d < best.dist) {
-			best = { edgeIndex: i, t, snapX: Math.round(sx * 10) / 10, snapY: Math.round(sy * 10) / 10, dist: d }
+			best = { edgeIndex: i, t, snapX: sx, snapY: sy, dist: d }
 		}
 	}
 	return best

@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactElement, useCallback, useRef, useState } from 'react'
+import { type ReactElement, useEffect, useRef } from 'react'
 
 import type { CatalogBody, CatalogPin, DesignSpec, UIPlacement } from '@/types/models'
 import { normalizeOutline, normaliseOutline, buildOutlinePath, outlineBBox, snapToEdge, nearestEdge, SCALE, PAD } from '@/lib/viewport'
@@ -40,6 +40,13 @@ function stripEnrichment (design: DesignSpec): DesignSpec {
 	return d
 }
 
+const EDGE_THRESHOLD = 3
+const DRAG_COLORS = {
+	valid:   { fill: 'rgba(52,211,153,0.25)', stroke: '#34d399' },
+	invalid: { fill: 'rgba(239,68,68,0.25)',  stroke: '#ef4444' },
+	pending: { fill: 'rgba(251,191,36,0.20)', stroke: '#fbbf24' },
+}
+
 export default function DesignViewport ({ design, sessionId, onDesignUpdate, className }: Props): ReactElement {
 	const outline = normalizeOutline(design.outline)
 	const placements = (design.ui_placements ?? []) as EnrichedPlacement[]
@@ -47,15 +54,22 @@ export default function DesignViewport ({ design, sessionId, onDesignUpdate, cla
 	const { verts } = norm
 	const svgRef = useRef<SVGSVGElement>(null)
 
-	const [dragValid, setDragValid] = useState<'valid' | 'invalid' | 'pending' | null>(null)
-	const [dragDelta, setDragDelta] = useState<{ dx: number; dy: number } | null>(null)
-	const [dragState, setDragState] = useState<{
-		instanceId: string
+	const designRef = useRef(design)
+	designRef.current = design
+	const onDesignUpdateRef = useRef(onDesignUpdate)
+	onDesignUpdateRef.current = onDesignUpdate
+	const placementsRef = useRef(placements)
+	placementsRef.current = placements
+	const vertsRef = useRef(verts)
+	vertsRef.current = verts
+	const normRef = useRef(norm)
+	normRef.current = norm
+
+	const dragRef = useRef<{
 		idx: number
+		instanceId: string
 		offsetX: number
 		offsetY: number
-	} | null>(null)
-	const dragInfoRef = useRef<{
 		origX: number
 		origY: number
 		baseX: number
@@ -63,8 +77,238 @@ export default function DesignViewport ({ design, sessionId, onDesignUpdate, cla
 		edgeIndex: number | null
 		isSideMount: boolean
 		currentEdge: number | null
+		groupEl: SVGGElement | null
+		validateTimer: ReturnType<typeof setTimeout> | null
+		pointerId: number
 	} | null>(null)
-	const validateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+	const commitSeqRef = useRef(0)
+	const pendingAbortRef = useRef<AbortController | null>(null)
+	const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+	useEffect(() => {
+		const svg = svgRef.current
+		if (!svg) return
+
+		function svgPoint (e: PointerEvent): { x: number; y: number } {
+			const pt = svg!.createSVGPoint()
+			const ctm = svg!.getScreenCTM()?.inverse()
+			pt.x = e.clientX
+			pt.y = e.clientY
+			if (ctm) {
+				const transformed = pt.matrixTransform(ctm)
+				return { x: transformed.x, y: transformed.y }
+			}
+			return { x: pt.x, y: pt.y }
+		}
+
+		function applyDragFeedback (el: SVGGElement, status: 'valid' | 'invalid' | 'pending') {
+			const body = el.querySelector<SVGRectElement | SVGCircleElement>('rect, circle')
+			if (!body) return
+			const c = DRAG_COLORS[status]
+			body.setAttribute('fill', c.fill)
+			body.setAttribute('stroke', c.stroke)
+		}
+
+		function clearDragFeedback (el: SVGGElement) {
+			// feedback is cleared when design re-renders from the commit
+		}
+
+		function onPointerDown (e: PointerEvent) {
+			const group = (e.target as Element).closest<SVGGElement>('g[data-drag-idx]')
+			if (!group || e.button !== 0) return
+			const idx = parseInt(group.dataset.dragIdx!, 10)
+			if (isNaN(idx)) return
+
+			e.preventDefault()
+			e.stopPropagation()
+
+			const pls = placementsRef.current
+			const up = pls[idx]
+			if (!up) return
+			const pt = svgPoint(e)
+			const v = vertsRef.current
+			const n = normRef.current
+			const d = designRef.current
+
+			let visualX = up.x_mm
+			let visualY = up.y_mm
+			if (up.edge_index != null) {
+				const snapInfo = snapToEdge(up, v, n.zTops, d.enclosure?.height_mm ?? 25)
+				visualX = snapInfo.x
+				visualY = snapInfo.y
+			}
+
+			dragRef.current = {
+				idx,
+				instanceId: up.instance_id,
+				offsetX: pt.x - visualX * SCALE,
+				offsetY: pt.y - visualY * SCALE,
+				origX: up.x_mm,
+				origY: up.y_mm,
+				baseX: visualX,
+				baseY: visualY,
+				edgeIndex: up.edge_index ?? null,
+				isSideMount: up.edge_index != null,
+				currentEdge: up.edge_index ?? null,
+				groupEl: group,
+				validateTimer: null,
+				pointerId: e.pointerId,
+			}
+
+			group.style.cursor = 'grabbing'
+			svg!.style.cursor = 'grabbing'
+			applyDragFeedback(group, 'pending')
+			svg!.setPointerCapture(e.pointerId)
+		}
+
+		function onPointerMove (e: PointerEvent) {
+			const drag = dragRef.current
+			if (!drag) return
+			const pt = svgPoint(e)
+			const v = vertsRef.current
+
+			let newX = (pt.x - drag.offsetX) / SCALE
+			let newY = (pt.y - drag.offsetY) / SCALE
+
+			const snap = nearestEdge(newX, newY, v)
+			if (snap.dist < EDGE_THRESHOLD) {
+				drag.isSideMount = true
+				drag.currentEdge = snap.edgeIndex
+				newX = snap.snapX
+				newY = snap.snapY
+			} else {
+				drag.isSideMount = false
+				drag.currentEdge = null
+			}
+
+			const dx = (newX - drag.baseX) * SCALE
+			const dy = (newY - drag.baseY) * SCALE
+			drag.groupEl?.setAttribute('transform', `translate(${dx}, ${dy})`)
+
+			if (drag.validateTimer) clearTimeout(drag.validateTimer)
+			if (sessionId) {
+				const valX = newX, valY = newY, valEdge = drag.currentEdge
+				const instId = drag.instanceId
+				const el = drag.groupEl
+				drag.validateTimer = setTimeout(async () => {
+					try {
+						const result = await validateUIPlacement(sessionId, {
+							instance_id: instId,
+							x_mm: valX,
+							y_mm: valY,
+							...(valEdge != null ? { edge_index: valEdge } : {}),
+						})
+						if (el) applyDragFeedback(el, result.valid ? 'valid' : 'invalid')
+					} catch {
+						if (el) applyDragFeedback(el, 'pending')
+					}
+				}, 100)
+			}
+		}
+
+		async function onPointerUp (e: PointerEvent) {
+			const drag = dragRef.current
+			if (!drag) return
+			dragRef.current = null
+
+			svg!.releasePointerCapture(drag.pointerId)
+			if (drag.validateTimer) clearTimeout(drag.validateTimer)
+			svg!.style.cursor = ''
+
+			const pt = svgPoint(e)
+			let newX = Math.round(((pt.x - drag.offsetX) / SCALE) * 10) / 10
+			let newY = Math.round(((pt.y - drag.offsetY) / SCALE) * 10) / 10
+			const v = vertsRef.current
+
+			const snap = nearestEdge(newX, newY, v)
+			let finalEdge: number | null = null
+			if (snap.dist < EDGE_THRESHOLD) {
+				finalEdge = snap.edgeIndex
+				newX = Math.round(snap.snapX * 10) / 10
+				newY = Math.round(snap.snapY * 10) / 10
+				drag.isSideMount = true
+			} else {
+				drag.isSideMount = false
+			}
+
+			if (Math.abs(newX - drag.origX) < 0.2 && Math.abs(newY - drag.origY) < 0.2 && finalEdge === drag.edgeIndex) {
+				drag.groupEl?.removeAttribute('transform')
+				drag.groupEl!.style.cursor = 'grab'
+				return
+			}
+
+			if (pendingAbortRef.current) pendingAbortRef.current.abort()
+			if (persistTimerRef.current) clearTimeout(persistTimerRef.current)
+			const seq = ++commitSeqRef.current
+			const abort = new AbortController()
+			pendingAbortRef.current = abort
+
+			const updated = { ...designRef.current }
+			const ups = [...(updated.ui_placements ?? [])]
+			const placementUpdate: UIPlacement = {
+				...ups[drag.idx],
+				x_mm: newX,
+				y_mm: newY,
+			}
+			if (drag.isSideMount && finalEdge != null) {
+				placementUpdate.edge_index = finalEdge
+			} else {
+				delete placementUpdate.edge_index
+			}
+			ups[drag.idx] = placementUpdate
+			updated.ui_placements = ups
+
+			drag.groupEl?.removeAttribute('transform')
+			drag.groupEl!.style.cursor = 'grab'
+			onDesignUpdateRef.current?.(updated)
+
+			if (!sessionId) return
+
+			try {
+				const result = await validateUIPlacement(sessionId, {
+					instance_id: drag.instanceId,
+					x_mm: newX,
+					y_mm: newY,
+					...(drag.isSideMount && finalEdge != null ? { edge_index: finalEdge } : {}),
+				})
+				if (abort.signal.aborted) return
+				if (!result.valid) {
+					if (seq === commitSeqRef.current) {
+						onDesignUpdateRef.current?.(designRef.current)
+					}
+					return
+				}
+			} catch {
+				if (abort.signal.aborted) return
+			}
+
+			if (abort.signal.aborted) return
+			persistTimerRef.current = setTimeout(async () => {
+				if (abort.signal.aborted) return
+				try {
+					const latestDesign = designRef.current
+					const stripped = stripEnrichment(latestDesign)
+					const saved = await putDesign(sessionId, stripped)
+					if (!abort.signal.aborted && seq === commitSeqRef.current) {
+						onDesignUpdateRef.current?.(saved)
+					}
+					await submitDesignToConversation(sessionId, stripped)
+				} catch {
+					/* optimistic update already applied */
+				}
+			}, 80)
+		}
+
+		svg.addEventListener('pointerdown', onPointerDown)
+		svg.addEventListener('pointermove', onPointerMove)
+		svg.addEventListener('pointerup', onPointerUp)
+		return () => {
+			svg.removeEventListener('pointerdown', onPointerDown)
+			svg.removeEventListener('pointermove', onPointerMove)
+			svg.removeEventListener('pointerup', onPointerUp)
+		}
+	}, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
 	if (outline.length < 3) {
 		return <div className="flex items-center justify-center text-fg-secondary text-sm p-8">No outline data</div>
@@ -75,185 +319,6 @@ export default function DesignViewport ({ design, sessionId, onDesignUpdate, cla
 	const vbH = bbox.height * SCALE + PAD * 2
 	const vb = `${bbox.minX * SCALE - PAD} ${bbox.minY * SCALE - PAD} ${vbW} ${vbH}`
 	const path = buildOutlinePath(outline)
-
-	function svgPoint (e: React.PointerEvent): { x: number; y: number } {
-		const svg = svgRef.current
-		if (!svg) return { x: 0, y: 0 }
-		const pt = svg.createSVGPoint()
-		const ctm = svg.getScreenCTM()?.inverse()
-		pt.x = e.clientX
-		pt.y = e.clientY
-		if (ctm) {
-			const transformed = pt.matrixTransform(ctm)
-			return { x: transformed.x, y: transformed.y }
-		}
-		return { x: pt.x, y: pt.y }
-	}
-
-	const handlePointerDown = useCallback((e: React.PointerEvent, instanceId: string, idx: number) => {
-		if (e.button !== 0) return
-		e.preventDefault()
-		e.stopPropagation()
-
-		const up = placements[idx]
-		const pt = svgPoint(e)
-
-		let visualX = up.x_mm
-		let visualY = up.y_mm
-		if (up.edge_index != null) {
-			const snapInfo = snapToEdge(up, verts, norm.zTops, design.enclosure?.height_mm ?? 25)
-			visualX = snapInfo.x
-			visualY = snapInfo.y
-		}
-
-		dragInfoRef.current = {
-			origX: up.x_mm,
-			origY: up.y_mm,
-			baseX: visualX,
-			baseY: visualY,
-			edgeIndex: up.edge_index ?? null,
-			isSideMount: up.edge_index != null,
-			currentEdge: up.edge_index ?? null,
-		}
-
-		setDragState({
-			instanceId,
-			idx,
-			offsetX: pt.x - visualX * SCALE,
-			offsetY: pt.y - visualY * SCALE,
-		})
-		setDragValid('pending')
-
-		const svg = svgRef.current
-		if (svg) svg.setPointerCapture(e.pointerId)
-	}, [placements, verts, norm.zTops, design.enclosure?.height_mm]) // eslint-disable-line react-hooks/exhaustive-deps
-
-	const EDGE_THRESHOLD = 3 // mm — auto side-mount when dragging within this distance of an edge
-
-	const handlePointerMove = useCallback((e: React.PointerEvent) => {
-		if (!dragState || !dragInfoRef.current) return
-		const info = dragInfoRef.current
-		const pt = svgPoint(e)
-
-		let newX = (pt.x - dragState.offsetX) / SCALE
-		let newY = (pt.y - dragState.offsetY) / SCALE
-
-		const snap = nearestEdge(newX, newY, verts)
-		if (snap.dist < EDGE_THRESHOLD) {
-			info.isSideMount = true
-			info.currentEdge = snap.edgeIndex
-			newX = snap.snapX
-			newY = snap.snapY
-		} else {
-			info.isSideMount = false
-			info.currentEdge = null
-		}
-
-		setDragDelta({
-			dx: (newX - info.baseX) * SCALE,
-			dy: (newY - info.baseY) * SCALE,
-		})
-
-		if (validateTimerRef.current) clearTimeout(validateTimerRef.current)
-		if (sessionId) {
-			const valX = newX, valY = newY, valEdge = info.currentEdge
-			validateTimerRef.current = setTimeout(async () => {
-				try {
-					const result = await validateUIPlacement(sessionId, {
-						instance_id: dragState.instanceId,
-						x_mm: valX,
-						y_mm: valY,
-						...(valEdge != null ? { edge_index: valEdge } : {}),
-					})
-					setDragValid(result.valid ? 'valid' : 'invalid')
-				} catch {
-					setDragValid('pending')
-				}
-			}, 100)
-		}
-	}, [dragState, verts, sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
-
-	const handlePointerUp = useCallback(async (e: React.PointerEvent) => {
-		if (!dragState || !dragInfoRef.current) return
-		const info = dragInfoRef.current
-		const svg = svgRef.current
-		if (svg) svg.releasePointerCapture(e.pointerId)
-		if (validateTimerRef.current) clearTimeout(validateTimerRef.current)
-
-		const pt = svgPoint(e)
-		let newX = Math.round(((pt.x - dragState.offsetX) / SCALE) * 10) / 10
-		let newY = Math.round(((pt.y - dragState.offsetY) / SCALE) * 10) / 10
-
-		const snap = nearestEdge(newX, newY, verts)
-		let finalEdge: number | null = null
-		if (snap.dist < EDGE_THRESHOLD) {
-			finalEdge = snap.edgeIndex
-			newX = snap.snapX
-			newY = snap.snapY
-			info.isSideMount = true
-		} else {
-			info.isSideMount = false
-		}
-
-		setDragDelta(null)
-
-		if (Math.abs(newX - info.origX) < 0.2 && Math.abs(newY - info.origY) < 0.2 && finalEdge === info.edgeIndex) {
-			setDragState(null)
-			setDragValid(null)
-			return
-		}
-
-		if (sessionId) {
-			try {
-				const result = await validateUIPlacement(sessionId, {
-					instance_id: dragState.instanceId,
-					x_mm: newX,
-					y_mm: newY,
-					...(info.isSideMount && finalEdge != null ? { edge_index: finalEdge } : {}),
-				})
-				if (!result.valid) {
-					setDragValid('invalid')
-					setDragState(null)
-					setTimeout(() => setDragValid(null), 1500)
-					return
-				}
-			} catch {
-				/* proceed on network failure */
-			}
-		}
-
-		const updated = { ...design }
-		const ups = [...(updated.ui_placements ?? [])]
-		const placementUpdate: UIPlacement = {
-			...ups[dragState.idx],
-			x_mm: newX,
-			y_mm: newY,
-		}
-		if (info.isSideMount && finalEdge != null) {
-			placementUpdate.edge_index = finalEdge
-		} else {
-			delete placementUpdate.edge_index
-		}
-		ups[dragState.idx] = placementUpdate
-		updated.ui_placements = ups
-
-		if (sessionId) {
-			try {
-				const stripped = stripEnrichment(updated)
-				const saved = await putDesign(sessionId, stripped)
-				onDesignUpdate?.(saved)
-				await submitDesignToConversation(sessionId, stripped)
-			} catch {
-				onDesignUpdate?.(updated)
-			}
-		} else {
-			onDesignUpdate?.(updated)
-		}
-
-		setDragValid('valid')
-		setDragState(null)
-		setTimeout(() => setDragValid(null), 1500)
-	}, [dragState, verts, design, sessionId, onDesignUpdate]) // eslint-disable-line react-hooks/exhaustive-deps
 
 	const UI_COLORS = [
 		'#58a6ff', '#3fb950', '#d29922', '#f778ba', '#bc8cff',
@@ -271,9 +336,6 @@ export default function DesignViewport ({ design, sessionId, onDesignUpdate, cla
 					viewBox={vb}
 					className={className ?? 'w-full h-full'}
 					xmlns="http://www.w3.org/2000/svg"
-					onPointerMove={dragState ? handlePointerMove : undefined}
-					onPointerUp={dragState ? handlePointerUp : undefined}
-					style={{ cursor: dragState ? 'grabbing' : undefined }}
 				>
 					<defs>
 						<pattern id="grid10" width={10 * SCALE} height={10 * SCALE} patternUnits="userSpaceOnUse">
@@ -316,7 +378,6 @@ export default function DesignViewport ({ design, sessionId, onDesignUpdate, cla
 					{placements.map((p, idx) => {
 						const color = UI_COLORS[idx % UI_COLORS.length]
 						const isSide = p.edge_index != null
-						const isDragging = dragState?.idx === idx
 
 						if (isSide) {
 							const snapInfo = snapToEdge(p, verts, norm.zTops, design.enclosure?.height_mm ?? 25)
@@ -324,9 +385,7 @@ export default function DesignViewport ({ design, sessionId, onDesignUpdate, cla
 								<g
 									key={p.instance_id}
 									data-drag-idx={idx}
-								style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-								transform={isDragging && dragDelta ? `translate(${dragDelta.dx}, ${dragDelta.dy})` : undefined}
-								onPointerDown={e => handlePointerDown(e, p.instance_id, idx)}
+									style={{ cursor: 'grab' }}
 								>
 									{p.body ? (
 										<ComponentIcon
@@ -336,7 +395,6 @@ export default function DesignViewport ({ design, sessionId, onDesignUpdate, cla
 											body={p.body}
 											pins={p.pins ?? []}
 											label={p.instance_id}
-											dragValid={isDragging ? dragValid : null}
 										/>
 									) : (
 										<SideMountMarker up={p} verts={verts} />
@@ -356,9 +414,7 @@ export default function DesignViewport ({ design, sessionId, onDesignUpdate, cla
 							<g
 								key={p.instance_id}
 								data-drag-idx={idx}
-								style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-								transform={isDragging && dragDelta ? `translate(${dragDelta.dx}, ${dragDelta.dy})` : undefined}
-								onPointerDown={e => handlePointerDown(e, p.instance_id, idx)}
+								style={{ cursor: 'grab' }}
 							>
 								{p.body ? (
 									<ComponentIcon
@@ -367,8 +423,6 @@ export default function DesignViewport ({ design, sessionId, onDesignUpdate, cla
 										body={p.body}
 										pins={p.pins ?? []}
 										label={p.instance_id}
-										highlight={isDragging}
-										dragValid={isDragging ? dragValid : null}
 									/>
 								) : (
 									<g>
