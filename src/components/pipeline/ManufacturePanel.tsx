@@ -1,9 +1,11 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { type ReactElement, useEffect, useState } from 'react'
+import { type ReactElement, useCallback, useEffect, useState } from 'react'
 
 import { useSession } from '@/contexts/SessionContext'
+import { usePipeline } from '@/contexts/PipelineContext'
+import type { PipelineFeedback } from '@/contexts/PipelineContext'
 import type { StepStatus, ManufactureStepState } from '@/hooks/useManufacture'
 import { useManufacture } from '@/hooks/useManufacture'
 import { getBundleDownloadUrl, getGCodeDownloadUrl, getBitmapDownloadUrl, getPrintJobDownloadUrl, getStlDownloadUrl } from '@/lib/api'
@@ -40,23 +42,38 @@ const STATUS_BADGE: Record<StepStatus, string> = {
 	skipped: '–'
 }
 
-function StepRow ({ s }: { s: ManufactureStepState }): ReactElement {
+function StepRow ({ s, onInform }: { s: ManufactureStepState; onInform?: (agent: 'design' | 'circuit', message: string) => void }): ReactElement {
 	return (
-		<div className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-colors ${
+		<div className={`flex flex-col gap-1 px-4 py-2 rounded-xl transition-colors ${
 			s.status === 'running' ? 'bg-surface-active' : ''
 		}`}>
-			<span className="text-xs font-mono font-semibold text-fg-secondary w-8">{STEP_ICONS[s.step]}</span>
-			<span className={`flex-1 text-sm font-medium ${STATUS_STYLES[s.status]}`}>
-				{s.label}
-			</span>
-			{s.status === 'running' && (
-				<span className="size-3 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+			<div className="flex items-center gap-3">
+				<span className="text-xs font-mono font-semibold text-fg-secondary w-8">{STEP_ICONS[s.step]}</span>
+				<span className={`flex-1 text-sm font-medium ${STATUS_STYLES[s.status]}`}>
+					{s.label}
+				</span>
+				{s.status === 'running' && (
+					<span className="size-3 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+				)}
+				<span className={`text-sm font-bold ${STATUS_STYLES[s.status]}`}>
+					{STATUS_BADGE[s.status]}
+				</span>
+			</div>
+			{s.status === 'error' && s.message && (
+				<div className="ml-11 mt-1 flex flex-col gap-2">
+					<p className="text-xs text-danger leading-relaxed">{s.message}</p>
+					{s.responsibleAgent && onInform && (
+						<button
+							onClick={() => onInform(s.responsibleAgent!, s.message!)}
+							className="self-start rounded-lg bg-accent-muted px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover transition-colors"
+						>
+							{s.responsibleAgent === 'design' ? 'Inform the Designer' : 'Inform the Circuit'}
+						</button>
+					)}
+				</div>
 			)}
-			<span className={`text-sm font-bold ${STATUS_STYLES[s.status]}`}>
-				{STATUS_BADGE[s.status]}
-			</span>
-			{s.message && (
-				<span className="text-xs text-fg-secondary">{s.message}</span>
+			{s.status !== 'error' && s.message && (
+				<span className="ml-11 text-xs text-fg-secondary">{s.message}</span>
 			)}
 		</div>
 	)
@@ -65,7 +82,8 @@ function StepRow ({ s }: { s: ManufactureStepState }): ReactElement {
 type ViewTab = 'steps' | 'placement' | 'routing' | 'bitmap' | '3d'
 
 export default function ManufacturePanel (): ReactElement {
-	const { currentSession } = useSession()
+	const { currentSession, setActiveStage } = useSession()
+	const { setPendingFeedback } = usePipeline()
 	const { steps, running, allDone, placementResult, routingResult, bitmapResult, gcodeStatus, runPipeline, stop } = useManufacture()
 	const [filaments, setFilaments] = useState<Filament[]>([])
 	const [selectedFilament, setSelectedFilament] = useState<string>('')
@@ -80,6 +98,15 @@ export default function ManufacturePanel (): ReactElement {
 
 	const firstIncomplete = steps.find(s => s.status !== 'done')
 	const canResume = !running && firstIncomplete && steps.some(s => s.status === 'done')
+
+	const handleInform = useCallback((agent: 'design' | 'circuit', message: string) => {
+		const stepLabel = steps.find(s => s.status === 'error')?.label ?? 'a manufacturing step'
+		setPendingFeedback({
+			target: agent,
+			message: `The manufacturing pipeline failed at "${stepLabel}" with the following error:\n\n${message}\n\nPlease fix the issue in your design and resubmit.`
+		})
+		setActiveStage(agent === 'design' ? 'design' : 'circuit')
+	}, [steps, setPendingFeedback, setActiveStage])
 
 	const VIEW_TABS: { key: ViewTab; label: string; enabled: boolean }[] = [
 		{ key: 'steps', label: 'Steps', enabled: true },
@@ -176,7 +203,7 @@ export default function ManufacturePanel (): ReactElement {
 					<div className="overflow-y-auto p-6 h-full">
 						<div className="mx-auto flex max-w-lg flex-col gap-1">
 							{steps.map(s => (
-								<StepRow key={s.step} s={s} />
+								<StepRow key={s.step} s={s} onInform={!running ? handleInform : undefined} />
 							))}
 						</div>
 

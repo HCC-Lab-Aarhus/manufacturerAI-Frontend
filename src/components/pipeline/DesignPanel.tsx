@@ -16,7 +16,7 @@ const Scene3D = dynamic(() => import('@/components/viewport/Scene3D'), { ssr: fa
 
 export default function DesignPanel (): ReactElement {
 	const { currentSession } = useSession()
-	const { design, setDesign } = usePipeline()
+	const { design, setDesign, pendingFeedback, setPendingFeedback } = usePipeline()
 	const {
 		messages,
 		streaming,
@@ -46,6 +46,15 @@ export default function DesignPanel (): ReactElement {
 			loadConversation(currentSession.id)
 		}
 	}, [currentSession?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+	useEffect(() => {
+		if (pendingFeedback?.target === 'design' && !streaming && currentSession) {
+			const msg = pendingFeedback.message
+			setPendingFeedback(null)
+			sendMessage(msg)
+			setViewMode('chat')
+		}
+	}, [pendingFeedback, streaming, currentSession]) // eslint-disable-line react-hooks/exhaustive-deps
 
 	const hasMessages = messages.length > 0
 

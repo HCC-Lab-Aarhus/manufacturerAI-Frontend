@@ -7,11 +7,17 @@ const baseUrl = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000').rep
 
 export function streamCircuit (
 	sessionId: string,
-	callbacks: SSECallbacks
+	callbacks: SSECallbacks,
+	feedback?: string
 ): AbortController {
+	const init: RequestInit = { method: 'POST' }
+	if (feedback) {
+		init.headers = { 'Content-Type': 'application/json' }
+		init.body = JSON.stringify({ feedback })
+	}
 	return consumeSSEStream(
 		`${baseUrl}/api/v2/sessions/${encodeURIComponent(sessionId)}/circuit`,
-		{ method: 'POST' },
+		init,
 		callbacks
 	)
 }

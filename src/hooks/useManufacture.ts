@@ -1,5 +1,6 @@
 'use client'
 
+import { type AxiosError } from 'axios'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useError } from '@/contexts/ErrorContext/ErrorContext'
@@ -26,6 +27,7 @@ export interface ManufactureStepState {
 	label: string
 	status: StepStatus
 	message?: string
+	responsibleAgent?: 'design' | 'circuit'
 }
 
 const STEP_DEFS: { step: ManufactureStep; label: string; artifact: string }[] = [
@@ -244,13 +246,11 @@ export function useManufacture () {
 					updateStep(currentStep, { status: 'pending', message: 'Cancelled' })
 				}
 			} else {
+				const { message, responsibleAgent } = extractPipelineError(err)
 				if (currentStep) {
-					updateStep(currentStep, {
-						status: 'error',
-						message: err instanceof Error ? err.message : 'Unknown error'
-					})
+					updateStep(currentStep, { status: 'error', message, responsibleAgent })
 				}
-				addError(err)
+				addError(message)
 			}
 		} finally {
 			setRunning(false)
@@ -287,4 +287,20 @@ class CancelError extends Error {
 		super('Cancelled')
 		this.name = 'CancelError'
 	}
+}
+
+function extractPipelineError (err: unknown): { message: string; responsibleAgent?: 'design' | 'circuit' } {
+	const axiosErr = err as AxiosError<Record<string, unknown>>
+	const data = axiosErr?.response?.data
+	if (data) {
+		const detail = typeof data.detail === 'object' && data.detail !== null
+			? data.detail as Record<string, unknown>
+			: data
+		const reason = (detail.reason ?? detail.message) as string | undefined
+		const agent = detail.responsible_agent as 'design' | 'circuit' | undefined
+		if (reason) {
+			return { message: reason, responsibleAgent: agent }
+		}
+	}
+	return { message: err instanceof Error ? err.message : 'Unknown error' }
 }

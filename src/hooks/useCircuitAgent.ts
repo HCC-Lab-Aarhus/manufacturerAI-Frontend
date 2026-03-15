@@ -52,71 +52,66 @@ export function useCircuitAgent () {
 		})
 	}, [])
 
-	const runCircuit = useCallback(async () => {
-		if (!currentSession || streaming) { return }
-
-		setMessages([])
-		setCircuit(null)
-		setStreaming(true)
-
-		const handleEvent = (type: SSEEventType, data: unknown) => {
-			const d = data as Record<string, unknown>
-			switch (type) {
-				case 'thinking_start':
-					appendMessage({
-						id: nextId('thinking'),
-						role: 'thinking',
-						content: '',
-						isStreaming: true
-					})
-					break
-				case 'thinking_delta':
-					updateLastThinking((d.text as string) ?? '')
-					break
-				case 'message_start':
-					appendMessage({
-						id: nextId('assistant'),
-						role: 'assistant',
-						content: '',
-						isStreaming: true
-					})
-					break
-				case 'message_delta':
-					updateLastAssistant((d.text as string) ?? '')
-					break
-				case 'block_stop':
-					setMessages(prev =>
-						prev.map(m => m.isStreaming ? { ...m, isStreaming: false } : m)
-					)
-					break
-				case 'tool_call':
-					appendMessage({
-						id: nextId('tool-call'),
-						role: 'tool_call',
-						content: JSON.stringify(d.input, null, 2),
-						toolName: d.name as string
-					})
-					break
-				case 'tool_result':
-					appendMessage({
-						id: nextId('tool-result'),
-						role: 'tool_result',
-						content: d.content as string,
-						toolName: d.name as string,
-						isError: d.is_error as boolean
-					})
-					break
-				case 'circuit':
-					setCircuit(d as unknown as CircuitSpec)
-					break
-				case 'error':
-					addError(d.message ?? d)
-					break
-				case 'done':
-					break
-			}
+	const handleEvent = useCallback((type: SSEEventType, data: unknown) => {
+		const d = data as Record<string, unknown>
+		switch (type) {
+			case 'thinking_start':
+				appendMessage({
+					id: nextId('thinking'),
+					role: 'thinking',
+					content: '',
+					isStreaming: true
+				})
+				break
+			case 'thinking_delta':
+				updateLastThinking((d.text as string) ?? '')
+				break
+			case 'message_start':
+				appendMessage({
+					id: nextId('assistant'),
+					role: 'assistant',
+					content: '',
+					isStreaming: true
+				})
+				break
+			case 'message_delta':
+				updateLastAssistant((d.text as string) ?? '')
+				break
+			case 'block_stop':
+				setMessages(prev =>
+					prev.map(m => m.isStreaming ? { ...m, isStreaming: false } : m)
+				)
+				break
+			case 'tool_call':
+				appendMessage({
+					id: nextId('tool-call'),
+					role: 'tool_call',
+					content: JSON.stringify(d.input, null, 2),
+					toolName: d.name as string
+				})
+				break
+			case 'tool_result':
+				appendMessage({
+					id: nextId('tool-result'),
+					role: 'tool_result',
+					content: d.content as string,
+					toolName: d.name as string,
+					isError: d.is_error as boolean
+				})
+				break
+			case 'circuit':
+				setCircuit(d as unknown as CircuitSpec)
+				break
+			case 'error':
+				addError(d.message ?? d)
+				break
+			case 'done':
+				break
 		}
+	}, [appendMessage, updateLastAssistant, updateLastThinking, setCircuit, addError, nextId])
 
+	const startStream = useCallback((feedback?: string) => {
+		if (!currentSession) { return }
 		abortRef.current = streamCircuit(
 			currentSession.id,
 			{
@@ -129,9 +124,29 @@ export function useCircuitAgent () {
 					setStreaming(false)
 					refreshSession()
 				}
-			}
+			},
+			feedback
 		)
-	}, [streaming, currentSession, appendMessage, updateLastAssistant, updateLastThinking, setCircuit, refreshSession, addError, nextId])
+	}, [currentSession, handleEvent, addError, refreshSession])
+
+	const runCircuit = useCallback(async () => {
+		if (!currentSession || streaming) { return }
+		setMessages([])
+		setCircuit(null)
+		setStreaming(true)
+		startStream()
+	}, [streaming, currentSession, setCircuit, startStream])
+
+	const sendFeedback = useCallback(async (feedback: string) => {
+		if (!currentSession || streaming) { return }
+		appendMessage({
+			id: nextId('user'),
+			role: 'user',
+			content: feedback
+		})
+		setStreaming(true)
+		startStream(feedback)
+	}, [streaming, currentSession, appendMessage, nextId, startStream])
 
 	const loadConversation = useCallback(async (sessionId: string) => {
 		try {
@@ -185,6 +200,7 @@ export function useCircuitAgent () {
 		messages,
 		streaming,
 		runCircuit,
+		sendFeedback,
 		loadConversation,
 		cancel
 	}

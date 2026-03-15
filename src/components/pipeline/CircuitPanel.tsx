@@ -10,11 +10,12 @@ import { useCircuitAgent } from '@/hooks/useCircuitAgent'
 
 export default function CircuitPanel (): ReactElement {
 	const { currentSession } = useSession()
-	const { design, circuit } = usePipeline()
+	const { design, circuit, pendingFeedback, setPendingFeedback } = usePipeline()
 	const {
 		messages,
 		streaming,
 		runCircuit,
+		sendFeedback,
 		loadConversation,
 		cancel
 	} = useCircuitAgent()
@@ -26,6 +27,15 @@ export default function CircuitPanel (): ReactElement {
 			loadConversation(currentSession.id)
 		}
 	}, [currentSession?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+	useEffect(() => {
+		if (pendingFeedback?.target === 'circuit' && !streaming && currentSession) {
+			const msg = pendingFeedback.message
+			setPendingFeedback(null)
+			sendFeedback(msg)
+			setViewMode('chat')
+		}
+	}, [pendingFeedback, streaming, currentSession]) // eslint-disable-line react-hooks/exhaustive-deps
 
 	const hasDesign = !!design || currentSession?.pipeline_state.design === 'complete'
 
