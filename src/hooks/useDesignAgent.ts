@@ -167,7 +167,7 @@ export function useDesignAgent () {
 	}, [streaming, currentSession, appendMessage, updateLastAssistant, updateLastThinking, setDesign, refreshSession, refreshSessions, selectSession, addError, nextId])
 
 	const loadConversation = useCallback(async (sessionId: string) => {
-		if (sentFirstRef.current) { return }
+		sentFirstRef.current = false
 		try {
 			const [convo, design] = await Promise.all([
 				getDesignConversation(sessionId),
