@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactElement, useState } from 'react'
+import { type ReactElement, useMemo, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -10,42 +10,81 @@ interface ChatMessageProps {
 	entry: ChatEntry
 }
 
+function ToolCallPair ({ call, result }: { call: ChatEntry; result?: ChatEntry }): ReactElement {
+	const [open, setOpen] = useState(false)
+	const brief = call.content.length > 100 ? call.content.slice(0, 100) + '…' : call.content
+
+	return (
+		<div>
+			<button
+				onClick={() => setOpen(!open)}
+				className="flex items-center gap-1.5 text-[11px] text-fg-muted hover:text-fg-secondary transition-colors"
+			>
+				<span className={`text-[9px] transition-transform ${open ? 'rotate-90' : ''}`}>{'▶'}</span>
+				<span className="font-medium">{call.toolName}</span>
+				{result && (
+					<span className={result.isError ? 'text-danger' : 'text-success'}>
+						{result.isError ? '✗' : '✓'}
+					</span>
+				)}
+			</button>
+			{open && (
+				<div className="ml-4 mt-0.5 space-y-1">
+					<pre className="overflow-auto rounded bg-surface-card px-2 py-1 text-[10px] leading-relaxed text-fg-muted whitespace-pre-wrap">
+						{call.content}
+					</pre>
+					{result && (
+						<div className={`ml-2 rounded px-2 py-1 text-[10px] leading-relaxed whitespace-pre-wrap ${
+							result.isError ? 'bg-danger/10 text-danger' : 'bg-surface-card text-fg-secondary'
+						}`}>
+							{result.content}
+						</div>
+					)}
+				</div>
+			)}
+			{!open && !result && (
+				<div className="ml-5 text-[10px] text-fg-muted truncate max-w-md">{brief}</div>
+			)}
+		</div>
+	)
+}
+
 function ToolCallGroup ({ entries }: { entries: ChatEntry[] }): ReactElement {
+	const pairs = useMemo(() => {
+		const result: { call: ChatEntry; result?: ChatEntry }[] = []
+		for (let i = 0; i < entries.length; i++) {
+			if (entries[i].role === 'tool_call') {
+				const next = entries[i + 1]
+				if (next?.role === 'tool_result') {
+					result.push({ call: entries[i], result: next })
+					i++
+				} else {
+					result.push({ call: entries[i] })
+				}
+			}
+		}
+		return result
+	}, [entries])
+
 	const [expanded, setExpanded] = useState(false)
-	const count = entries.filter(e => e.role === 'tool_call').length
+	const count = pairs.length
 	const hasError = entries.some(e => e.isError)
 
 	return (
 		<div className="my-0.5">
 			<button
-				onClick={() => { setExpanded(!expanded) }}
-				className="flex items-center gap-2 rounded-md px-2.5 py-1 text-xs text-fg-secondary hover:text-fg transition-colors"
+				onClick={() => setExpanded(!expanded)}
+				className="flex items-center gap-1.5 text-[11px] text-fg-muted hover:text-fg-secondary transition-colors"
 			>
-				<span className={`text-[10px] transition-transform ${expanded ? 'rotate-90' : ''}`}>{'▶'}</span>
-				<span className="font-medium">
-					{count} tool {count === 1 ? 'call' : 'calls'}
-				</span>
+				<span className={`text-[9px] transition-transform ${expanded ? 'rotate-90' : ''}`}>{'▶'}</span>
+				<span>{count} tool {count === 1 ? 'call' : 'calls'}</span>
 				{hasError && <span className="text-danger">{'(error)'}</span>}
 			</button>
 			{expanded && (
-				<div className="ml-4 mt-1 flex flex-col gap-0.5 border-l-2 border-border pl-3">
-					{entries.map(e => {
-						const isResult = e.role === 'tool_result'
-						const icon = isResult ? (e.isError ? '✗' : '✓') : '→'
-						const color = isResult
-						? (e.isError ? 'text-danger' : 'text-success')
-						: 'text-fg-secondary'
-						const brief = e.content.length > 120
-							? e.content.slice(0, 120) + '…'
-							: e.content
-						return (
-							<div key={e.id} className="text-[11px] leading-relaxed text-fg-secondary">
-								<span className={color}>{icon}</span>{' '}
-								<span className="font-medium text-fg-secondary">{e.toolName}</span>{' '}
-								<span className="text-fg-muted">{brief}</span>
-							</div>
-						)
-					})}
+				<div className="ml-3 mt-1 flex flex-col gap-1.5 border-l border-border/50 pl-3">
+					{pairs.map(p => (
+						<ToolCallPair key={p.call.id} call={p.call} result={p.result} />
+					))}
 				</div>
 			)}
 		</div>
@@ -54,23 +93,53 @@ function ToolCallGroup ({ entries }: { entries: ChatEntry[] }): ReactElement {
 
 export { ToolCallGroup }
 
+function ThinkingPreview ({ content }: { content: string }): ReactElement {
+	return (
+		<div
+			className="mt-0.5 overflow-hidden"
+			style={{
+				maxHeight: '4.5lh',
+				maskImage: 'linear-gradient(to bottom, transparent 0%, black 100%)',
+				WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 100%)',
+			}}
+		>
+			<div className="flex flex-col-reverse">
+				<div className="text-[11px] leading-snug text-fg-muted/70 break-words">
+					{content}
+				</div>
+			</div>
+		</div>
+	)
+}
+
 export default function ChatMessage ({ entry }: ChatMessageProps): ReactElement {
 	const [expanded, setExpanded] = useState(false)
+
+	if (entry.role === 'status') {
+		return (
+			<div className="flex justify-center py-1">
+				<span className="text-[11px] text-fg-muted">{'✓ '}{entry.content}</span>
+			</div>
+		)
+	}
 
 	if (entry.role === 'thinking') {
 		return (
 			<div>
-				<button
-					onClick={() => { setExpanded(!expanded) }}
-					className="flex items-center gap-1.5 text-xs text-fg-secondary hover:text-fg transition-colors"
-				>
-					<span className={`text-[10px] transition-transform ${expanded ? 'rotate-90' : ''}`}>{'▶'}</span>
-					<span>{'Thinking'}{entry.isStreaming ? '…' : ''}</span>
-				</button>
-				{expanded && (
-				<pre className="mt-1 overflow-auto text-xs text-fg-secondary whitespace-pre-wrap leading-relaxed">
-						{entry.content}
-					</pre>
+				{expanded ? (
+					<div className="text-xs text-fg-secondary leading-relaxed markdown-body [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+						<Markdown remarkPlugins={[remarkGfm]}>{entry.content}</Markdown>
+					</div>
+				) : entry.content.length > 0 && (
+					<ThinkingPreview content={entry.content} />
+				)}
+				{entry.content.length > 0 && !entry.isStreaming && (
+					<button
+						onClick={() => setExpanded(!expanded)}
+						className="text-[11px] text-fg-muted hover:text-fg-secondary transition-colors mt-0.5"
+					>
+						{expanded ? 'Collapse' : 'Expand'}
+					</button>
 				)}
 			</div>
 		)

@@ -12,7 +12,7 @@ import type { DesignSpec, TokenUsage } from '@/types/models'
 
 export interface ChatEntry {
 	id: string
-	role: 'user' | 'assistant' | 'thinking' | 'tool_call' | 'tool_result'
+	role: 'user' | 'assistant' | 'thinking' | 'tool_call' | 'tool_result' | 'status'
 	content: string
 	toolName?: string
 	isError?: boolean
@@ -84,6 +84,8 @@ export function useDesignAgent () {
 			selectSession(sessionId)
 		}
 
+		let designReceived = false
+
 		const handleEvent = (type: SSEEventType, data: unknown) => {
 			const d = data as Record<string, unknown>
 			switch (type) {
@@ -132,6 +134,7 @@ export function useDesignAgent () {
 					})
 					break
 				case 'design':
+					designReceived = true
 					setDesign((d.design ?? d) as unknown as DesignSpec)
 					break
 				case 'token_usage':
@@ -147,6 +150,13 @@ export function useDesignAgent () {
 					addError(d.message ?? d)
 					break
 				case 'done':
+					appendMessage({
+						id: nextId('status'),
+						role: 'status',
+						content: designReceived
+							? 'Design validated and saved'
+							: 'Design agent finished'
+					})
 					break
 			}
 		}

@@ -19,6 +19,8 @@ export function useCircuitAgent () {
 	const [messages, setMessages] = useState<ChatEntry[]>([])
 	const [streaming, setStreaming] = useState(false)
 	const abortRef = useRef<AbortController | null>(null)
+	const streamingRef = useRef(false)
+	const circuitReceivedRef = useRef(false)
 	const idCounter = useRef(0)
 	const nextId = useCallback((prefix: string) => `${prefix}-${++idCounter.current}`, [])
 
@@ -100,17 +102,25 @@ export function useCircuitAgent () {
 				})
 				break
 			case 'circuit':
-				setCircuit(d as unknown as CircuitSpec)
+				circuitReceivedRef.current = true
+				setCircuit((d.circuit ?? d) as unknown as CircuitSpec)
 				break
 			case 'error':
 				addError(d.message ?? d)
 				break
 			case 'done':
+				appendMessage({
+					id: nextId('status'),
+					role: 'status',
+					content: circuitReceivedRef.current
+						? 'Circuit validated and saved'
+						: 'Circuit agent finished'
+				})
 				break
 		}
 	}, [appendMessage, updateLastAssistant, updateLastThinking, setCircuit, addError, nextId])
 
-	const startStream = useCallback((feedback?: string) => {
+	const startStream = useCallback((feedback?: string, outline?: string) => {
 		if (!currentSession) { return }
 		abortRef.current = streamCircuit(
 			currentSession.id,
@@ -118,24 +128,32 @@ export function useCircuitAgent () {
 				onEvent: handleEvent,
 				onError: (err) => {
 					addError(err)
+					streamingRef.current = false
 					setStreaming(false)
 				},
 				onDone: () => {
+					streamingRef.current = false
 					setStreaming(false)
 					refreshSession()
 				}
 			},
-			feedback
+			feedback,
+			outline
 		)
 	}, [currentSession, handleEvent, addError, refreshSession])
 
-	const runCircuit = useCallback(async () => {
+	const runCircuit = useCallback(async (outline?: string) => {
 		if (!currentSession || streaming) { return }
 		setMessages([])
 		setCircuit(null)
 		setStreaming(true)
-		startStream()
-	}, [streaming, currentSession, setCircuit, startStream])
+		streamingRef.current = true
+		circuitReceivedRef.current = false
+		if (outline) {
+			appendMessage({ id: nextId('user'), role: 'user', content: outline })
+		}
+		startStream(undefined, outline)
+	}, [streaming, currentSession, setCircuit, startStream, appendMessage, nextId])
 
 	const sendFeedback = useCallback(async (feedback: string) => {
 		if (!currentSession || streaming) { return }
@@ -145,10 +163,13 @@ export function useCircuitAgent () {
 			content: feedback
 		})
 		setStreaming(true)
+		streamingRef.current = true
+		circuitReceivedRef.current = false
 		startStream(feedback)
 	}, [streaming, currentSession, appendMessage, nextId, startStream])
 
 	const loadConversation = useCallback(async (sessionId: string) => {
+		if (streamingRef.current) return
 		try {
 			const [convo, circuit] = await Promise.all([
 				getCircuitConversation(sessionId),
@@ -193,6 +214,7 @@ export function useCircuitAgent () {
 
 	const cancel = useCallback(() => {
 		abortRef.current?.abort()
+		streamingRef.current = false
 		setStreaming(false)
 	}, [])
 

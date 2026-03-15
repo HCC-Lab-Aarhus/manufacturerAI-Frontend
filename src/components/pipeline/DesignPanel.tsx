@@ -27,6 +27,7 @@ export default function DesignPanel (): ReactElement {
 	} = useDesignAgent()
 
 	const [viewMode, setViewMode] = useState<'chat' | 'design'>('chat')
+	const feedbackSentRef = useRef(false)
 
 	const scene3dDesignRef = useRef(design)
 	const [scene3dDesign, setScene3dDesign] = useState(design)
@@ -48,11 +49,15 @@ export default function DesignPanel (): ReactElement {
 	}, [currentSession?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
 	useEffect(() => {
-		if (pendingFeedback?.target === 'design' && !streaming && currentSession) {
+		if (pendingFeedback?.target === 'design' && !streaming && currentSession && !feedbackSentRef.current) {
+			feedbackSentRef.current = true
 			const msg = pendingFeedback.message
 			setPendingFeedback(null)
 			sendMessage(msg)
 			setViewMode('chat')
+		}
+		if (!pendingFeedback) {
+			feedbackSentRef.current = false
 		}
 	}, [pendingFeedback, streaming, currentSession]) // eslint-disable-line react-hooks/exhaustive-deps
 

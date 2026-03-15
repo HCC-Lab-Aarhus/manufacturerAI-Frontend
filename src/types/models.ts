@@ -72,6 +72,7 @@ export interface Net {
 }
 
 export interface DesignSpec {
+	device_description?: string
 	outline: Outline
 	enclosure: Enclosure
 	ui_placements: UIPlacement[]

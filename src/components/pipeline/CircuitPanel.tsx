@@ -1,12 +1,42 @@
 'use client'
 
-import { type ReactElement, useEffect, useState } from 'react'
+import { type ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+
+import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 import ChatLog from '@/components/chat/ChatLog'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { usePipeline } from '@/contexts/PipelineContext'
 import { useSession } from '@/contexts/SessionContext'
 import { useCircuitAgent } from '@/hooks/useCircuitAgent'
+import type { DesignSpec } from '@/types/models'
+
+function buildOutline (design: DesignSpec): string {
+	const desc = design.device_description ?? ''
+	const placements = design.ui_placements ?? []
+	const lines = [
+		'Design the circuit for this device.',
+		'',
+		'**Device Description:**',
+		desc,
+		'',
+		'**Placed UI Components (use these exact instance_ids):**'
+	]
+	for (const p of placements) {
+		const cid = p.catalog_id ?? p.instance_id ?? '?'
+		const iid = p.instance_id ?? '?'
+		const face = p.edge_index != null ? 'side' : 'top'
+		lines.push(`- ${iid} (${cid}) — ${face} face`)
+	}
+	lines.push('')
+	lines.push(
+		'Include these UI components in your circuit. Add all needed internal ' +
+		'components (batteries, resistors, MCU, capacitors, etc.) and design ' +
+		'the electrical connections.'
+	)
+	return lines.join('\n')
+}
 
 export default function CircuitPanel (): ReactElement {
 	const { currentSession } = useSession()
@@ -21,6 +51,17 @@ export default function CircuitPanel (): ReactElement {
 	} = useCircuitAgent()
 
 	const [viewMode, setViewMode] = useState<'chat' | 'details'>('chat')
+	const [editingOutline, setEditingOutline] = useState(false)
+	const feedbackSentRef = useRef(false)
+
+	const defaultOutline = useMemo(() => design ? buildOutline(design) : '', [design])
+	const [outline, setOutline] = useState('')
+
+	useEffect(() => {
+		if (defaultOutline && !outline) {
+			setOutline(defaultOutline)
+		}
+	}, [defaultOutline]) // eslint-disable-line react-hooks/exhaustive-deps
 
 	useEffect(() => {
 		if (currentSession) {
@@ -29,15 +70,24 @@ export default function CircuitPanel (): ReactElement {
 	}, [currentSession?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
 	useEffect(() => {
-		if (pendingFeedback?.target === 'circuit' && !streaming && currentSession) {
+		if (pendingFeedback?.target === 'circuit' && !streaming && currentSession && !feedbackSentRef.current) {
+			feedbackSentRef.current = true
 			const msg = pendingFeedback.message
 			setPendingFeedback(null)
 			sendFeedback(msg)
 			setViewMode('chat')
 		}
+		if (!pendingFeedback) {
+			feedbackSentRef.current = false
+		}
 	}, [pendingFeedback, streaming, currentSession]) // eslint-disable-line react-hooks/exhaustive-deps
 
 	const hasDesign = !!design || currentSession?.pipeline_state.design === 'complete'
+	const hasConversation = messages.length > 0 || streaming
+
+	const handleGenerate = useCallback(() => {
+		runCircuit(outline || undefined)
+	}, [runCircuit, outline])
 
 	if (!hasDesign) {
 		return (
@@ -61,7 +111,7 @@ export default function CircuitPanel (): ReactElement {
 					</button>
 					<button
 						onClick={() => setViewMode('details')}
-						disabled={!circuit}
+						disabled={!circuit?.components}
 						className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
 							viewMode === 'details' ? 'bg-accent text-white' : 'text-fg-secondary hover:bg-surface-hover'
 						} disabled:opacity-30`}
@@ -69,31 +119,33 @@ export default function CircuitPanel (): ReactElement {
 						Details
 					</button>
 				</div>
-				<div className="flex items-center gap-2">
-					{streaming ? (
-						<>
-							<LoadingSpinner size="sm" label="Generating circuit…" />
+				{hasConversation && (
+					<div className="flex items-center gap-2">
+						{streaming ? (
+							<>
+								<LoadingSpinner size="sm" label="Generating circuit…" />
+								<button
+									onClick={cancel}
+									className="rounded px-2 py-1 text-xs text-danger hover:bg-danger/10 transition-colors"
+								>
+									{'Stop'}
+								</button>
+							</>
+						) : (
 							<button
-								onClick={cancel}
-								className="rounded px-2 py-1 text-xs text-danger hover:bg-danger/10 transition-colors"
+								onClick={handleGenerate}
+								disabled={!currentSession}
+								className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-40 transition-colors"
 							>
-								{'Stop'}
+								{'Re-run Circuit'}
 							</button>
-						</>
-					) : (
-						<button
-							onClick={runCircuit}
-							disabled={!currentSession}
-							className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-40 transition-colors"
-						>
-							{messages.length > 0 ? 'Re-run Circuit' : 'Generate Circuit'}
-						</button>
-					)}
-				</div>
+						)}
+					</div>
+				)}
 			</div>
 
 			<div className="flex-1 overflow-hidden">
-				{viewMode === 'details' && circuit ? (
+				{viewMode === 'details' && circuit?.components ? (
 					<div className="overflow-y-auto p-6 h-full">
 						<div className="mx-auto max-w-2xl space-y-6">
 							<section>
@@ -132,9 +184,40 @@ export default function CircuitPanel (): ReactElement {
 							</section>
 						</div>
 					</div>
-				) : (
+				) : hasConversation ? (
 					<div className="flex h-full flex-col">
 						<ChatLog messages={messages} />
+					</div>
+				) : (
+					<div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
+						<div className="flex items-center gap-3">
+							<h2 className="text-lg font-semibold text-fg-secondary">Circuit Outline</h2>
+							<button
+								onClick={() => setEditingOutline(!editingOutline)}
+								className="rounded px-2 py-0.5 text-xs text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"
+							>
+								{editingOutline ? 'Preview' : 'Edit'}
+							</button>
+						</div>
+						{editingOutline ? (
+							<textarea
+								value={outline}
+								onChange={e => setOutline(e.target.value)}
+								rows={18}
+								className="w-full max-w-2xl rounded-xl border border-border bg-surface-card px-4 py-3 text-sm text-fg placeholder-fg-muted outline-none focus:border-accent transition-colors resize-y"
+							/>
+						) : (
+							<div className="w-full max-w-2xl overflow-y-auto rounded-xl border border-border bg-surface-card px-5 py-4 text-sm text-fg markdown-body [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+								<Markdown remarkPlugins={[remarkGfm]}>{outline}</Markdown>
+							</div>
+						)}
+						<button
+							onClick={handleGenerate}
+							disabled={!currentSession || !outline.trim()}
+							className="rounded-xl bg-accent px-6 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+						>
+							Generate Circuit
+						</button>
 					</div>
 				)}
 			</div>
