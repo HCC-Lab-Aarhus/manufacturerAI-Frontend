@@ -160,6 +160,12 @@ export type StageStatus = 'pending' | 'complete' | 'done' | 'error'
 
 export type PipelineState = Record<string, StageStatus | string>
 
+export interface PipelineError {
+	error: string
+	reason: string
+	responsible_agent?: 'design' | 'circuit'
+}
+
 export interface SessionMeta {
 	id: string
 	created: string
@@ -168,6 +174,7 @@ export interface SessionMeta {
 	name?: string
 	printer_id?: string
 	pipeline_state: PipelineState
+	pipeline_errors?: Record<string, PipelineError>
 	artifacts: Record<string, boolean>
 }
 

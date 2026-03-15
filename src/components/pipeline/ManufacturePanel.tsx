@@ -8,12 +8,14 @@ import { useSession } from '@/contexts/SessionContext'
 import type { StepStatus, ManufactureStepState } from '@/hooks/useManufacture'
 import { useManufacture } from '@/hooks/useManufacture'
 import { getBundleDownloadUrl, getGCodeDownloadUrl, getBitmapDownloadUrl, getPrintJobDownloadUrl, getStlDownloadUrl, listFilaments } from '@/lib/api'
-import type { Filament } from '@/types/models'
+import type { Filament, ManufactureStep } from '@/types/models'
 
 const PlacementViewport = dynamic(() => import('@/components/viewport/PlacementViewport'), { ssr: false })
 const RoutingViewport = dynamic(() => import('@/components/viewport/RoutingViewport'), { ssr: false })
 const BitmapViewport = dynamic(() => import('@/components/viewport/BitmapViewport'), { ssr: false })
 const Scene3D = dynamic(() => import('@/components/viewport/Scene3D'), { ssr: false })
+
+const ALL_STEPS: ManufactureStep[] = ['placement', 'routing', 'bitmap', 'scad', 'compile', 'gcode']
 
 const STATUS_STYLES: Record<StepStatus, string> = {
 	pending: 'text-fg-secondary',
@@ -40,7 +42,16 @@ const STEP_ICONS: Record<string, string> = {
 	gcode: 'GCO'
 }
 
-function StepRow ({ s, onInform }: { s: ManufactureStepState; onInform?: (agent: 'design' | 'circuit', message: string) => void }): ReactElement {
+interface StepRowProps {
+	s: ManufactureStepState
+	running: boolean
+	onInform?: (agent: 'design' | 'circuit', message: string) => void
+	onRetry?: (step: ManufactureStep) => void
+	onContinue?: (step: ManufactureStep) => void
+	onRunStep?: (step: ManufactureStep) => void
+}
+
+function StepRow ({ s, running, onInform, onRetry, onContinue, onRunStep }: StepRowProps): ReactElement {
 	return (
 		<div className={`flex flex-col gap-1 px-3 py-1.5 rounded-lg transition-colors ${
 			s.status === 'running' ? 'bg-surface-active' : ''
@@ -53,6 +64,15 @@ function StepRow ({ s, onInform }: { s: ManufactureStepState; onInform?: (agent:
 				{s.status === 'running' && (
 					<span className="size-2.5 animate-spin rounded-full border-[1.5px] border-accent border-t-transparent" />
 				)}
+				{!running && (s.status === 'done' || s.status === 'pending') && onRunStep && (
+					<button
+						onClick={() => onRunStep(s.step)}
+						className="flex items-center justify-center size-6 rounded text-[10px] text-fg-muted hover:text-accent hover:bg-surface-hover transition-colors"
+						title={`Run ${s.label}`}
+					>
+						{'▶'}
+					</button>
+				)}
 				<span className={`text-xs font-bold ${STATUS_STYLES[s.status]}`}>
 					{STATUS_BADGE[s.status]}
 				</span>
@@ -60,14 +80,32 @@ function StepRow ({ s, onInform }: { s: ManufactureStepState; onInform?: (agent:
 			{s.status === 'error' && s.message && (
 				<div className="ml-9 mt-0.5 flex flex-col gap-1.5">
 					<p className="text-[11px] text-danger leading-relaxed">{s.message}</p>
-					{s.responsibleAgent && onInform && (
-						<button
-							onClick={() => onInform(s.responsibleAgent!, s.message!)}
-							className="self-start rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
-						>
-							{s.responsibleAgent === 'design' ? 'Inform the Designer' : 'Inform the Circuit'}
-						</button>
-					)}
+					<div className="flex items-center gap-2">
+						{onRetry && (
+							<button
+								onClick={() => onRetry(s.step)}
+								className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
+							>
+								{'Retry'}
+							</button>
+						)}
+						{onContinue && (
+							<button
+								onClick={() => onContinue(s.step)}
+								className="rounded-md bg-surface-chip px-2.5 py-1 text-[11px] font-medium text-fg-secondary hover:bg-surface-hover transition-colors"
+							>
+								{'Skip & Continue'}
+							</button>
+						)}
+						{s.responsibleAgent && onInform && (
+							<button
+								onClick={() => onInform(s.responsibleAgent!, s.message!)}
+								className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
+							>
+								{s.responsibleAgent === 'design' ? 'Inform the Designer' : 'Inform the Circuit'}
+							</button>
+						)}
+					</div>
 				</div>
 			)}
 			{s.status !== 'error' && s.message && (
@@ -125,6 +163,22 @@ export default function ManufacturePanel (): ReactElement {
 		setActiveStage(agent === 'design' ? 'design' : 'circuit')
 	}, [steps, setPendingFeedback, setActiveStage])
 
+	const opts = useCallback(() => ({ filament: selectedFilament || undefined, silverink_only: silverinkOnly }), [selectedFilament, silverinkOnly])
+
+	const handleRetry = useCallback((step: ManufactureStep) => {
+		runPipeline(step, { ...opts(), toStep: step })
+	}, [runPipeline, opts])
+
+	const handleContinue = useCallback((step: ManufactureStep) => {
+		const idx = ALL_STEPS.indexOf(step)
+		const next = ALL_STEPS[idx + 1]
+		if (next) { runPipeline(next, opts()) }
+	}, [runPipeline, opts])
+
+	const handleRunStep = useCallback((step: ManufactureStep) => {
+		runPipeline(step, { ...opts(), toStep: step })
+	}, [runPipeline, opts])
+
 	const VIEW_TABS: { key: ViewTab; label: string; enabled: boolean }[] = [
 		{ key: 'placement', label: 'Placement', enabled: !!placementResult },
 		{ key: 'routing', label: 'Routing', enabled: !!routingResult },
@@ -159,7 +213,15 @@ export default function ManufacturePanel (): ReactElement {
 									{'Stop'}
 								</button>
 							) : allDone ? (
-								<span className="text-[11px] font-medium text-success">{'Complete'}</span>
+								<>
+									<span className="text-[11px] font-medium text-success">{'Complete'}</span>
+									<button
+										onClick={() => runPipeline('placement', { filament: selectedFilament || undefined, silverink_only: silverinkOnly })}
+										className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
+									>
+										{'Re-run'}
+									</button>
+								</>
 							) : canResume ? (
 								<button
 									onClick={() => runPipeline(firstIncomplete!.step, { filament: selectedFilament || undefined, silverink_only: silverinkOnly })}
@@ -196,7 +258,15 @@ export default function ManufacturePanel (): ReactElement {
 
 					<div className="flex-1 overflow-y-auto py-1">
 						{steps.map(s => (
-							<StepRow key={s.step} s={s} onInform={!running ? handleInform : undefined} />
+							<StepRow
+								key={s.step}
+								s={s}
+								running={running}
+								onInform={!running ? handleInform : undefined}
+								onRetry={!running ? handleRetry : undefined}
+								onContinue={!running ? handleContinue : undefined}
+								onRunStep={!running ? handleRunStep : undefined}
+							/>
 						))}
 					</div>
 

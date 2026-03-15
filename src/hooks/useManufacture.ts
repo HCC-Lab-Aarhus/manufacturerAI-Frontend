@@ -18,7 +18,7 @@ import {
 	getRoutingResult,
 	getBitmap
 } from '@/lib/api'
-import type { ManufactureStep, PlacementResult, RoutingResult, BitmapResult, GCodeStatus } from '@/types/models'
+import type { ManufactureStep, PlacementResult, RoutingResult, BitmapResult, GCodeStatus, PipelineError } from '@/types/models'
 
 export type StepStatus = 'pending' | 'running' | 'done' | 'error' | 'skipped'
 
@@ -39,8 +39,12 @@ const STEP_DEFS: { step: ManufactureStep; label: string; artifact: string }[] = 
 	{ step: 'gcode', label: 'G-Code Pipeline', artifact: 'gcode' }
 ]
 
-function initSteps (artifacts: Record<string, boolean>): ManufactureStepState[] {
+function initSteps (artifacts: Record<string, boolean>, errors?: Record<string, PipelineError>): ManufactureStepState[] {
 	return STEP_DEFS.map(({ step, label }) => {
+		const err = errors?.[step]
+		if (err) {
+			return { step, label, status: 'error' as StepStatus, message: err.reason, responsibleAgent: err.responsible_agent }
+		}
 		const done = !!artifacts[step]
 		return { step, label, status: done ? 'done' as StepStatus : 'pending' as StepStatus }
 	})
@@ -51,7 +55,7 @@ export function useManufacture () {
 	const { addError } = useError()
 
 	const [steps, setSteps] = useState<ManufactureStepState[]>(() =>
-		initSteps(currentSession?.artifacts ?? {})
+		initSteps(currentSession?.artifacts ?? {}, currentSession?.pipeline_errors)
 	)
 	const [running, setRunning] = useState(false)
 	const [currentStep, setCurrentStep] = useState<ManufactureStep | null>(null)
@@ -64,7 +68,7 @@ export function useManufacture () {
 
 	useEffect(() => {
 		if (!running) {
-			setSteps(initSteps(currentSession?.artifacts ?? {}))
+			setSteps(initSteps(currentSession?.artifacts ?? {}, currentSession?.pipeline_errors))
 		}
 		if (currentSession?.id) {
 			const a = currentSession.artifacts ?? {}
@@ -89,7 +93,7 @@ export function useManufacture () {
 		}
 	}, [])
 
-	const runPipeline = useCallback(async (fromStep?: ManufactureStep, options?: { filament?: string; silverink_only?: boolean }) => {
+	const runPipeline = useCallback(async (fromStep?: ManufactureStep, options?: { filament?: string; silverink_only?: boolean; toStep?: ManufactureStep }) => {
 		if (!currentSession || running) { return }
 
 		cancelRef.current = false
@@ -99,17 +103,19 @@ export function useManufacture () {
 		const artifacts = currentSession.artifacts
 		const allSteps: ManufactureStep[] = ['placement', 'routing', 'bitmap', 'scad', 'compile', 'gcode']
 		const startIdx = fromStep ? allSteps.indexOf(fromStep) : 0
+		const endIdx = options?.toStep ? allSteps.indexOf(options.toStep) : allSteps.length - 1
 		let activeStep: ManufactureStep | null = null
 
 		setSteps(prev => prev.map((s, i) => {
-			if (i < startIdx) { return s }
+			if (i < startIdx || i > endIdx) { return s }
 			if (i >= startIdx && s.status === 'done' && !fromStep) { return s }
-			return { ...s, status: 'pending', message: undefined }
+			return { ...s, status: 'pending', message: undefined, responsibleAgent: undefined }
 		}))
 
 		const shouldRun = (step: ManufactureStep): boolean => {
 			const idx = allSteps.indexOf(step)
-			if (fromStep) { return idx >= startIdx }
+			if (idx < startIdx || idx > endIdx) { return false }
+			if (fromStep) { return true }
 			return !artifacts[step]
 		}
 
