@@ -38,20 +38,9 @@ const STEP_DEFS: { step: ManufactureStep; label: string; artifact: string }[] = 
 ]
 
 function initSteps (artifacts: Record<string, boolean>): ManufactureStepState[] {
-	const placementDone = !!artifacts.placement
-	const routingDone = !!artifacts.routing
-	const scadDone = !!artifacts.scad
-	const gcodeDone = !!artifacts.gcode
-
 	return STEP_DEFS.map(({ step, label }) => {
-		let status: StepStatus = 'pending'
-		if (step === 'placement' && placementDone) { status = 'done' }
-		if (step === 'routing' && routingDone) { status = 'done' }
-		if (step === 'bitmap' && routingDone) { status = 'done' }
-		if (step === 'scad' && scadDone) { status = 'done' }
-		if (step === 'compile' && scadDone) { status = 'done' }
-		if (step === 'gcode' && gcodeDone) { status = 'done' }
-		return { step, label, status }
+		const done = !!artifacts[step]
+		return { step, label, status: done ? 'done' as StepStatus : 'pending' as StepStatus }
 	})
 }
 
@@ -115,16 +104,9 @@ export function useManufacture () {
 		}))
 
 		const shouldRun = (step: ManufactureStep): boolean => {
-			if (fromStep) { return allSteps.indexOf(step) >= startIdx }
-			switch (step) {
-				case 'placement': return !artifacts.placement
-				case 'routing': return !artifacts.routing
-				case 'bitmap': return true
-				case 'scad': return !artifacts.scad
-				case 'compile': return !artifacts.scad
-				case 'gcode': return !artifacts.gcode
-				default: return true
-			}
+			const idx = allSteps.indexOf(step)
+			if (fromStep) { return idx >= startIdx }
+			return !artifacts[step]
 		}
 
 		try {
@@ -154,12 +136,16 @@ export function useManufacture () {
 
 			// Bitmap
 			if (cancelRef.current) { throw new CancelError() }
-			setCurrentStep('bitmap')
-			updateStep('bitmap', { status: 'running' })
-			await generateBitmap(sessionId)
-			const br = await getBitmap(sessionId)
-			setBitmapResult(br)
-			updateStep('bitmap', { status: 'done' })
+			if (shouldRun('bitmap')) {
+				setCurrentStep('bitmap')
+				updateStep('bitmap', { status: 'running' })
+				await generateBitmap(sessionId)
+				const br = await getBitmap(sessionId)
+				setBitmapResult(br)
+				updateStep('bitmap', { status: 'done' })
+			} else {
+				updateStep('bitmap', { status: 'done', message: 'Using existing' })
+			}
 
 			// SCAD
 			if (cancelRef.current) { throw new CancelError() }
@@ -174,40 +160,44 @@ export function useManufacture () {
 
 			// Compile
 			if (cancelRef.current) { throw new CancelError() }
-			setCurrentStep('compile')
-			updateStep('compile', { status: 'running' })
-			const compileResult = await startCompile(sessionId, true)
-			if (compileResult.status === 'compiling' || compileResult.status === 'pending') {
-				await new Promise<void>((resolve, reject) => {
-					pollRef.current = setInterval(async () => {
-						if (cancelRef.current) {
-							if (pollRef.current) { clearInterval(pollRef.current) }
-							pollRef.current = null
-							reject(new CancelError())
-							return
-						}
-						try {
-							const s = await pollCompile(sessionId)
-							if (s.status === 'done') {
+			if (shouldRun('compile')) {
+				setCurrentStep('compile')
+				updateStep('compile', { status: 'running' })
+				const compileResult = await startCompile(sessionId, true)
+				if (compileResult.status === 'compiling' || compileResult.status === 'pending') {
+					await new Promise<void>((resolve, reject) => {
+						pollRef.current = setInterval(async () => {
+							if (cancelRef.current) {
 								if (pollRef.current) { clearInterval(pollRef.current) }
 								pollRef.current = null
-								resolve()
-							} else if (s.status === 'error') {
-								if (pollRef.current) { clearInterval(pollRef.current) }
-								pollRef.current = null
-								reject(new Error(s.message ?? 'STL compilation failed'))
+								reject(new CancelError())
+								return
 							}
-						} catch (err) {
-							if (pollRef.current) { clearInterval(pollRef.current) }
-							pollRef.current = null
-							reject(err)
-						}
-					}, 3000)
-				})
-			} else if (compileResult.status === 'error') {
-				throw new Error(compileResult.message ?? 'STL compilation failed')
+							try {
+								const s = await pollCompile(sessionId)
+								if (s.status === 'done') {
+									if (pollRef.current) { clearInterval(pollRef.current) }
+									pollRef.current = null
+									resolve()
+								} else if (s.status === 'error') {
+									if (pollRef.current) { clearInterval(pollRef.current) }
+									pollRef.current = null
+									reject(new Error(s.message ?? 'STL compilation failed'))
+								}
+							} catch (err) {
+								if (pollRef.current) { clearInterval(pollRef.current) }
+								pollRef.current = null
+								reject(err)
+							}
+						}, 3000)
+					})
+				} else if (compileResult.status === 'error') {
+					throw new Error(compileResult.message ?? 'STL compilation failed')
+				}
+				updateStep('compile', { status: 'done' })
+			} else {
+				updateStep('compile', { status: 'done', message: 'Using existing' })
 			}
-			updateStep('compile', { status: 'done' })
 
 			// G-code
 			if (cancelRef.current) { throw new CancelError() }

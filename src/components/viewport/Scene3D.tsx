@@ -7,6 +7,7 @@ import { STLLoader } from 'three/addons/loaders/STLLoader.js'
 
 import { normalizeOutline } from '@/lib/viewport'
 import { buildSceneContent } from '@/lib/scene3dBuilder'
+import { useTheme } from '@/contexts/ThemeContext'
 import type { DesignSpec, PlacementResult, RoutingResult } from '@/types/models'
 
 function cssColor (prop: string, fallback: string): THREE.Color {
@@ -31,11 +32,13 @@ interface Props {
 }
 
 export default function Scene3D ({ stlUrl, design, placement, routing, className }: Props) {
+	const { color: themeColor } = useTheme()
 	const containerRef = useRef<HTMLDivElement>(null)
 	const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
 	const sceneRef = useRef<THREE.Scene | null>(null)
 	const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
 	const controlsRef = useRef<OrbitControls | null>(null)
+	const gridRef = useRef<THREE.GridHelper | null>(null)
 	const frameRef = useRef<number>(0)
 	const needsFitRef = useRef(true)
 
@@ -84,6 +87,7 @@ export default function Scene3D ({ stlUrl, design, placement, routing, className
 		const grid = new THREE.GridHelper(400, 40, gridMain.getHex(), gridSub.getHex())
 		grid.position.y = -0.5
 		scene.add(grid)
+		gridRef.current = grid
 
 		const animate = () => {
 			frameRef.current = requestAnimationFrame(animate)
@@ -112,6 +116,31 @@ export default function Scene3D ({ stlUrl, design, placement, routing, className
 			}
 		}
 	}, [])
+
+	useEffect(() => {
+		const scene = sceneRef.current
+		const renderer = rendererRef.current
+		const oldGrid = gridRef.current
+		if (!scene || !renderer) return
+
+		const bg = cssColor('--color-surface', '#0d1117')
+		scene.background = bg
+		if (scene.fog instanceof THREE.FogExp2) scene.fog.color.copy(bg)
+		renderer.setClearColor(bg.getHex(), 1)
+
+		if (oldGrid) {
+			scene.remove(oldGrid)
+			oldGrid.geometry.dispose()
+			if (Array.isArray(oldGrid.material)) oldGrid.material.forEach(m => m.dispose())
+			else oldGrid.material.dispose()
+		}
+		const gridMain = bg.clone().lerp(new THREE.Color('#ffffff'), 0.08)
+		const gridSub = bg.clone().lerp(new THREE.Color('#ffffff'), 0.04)
+		const grid = new THREE.GridHelper(400, 40, gridMain.getHex(), gridSub.getHex())
+		grid.position.y = -0.5
+		scene.add(grid)
+		gridRef.current = grid
+	}, [themeColor])
 
 	useEffect(() => {
 		const scene = sceneRef.current

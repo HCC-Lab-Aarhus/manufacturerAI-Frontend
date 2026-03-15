@@ -123,7 +123,9 @@ export default function CircuitPanel (): ReactElement {
 						</div>
 					</div>
 				) : (
-					<ChatLog messages={messages} />
+					<div className="flex h-full flex-col">
+						<ChatLog messages={messages} />
+					</div>
 				)}
 			</div>
 		</div>

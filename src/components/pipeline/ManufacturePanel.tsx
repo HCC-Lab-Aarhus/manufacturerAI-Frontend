@@ -180,19 +180,6 @@ export default function ManufacturePanel (): ReactElement {
 							))}
 						</div>
 
-						{gcodeStatus?.stages && gcodeStatus.stages.length > 0 && (
-							<div className="mx-auto mt-4 max-w-lg rounded-xl bg-surface-chip p-4">
-								<h4 className="mb-2 text-xs font-semibold text-fg-secondary">G-Code Stages</h4>
-								{gcodeStatus.stages.map((stage, i) => (
-									<div key={i} className="flex items-center gap-2 py-1 text-xs text-fg-secondary">
-										<span className={stage.status === 'done' ? 'text-success' : stage.status === 'error' ? 'text-danger' : ''}>{stage.status === 'done' ? '✓' : stage.status === 'error' ? '✗' : '○'}</span>
-										<span className="font-medium">{stage.name}</span>
-										{stage.message && <span className="text-fg-muted">{stage.message}</span>}
-									</div>
-								))}
-							</div>
-						)}
-
 						{allDone && sessionId && (
 							<div className="mx-auto mt-8 max-w-lg rounded-2xl bg-surface-chip p-6">
 								<h3 className="mb-4 text-sm font-semibold text-fg">Output Files</h3>

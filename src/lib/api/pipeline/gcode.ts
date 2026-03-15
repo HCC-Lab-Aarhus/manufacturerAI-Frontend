@@ -1,0 +1,33 @@
+import type { GCodeStatus } from '@/types/models'
+import apiClient from '../client'
+
+const sid = (id: string) => encodeURIComponent(id)
+
+export async function startGCode (
+	sessionId: string,
+	options?: { force?: boolean; filament?: string; silverink_only?: boolean }
+): Promise<void> {
+	await apiClient.post(
+		`/api/v2/sessions/${sid(sessionId)}/manufacture/gcode`,
+		null,
+		{
+			params: {
+				...(options?.force ? { force: 'true' } : {}),
+				...(options?.filament ? { filament: options.filament } : {}),
+				...(options?.silverink_only ? { silverink_only: 'true' } : {})
+			}
+		}
+	)
+}
+
+export async function pollGCode (sessionId: string): Promise<GCodeStatus> {
+	const { data } = await apiClient.get<GCodeStatus>(
+		`/api/v2/sessions/${sid(sessionId)}/manufacture/gcode`
+	)
+	return data
+}
+
+export function getGCodeDownloadUrl (sessionId: string, format: 'gcode' | 'bgcode' = 'gcode'): string {
+	const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+	return `${base}/api/v2/sessions/${sid(sessionId)}/manufacture/gcode/download?format=${format}`
+}

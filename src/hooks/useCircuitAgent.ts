@@ -55,6 +55,8 @@ export function useCircuitAgent () {
 	const runCircuit = useCallback(async () => {
 		if (!currentSession || streaming) { return }
 
+		setMessages([])
+		setCircuit(null)
 		setStreaming(true)
 
 		const handleEvent = (type: SSEEventType, data: unknown) => {
