@@ -3,12 +3,11 @@
 import dynamic from 'next/dynamic'
 import { type ReactElement, useCallback, useEffect, useRef, useState } from 'react'
 
-import { useSession } from '@/contexts/SessionContext'
 import { usePipeline } from '@/contexts/PipelineContext'
+import { useSession } from '@/contexts/SessionContext'
 import type { StepStatus, ManufactureStepState } from '@/hooks/useManufacture'
 import { useManufacture } from '@/hooks/useManufacture'
-import { getBundleDownloadUrl, getGCodeDownloadUrl, getBitmapDownloadUrl, getPrintJobDownloadUrl, getStlDownloadUrl } from '@/lib/api'
-import { listFilaments } from '@/lib/api'
+import { getBundleDownloadUrl, getGCodeDownloadUrl, getBitmapDownloadUrl, getPrintJobDownloadUrl, getStlDownloadUrl, listFilaments } from '@/lib/api'
 import type { Filament } from '@/types/models'
 
 const PlacementViewport = dynamic(() => import('@/components/viewport/PlacementViewport'), { ssr: false })
@@ -85,13 +84,13 @@ const STEP_TO_TAB: Record<string, ViewTab> = {
 	routing: 'routing',
 	bitmap: 'bitmap',
 	scad: '3d',
-	compile: '3d',
+	compile: '3d'
 }
 
 export default function ManufacturePanel (): ReactElement {
 	const { currentSession, setActiveStage } = useSession()
 	const { setPendingFeedback } = usePipeline()
-	const { steps, running, allDone, placementResult, routingResult, bitmapResult, gcodeStatus, runPipeline, stop } = useManufacture()
+	const { steps, running, allDone, placementResult, routingResult, bitmapResult, runPipeline, stop } = useManufacture()
 	const [filaments, setFilaments] = useState<Filament[]>([])
 	const [selectedFilament, setSelectedFilament] = useState<string>('')
 	const [silverinkOnly, setSilverinkOnly] = useState(false)
@@ -139,7 +138,7 @@ export default function ManufacturePanel (): ReactElement {
 				{/* Left: Steps panel */}
 				<div className="w-72 shrink-0 flex flex-col border-r border-border">
 					<div className="flex items-center justify-between px-3 py-2 border-b border-border">
-						<span className="text-xs font-semibold text-fg">Steps</span>
+						<span className="text-xs font-semibold text-fg">{'Steps'}</span>
 						<div className="flex items-center gap-2">
 							{!running && !allDone && (
 								<label className="flex items-center gap-1 text-[11px] text-fg-secondary">
@@ -149,7 +148,7 @@ export default function ManufacturePanel (): ReactElement {
 										onChange={e => setSilverinkOnly(e.target.checked)}
 										className="rounded border-border-light"
 									/>
-									SilverInk
+									{'SilverInk'}
 								</label>
 							)}
 							{running ? (
@@ -157,23 +156,23 @@ export default function ManufacturePanel (): ReactElement {
 									onClick={stop}
 									className="rounded-md bg-danger px-2.5 py-1 text-[11px] font-medium text-white hover:bg-danger/80 transition-colors"
 								>
-									Stop
+									{'Stop'}
 								</button>
 							) : allDone ? (
-								<span className="text-[11px] font-medium text-success">Complete</span>
+								<span className="text-[11px] font-medium text-success">{'Complete'}</span>
 							) : canResume ? (
 								<button
 									onClick={() => runPipeline(firstIncomplete!.step, { filament: selectedFilament || undefined, silverink_only: silverinkOnly })}
 									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
 								>
-									Resume
+									{'Resume'}
 								</button>
 							) : (
 								<button
 									onClick={() => runPipeline(undefined, { filament: selectedFilament || undefined, silverink_only: silverinkOnly })}
 									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
 								>
-									Start
+									{'Start'}
 								</button>
 							)}
 						</div>
@@ -187,7 +186,7 @@ export default function ManufacturePanel (): ReactElement {
 								title="Filament"
 								className="w-full rounded-md border border-border bg-surface-card px-2 py-1 text-[11px] text-fg-secondary"
 							>
-								<option value="">Default filament</option>
+								<option value="">{'Default filament'}</option>
 								{filaments.map(f => (
 									<option key={f.id} value={f.id}>{f.label}</option>
 								))}
@@ -202,22 +201,26 @@ export default function ManufacturePanel (): ReactElement {
 					</div>
 
 					{allDone && sessionId && (
-						<div className="border-t border-border p-3 flex flex-col gap-1.5">
-							<span className="text-[11px] font-semibold text-fg mb-0.5">Output Files</span>
-							<a href={getGCodeDownloadUrl(sessionId)} download className="flex items-center gap-2 rounded-md bg-surface-card px-2.5 py-1.5 text-[11px] text-fg hover:bg-surface-hover transition-colors">
-								<span className="flex-1 font-medium">enclosure.gcode</span>
+						<div className="border-t border-border p-4 flex flex-col gap-2">
+							<span className="text-xs font-semibold text-fg">{'Output Files'}</span>
+							<a href={getGCodeDownloadUrl(sessionId)} download className="flex items-center gap-2 rounded-lg bg-surface-card px-3 py-2 text-xs text-fg hover:bg-surface-hover transition-colors">
+								<span className="flex-1 font-medium">{'enclosure.gcode'}</span>
+								<span className="text-[10px] text-fg-secondary">{'G-code'}</span>
 							</a>
-							<a href={getStlDownloadUrl(sessionId)} download className="flex items-center gap-2 rounded-md bg-surface-card px-2.5 py-1.5 text-[11px] text-fg hover:bg-surface-hover transition-colors">
-								<span className="flex-1 font-medium">enclosure.stl</span>
+							<a href={getStlDownloadUrl(sessionId)} download className="flex items-center gap-2 rounded-lg bg-surface-card px-3 py-2 text-xs text-fg hover:bg-surface-hover transition-colors">
+								<span className="flex-1 font-medium">{'enclosure.stl'}</span>
+								<span className="text-[10px] text-fg-secondary">{'3D model'}</span>
 							</a>
-							<a href={getBitmapDownloadUrl(sessionId)} download className="flex items-center gap-2 rounded-md bg-surface-card px-2.5 py-1.5 text-[11px] text-fg hover:bg-surface-hover transition-colors">
-								<span className="flex-1 font-medium">trace_bitmap.txt</span>
+							<a href={getBitmapDownloadUrl(sessionId)} download className="flex items-center gap-2 rounded-lg bg-surface-card px-3 py-2 text-xs text-fg hover:bg-surface-hover transition-colors">
+								<span className="flex-1 font-medium">{'trace_bitmap.txt'}</span>
+								<span className="text-[10px] text-fg-secondary">{'Bitmap'}</span>
 							</a>
-							<a href={getPrintJobDownloadUrl(sessionId)} download className="flex items-center gap-2 rounded-md bg-surface-card px-2.5 py-1.5 text-[11px] text-fg hover:bg-surface-hover transition-colors">
-								<span className="flex-1 font-medium">print_job.json</span>
+							<a href={getPrintJobDownloadUrl(sessionId)} download className="flex items-center gap-2 rounded-lg bg-surface-card px-3 py-2 text-xs text-fg hover:bg-surface-hover transition-colors">
+								<span className="flex-1 font-medium">{'print_job.json'}</span>
+								<span className="text-[10px] text-fg-secondary">{'Manifest'}</span>
 							</a>
-							<a href={getBundleDownloadUrl(sessionId)} download className="mt-1 flex items-center justify-center rounded-md bg-success px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-success/80 transition-colors">
-								Download Bundle (.zip)
+							<a href={getBundleDownloadUrl(sessionId)} download className="mt-1 flex items-center justify-center rounded-lg bg-success px-4 py-2.5 text-sm font-semibold text-white hover:bg-success/80 transition-colors">
+								{'Download Bundle (.zip)'}
 							</a>
 						</div>
 					)}
