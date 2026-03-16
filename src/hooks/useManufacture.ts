@@ -272,6 +272,14 @@ export function useManufacture () {
 				const { message, responsibleAgent } = extractPipelineError(err)
 				if (activeStep) {
 					updateStep(activeStep, { status: 'error', message, responsibleAgent })
+					// Reset all downstream steps to pending so they don't stay
+					// green from a previous successful run.
+					const failedIdx = allSteps.indexOf(activeStep)
+					setSteps(prev => prev.map((s, i) =>
+						i > failedIdx && s.status === 'done'
+							? { ...s, status: 'pending' as StepStatus, message: undefined, responsibleAgent: undefined }
+							: s
+					))
 				}
 				if (!responsibleAgent) {
 					addError(message)
