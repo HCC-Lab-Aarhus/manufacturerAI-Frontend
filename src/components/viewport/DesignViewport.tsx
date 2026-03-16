@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, type ReactElement, useEffect, useRef } from 'react'
+import { memo, type ReactElement, useEffect, useRef, useState } from 'react'
 
 import { useSession } from '@/contexts/SessionContext'
 import type { CatalogBody, CatalogPin, DesignSpec, UIPlacement } from '@/types/models'
@@ -90,6 +90,9 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 	const commitSeqRef = useRef(0)
 	const pendingAbortRef = useRef<AbortController | null>(null)
 	const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+	// Kept up-to-date every render so effects with [] deps can read the current base bbox
+	const bboxBaseRef = useRef({ x: 0, y: 0, w: 0, h: 0 })
 
 	useEffect(() => {
 		const svg = svgRef.current
@@ -326,14 +329,59 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 		}
 	}, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+	const bbox = outlineBBox(outline)
+	const baseVbX = bbox.minX * SCALE - PAD
+	const baseVbY = bbox.minY * SCALE - PAD
+	const baseVbW = bbox.width * SCALE + PAD * 2
+	const baseVbH = bbox.height * SCALE + PAD * 2
+
+	const [vbState, setVbState] = useState({ x: baseVbX, y: baseVbY, w: baseVbW, h: baseVbH })
+
+	// Reset viewBox when the outline geometry changes
+	const outlineKey = `${bbox.minX},${bbox.minY},${bbox.width},${bbox.height}`
+	const outlineKeyRef = useRef(outlineKey)
+	useEffect(() => {
+		if (outlineKeyRef.current !== outlineKey) {
+			outlineKeyRef.current = outlineKey
+			setVbState({ x: baseVbX, y: baseVbY, w: baseVbW, h: baseVbH })
+		}
+	}) // eslint-disable-line react-hooks/exhaustive-deps
+
+	// Wheel zoom handler
+	useEffect(() => {
+		const svg = svgRef.current
+		if (!svg) return
+		function onWheel (e: WheelEvent) {
+			e.preventDefault()
+			const factor = e.deltaY > 0 ? 1.1 : 1 / 1.1
+			const rect = svg!.getBoundingClientRect()
+			const fx = (e.clientX - rect.left) / rect.width
+			const fy = (e.clientY - rect.top) / rect.height
+			setVbState(prev => {
+				const { x: bx, y: by, w: bw, h: bh } = bboxBaseRef.current
+				const newW = Math.min(bw * 4, Math.max(10, prev.w * factor))
+				const newH = Math.min(bh * 4, Math.max(10, prev.h * factor))
+				const rawX = prev.x + fx * (prev.w - newW)
+				const rawY = prev.y + fy * (prev.h - newH)
+				return {
+					x: Math.max(bx - bw, Math.min(bx + bw, rawX)),
+					y: Math.max(by - bh, Math.min(by + bh, rawY)),
+					w: newW, h: newH,
+				}
+			})
+		}
+		svg.addEventListener('wheel', onWheel, { passive: false })
+		return () => { svg.removeEventListener('wheel', onWheel) }
+	}, []) // eslint-disable-line react-hooks/exhaustive-deps
+
 	if (outline.length < 3) {
 		return <div className="flex items-center justify-center text-fg-secondary text-sm p-8">No outline data</div>
 	}
 
-	const bbox = outlineBBox(outline)
-	const vbW = bbox.width * SCALE + PAD * 2
-	const vbH = bbox.height * SCALE + PAD * 2
-	const vb = `${bbox.minX * SCALE - PAD} ${bbox.minY * SCALE - PAD} ${vbW} ${vbH}`
+	// Keep bboxBaseRef current so the wheel effect can read it for clamping
+	bboxBaseRef.current = { x: baseVbX, y: baseVbY, w: baseVbW, h: baseVbH }
+
+	const vb = `${vbState.x} ${vbState.y} ${vbState.w} ${vbState.h}`
 	const path = buildOutlinePath(outline)
 
 	const UI_COLORS = [
@@ -362,8 +410,8 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 					<rect
 						x={bbox.minX * SCALE - PAD}
 						y={bbox.minY * SCALE - PAD}
-						width={vbW}
-						height={vbH}
+						width={baseVbW}
+						height={baseVbH}
 						fill="url(#grid10)"
 					/>
 					<path d={path} fill="rgba(86,114,160,0.06)" stroke="#5672a0" strokeWidth={2} />
