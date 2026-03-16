@@ -125,9 +125,13 @@ export default function ChatMessage ({ entry }: ChatMessageProps): ReactElement 
 
 	if (entry.role === 'thinking') {
 		return (
-			<div>
+			<div className="my-1 ml-2 max-w-[75%] rounded-lg border border-border/40 bg-surface-card/50 px-3 py-2">
+				<div className="flex items-center gap-1.5 text-[11px] text-fg-muted/60 font-medium mb-0.5">
+					<span className="text-[10px]">{'⧗'}</span>
+					<span>{'Thinking'}</span>
+				</div>
 				{expanded ? (
-					<div className="text-xs text-fg-secondary leading-relaxed markdown-body [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+					<div className="text-xs text-fg-secondary/80 leading-relaxed markdown-body [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
 						<Markdown remarkPlugins={[remarkGfm]}>{entry.content}</Markdown>
 					</div>
 				) : entry.content.length > 0 && (
@@ -136,7 +140,7 @@ export default function ChatMessage ({ entry }: ChatMessageProps): ReactElement 
 				{entry.content.length > 0 && !entry.isStreaming && (
 					<button
 						onClick={() => setExpanded(!expanded)}
-						className="text-[11px] text-fg-muted hover:text-fg-secondary transition-colors mt-0.5"
+						className="text-[11px] text-fg-muted/60 hover:text-fg-secondary transition-colors mt-1"
 					>
 						{expanded ? 'Collapse' : 'Expand'}
 					</button>
