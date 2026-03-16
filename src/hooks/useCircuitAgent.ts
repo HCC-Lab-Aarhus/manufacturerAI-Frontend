@@ -25,6 +25,7 @@ export function useCircuitAgent () {
 
 	const [messages, setMessages] = useState<ChatEntry[]>([])
 	const [streaming, setStreaming] = useState(false)
+	const [conversationLoading, setConversationLoading] = useState(false)
 	const abortRef = useRef<AbortController | null>(null)
 	const streamingRef = useRef(false)
 	const circuitReceivedRef = useRef(false)
@@ -268,6 +269,8 @@ export function useCircuitAgent () {
 			}
 		} catch {
 			setMessages([])
+		} finally {
+			setConversationLoading(false)
 		}
 	}, [setCircuit, subscribeToStream])
 
@@ -285,6 +288,7 @@ export function useCircuitAgent () {
 	return {
 		messages,
 		streaming,
+		conversationLoading,
 		runCircuit,
 		sendFeedback,
 		loadConversation,

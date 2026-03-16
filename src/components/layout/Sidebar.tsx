@@ -19,6 +19,7 @@ export default function Sidebar (): ReactElement {
 		clearSession,
 		refreshSessions,
 		patchSession,
+		setActiveStage,
 		printer,
 		setPrinter
 	} = useSession()
@@ -45,8 +46,9 @@ export default function Sidebar (): ReactElement {
 
 	const handleSelectSession = useCallback(async (id: string) => {
 		clearAll()
+		setActiveStage('design')
 		await selectSession(id)
-	}, [clearAll, selectSession])
+	}, [clearAll, selectSession, setActiveStage])
 
 	const handlePrinterChange = useCallback(async (printerId: string) => {
 		if (!currentSession) { return }

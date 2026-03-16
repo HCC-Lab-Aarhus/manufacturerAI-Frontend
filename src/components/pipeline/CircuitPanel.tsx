@@ -44,6 +44,7 @@ export default function CircuitPanel (): ReactElement {
 	const {
 		messages,
 		streaming,
+		conversationLoading,
 		runCircuit,
 		sendFeedback,
 		loadConversation,
@@ -183,6 +184,10 @@ export default function CircuitPanel (): ReactElement {
 								</div>
 							</section>
 						</div>
+					</div>
+				) : conversationLoading ? (
+					<div className="flex h-full items-center justify-center">
+						<LoadingSpinner size="md" />
 					</div>
 				) : hasConversation ? (
 					<div className="flex h-full flex-col">

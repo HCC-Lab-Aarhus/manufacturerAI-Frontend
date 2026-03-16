@@ -5,6 +5,7 @@ import { type ReactElement, useCallback, useEffect, useRef, useState } from 'rea
 
 import ChatInput from '@/components/chat/ChatInput'
 import ChatLog from '@/components/chat/ChatLog'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import TokenMeter from '@/components/ui/TokenMeter'
 import { usePipeline } from '@/contexts/PipelineContext'
 import { useSession } from '@/contexts/SessionContext'
@@ -20,6 +21,7 @@ export default function DesignPanel (): ReactElement {
 	const {
 		messages,
 		streaming,
+		conversationLoading,
 		tokenUsage,
 		sendMessage,
 		loadConversation,
@@ -105,7 +107,11 @@ export default function DesignPanel (): ReactElement {
 					</div>
 				) : (
 					<div className="flex h-full flex-col">
-						{hasMessages ? (
+						{conversationLoading ? (
+							<div className="flex flex-1 items-center justify-center">
+								<LoadingSpinner size="md" />
+							</div>
+						) : hasMessages ? (
 							<ChatLog messages={messages} />
 						) : (
 						<div className="flex flex-1 flex-col items-center justify-center gap-4 text-fg-secondary">

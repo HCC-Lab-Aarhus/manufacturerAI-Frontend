@@ -27,12 +27,13 @@ export interface ChatEntry {
 }
 
 export function useDesignAgent () {
-	const { currentSession, selectSession, refreshSession, refreshSessions, patchSession } = useSession()
+	const { currentSession, selectSession, setActiveStage, refreshSession, refreshSessions, patchSession } = useSession()
 	const { setDesign } = usePipeline()
 	const { addError } = useError()
 
 	const [messages, setMessages] = useState<ChatEntry[]>([])
 	const [streaming, setStreaming] = useState(false)
+	const [conversationLoading, setConversationLoading] = useState(false)
 	const [tokenUsage, setTokenUsage] = useState<TokenUsage | null>(null)
 	const abortRef = useRef<AbortController | null>(null)
 	const streamingRef = useRef(false)
@@ -186,6 +187,7 @@ export function useDesignAgent () {
 			sessionId = session_id
 			refreshSessions()
 			selectSession(sessionId)
+			setActiveStage('design')
 		}
 
 		appendMessage({
@@ -202,11 +204,13 @@ export function useDesignAgent () {
 			streamingRef.current = false
 			setStreaming(false)
 		}
-	}, [streaming, currentSession, appendMessage, subscribeToStream, refreshSessions, selectSession, addError, nextId])
+	}, [streaming, currentSession, appendMessage, subscribeToStream, refreshSessions, selectSession, setActiveStage, addError, nextId])
 
 	const loadConversation = useCallback(async (sessionId: string) => {
 		if (streamingRef.current) return
 		sentFirstRef.current = false
+		setMessages([])
+		setConversationLoading(true)
 		try {
 			const status = await getDesignStatus(sessionId).catch(() => null)
 			const isRunning = status?.status === 'running'
@@ -276,6 +280,8 @@ export function useDesignAgent () {
 			}
 		} catch {
 			setMessages([])
+		} finally {
+			setConversationLoading(false)
 		}
 	}, [setDesign, subscribeToStream])
 
@@ -293,6 +299,7 @@ export function useDesignAgent () {
 	return {
 		messages,
 		streaming,
+		conversationLoading,
 		tokenUsage,
 		sendMessage,
 		loadConversation,
