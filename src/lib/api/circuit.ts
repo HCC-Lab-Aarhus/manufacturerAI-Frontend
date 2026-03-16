@@ -1,4 +1,4 @@
-import type { CircuitSpec, ConversationMessage } from '@/types/models'
+import type { CircuitSpec, ConversationMessage, TokenUsage } from '@/types/models'
 
 import apiClient from './client'
 import { type SSECallbacks, consumeSSEStream } from './sse'
@@ -74,6 +74,13 @@ export async function getCircuitConversation (sessionId: string): Promise<Conver
 export async function getCircuitResult (sessionId: string): Promise<CircuitSpec> {
 	const { data } = await apiClient.get<CircuitSpec>(
 		`/api/v2/sessions/${encodeURIComponent(sessionId)}/circuit`
+	)
+	return data
+}
+
+export async function getCircuitTokenUsage (sessionId: string): Promise<TokenUsage> {
+	const { data } = await apiClient.get<TokenUsage>(
+		`/api/v2/sessions/${encodeURIComponent(sessionId)}/circuit/tokens`
 	)
 	return data
 }

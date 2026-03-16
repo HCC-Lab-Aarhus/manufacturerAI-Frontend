@@ -47,6 +47,7 @@ export default function CircuitPanel (): ReactElement {
 		messages,
 		streaming,
 		conversationLoading,
+		tokenUsage,
 		runCircuit,
 		sendFeedback,
 		loadConversation,
@@ -127,6 +128,7 @@ export default function CircuitPanel (): ReactElement {
 							placeholder="Give feedback on the circuit…"
 							streaming={streaming}
 							onStop={cancel}
+							tokenUsage={tokenUsage}
 						/>
 					</div>
 				</>

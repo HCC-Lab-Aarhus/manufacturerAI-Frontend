@@ -11,10 +11,11 @@ import {
 	getCircuitStatus,
 	stopCircuit,
 	getCircuitConversation,
-	getCircuitResult
+	getCircuitResult,
+	getCircuitTokenUsage
 } from '@/lib/api'
 import type { SSEEventType } from '@/types/events'
-import type { CircuitSpec } from '@/types/models'
+import type { CircuitSpec, TokenUsage } from '@/types/models'
 
 import type { ChatEntry } from './useDesignAgent'
 
@@ -26,6 +27,7 @@ export function useCircuitAgent () {
 	const [messages, setMessages] = useState<ChatEntry[]>([])
 	const [streaming, setStreaming] = useState(false)
 	const [_conversationLoading, setConversationLoading] = useState(false)
+	const [tokenUsage, setTokenUsage] = useState<TokenUsage | null>(null)
 	const loadedSessionRef = useRef<string | null>(null)
 	const abortRef = useRef<AbortController | null>(null)
 	const streamingRef = useRef(false)
@@ -128,6 +130,9 @@ export function useCircuitAgent () {
 			case 'error':
 				addError(d.message ?? d)
 				break
+			case 'token_usage':
+				setTokenUsage(d as unknown as TokenUsage)
+				break
 			case 'done':
 				appendMessage({
 					id: nextId('status'),
@@ -213,10 +218,11 @@ export function useCircuitAgent () {
 				await new Promise(resolve => setTimeout(resolve, 150))
 			}
 
-			const [convo, circuit, freshStatus] = await Promise.all([
+			const [convo, circuit, freshStatus, tokens] = await Promise.all([
 				getCircuitConversation(sessionId),
 				getCircuitResult(sessionId).catch(() => null),
-				isRunning ? getCircuitStatus(sessionId).catch(() => null) : Promise.resolve(null)
+				isRunning ? getCircuitStatus(sessionId).catch(() => null) : Promise.resolve(null),
+				getCircuitTokenUsage(sessionId).catch(() => null)
 			])
 
 			const entries: ChatEntry[] = []
@@ -267,6 +273,10 @@ export function useCircuitAgent () {
 				setCircuit(circuit)
 			}
 
+			if (tokens) {
+				setTokenUsage(tokens)
+			}
+
 			if (isRunning) {
 				const cursor = freshStatus?.last_save_cursor ?? status?.last_save_cursor ?? 0
 				setStreaming(true)
@@ -299,6 +309,7 @@ export function useCircuitAgent () {
 		streamingRef.current = false
 		setStreaming(false)
 		setMessages([])
+		setTokenUsage(null)
 		loadedSessionRef.current = null
 	}, [])
 
@@ -306,6 +317,7 @@ export function useCircuitAgent () {
 		messages,
 		streaming,
 		conversationLoading,
+		tokenUsage,
 		runCircuit,
 		sendFeedback,
 		loadConversation,
