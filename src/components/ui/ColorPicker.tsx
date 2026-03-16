@@ -41,6 +41,24 @@ function hsbToHex (h: number, s: number, b: number): string {
 const WHEEL_SIZE = 56
 const WHEEL_R = WHEEL_SIZE / 2
 const RING_WIDTH = 8
+const LOG_EXP = 2
+
+function toSliderPos (value: number): number {
+	return Math.pow(Math.max(0, Math.min(1, value)), 1 / LOG_EXP)
+}
+
+function fromSliderPos (pos: number): number {
+	return Math.pow(Math.max(0, Math.min(1, pos)), LOG_EXP)
+}
+
+function logGradient (steps: number, colorFn: (v: number) => string): string {
+	const parts = Array.from({ length: steps }, (_, i) => {
+		const pos = i / (steps - 1)
+		const val = fromSliderPos(pos)
+		return `${colorFn(val)} ${(pos * 100).toFixed(1)}%`
+	})
+	return `linear-gradient(to right, ${parts.join(', ')})`
+}
 
 function HueWheel ({ hue, sat, bri, onChange }: {
 	hue: number
@@ -65,7 +83,7 @@ function HueWheel ({ hue, sat, bri, onChange }: {
 	const onPointerMove = useCallback((e: React.PointerEvent) => {
 		if (!dragRef.current) return
 		const dx = e.clientX - dragRef.current.startX
-		const newH = (dragRef.current.startHue + dx * 2 + 3600) % 360
+		const newH = (dragRef.current.startHue + dx * 0.5 + 3600) % 360
 		onChange(newH)
 	}, [onChange])
 
@@ -116,10 +134,9 @@ function HueWheel ({ hue, sat, bri, onChange }: {
 	)
 }
 
-function HsbSlider ({ label, value, max, background, onChange, onInvert }: {
+function HsbSlider ({ label, value, background, onChange, onInvert }: {
 	label: string
 	value: number
-	max: number
 	background: string
 	onChange: (v: number) => void
 	onInvert: () => void
@@ -132,10 +149,10 @@ function HsbSlider ({ label, value, max, background, onChange, onInvert }: {
 				<input
 					type="range"
 					min={0}
-					max={max}
-					step={max > 1 ? 1 : 0.01}
-					value={value}
-					onChange={e => onChange(Number(e.target.value))}
+					max={1}
+					step={0.005}
+					value={toSliderPos(value)}
+					onChange={e => onChange(fromSliderPos(Number(e.target.value)))}
 					className="absolute inset-0 w-full h-full appearance-none bg-transparent cursor-pointer
 						[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
 						[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white
@@ -185,11 +202,11 @@ export default function ColorPicker (): ReactElement {
 	}, [setColor])
 
 	const satGradient = useMemo(() =>
-		`linear-gradient(to right, ${hsbToHex(h, 0, b)}, ${hsbToHex(h, 1, b)})`,
+		logGradient(11, v => hsbToHex(h, v, b)),
 	[h, b])
 
 	const briGradient = useMemo(() =>
-		`linear-gradient(to right, ${hsbToHex(h, s, 0)}, ${hsbToHex(h, s, 1)})`,
+		logGradient(11, v => hsbToHex(h, s, v)),
 	[h, s])
 
 	const handleReset = useCallback(() => {
@@ -219,14 +236,14 @@ export default function ColorPicker (): ReactElement {
 				<HueWheel hue={h} sat={s} bri={b} onChange={v => applyHsb(v, s, b)} />
 				<div className="flex flex-col gap-1.5 flex-1 min-w-0">
 					<HsbSlider
-						label="S" value={s} max={1} background={satGradient}
+						label="S" value={s} background={satGradient}
 						onChange={v => applyHsb(h, v, b)}
-						onInvert={() => applyHsb(h, 1 - s, b)}
+						onInvert={() => applyHsb(h, fromSliderPos(1 - toSliderPos(s)), b)}
 					/>
 					<HsbSlider
-						label="B" value={b} max={1} background={briGradient}
+						label="B" value={b} background={briGradient}
 						onChange={v => applyHsb(h, s, v)}
-						onInvert={() => applyHsb(h, s, 1 - b)}
+						onInvert={() => applyHsb(h, s, fromSliderPos(1 - toSliderPos(b)))}
 					/>
 				</div>
 			</div>
