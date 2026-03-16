@@ -1,4 +1,4 @@
-export const DEFAULT_COLOR = '#f8f7f4'
+export const DEFAULT_COLOR = '#2a2a2e'
 const COOKIE_NAME = 'theme-color'
 
 interface HSL { h: number; s: number; l: number }
