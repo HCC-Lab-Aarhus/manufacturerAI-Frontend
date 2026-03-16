@@ -231,11 +231,44 @@ export interface PinGroup {
 	capabilities?: string[] | null
 }
 
+export interface MountingCap {
+	diameter_mm: number
+	height_mm: number
+	hole_clearance_mm: number
+}
+
+export interface MountingHatch {
+	enabled: boolean
+	clearance_mm: number
+	thickness_mm: number
+}
+
 export interface Mounting {
 	style: string
 	allowed_styles: string[]
 	blocks_routing: boolean
 	keepout_margin_mm: number
+	cap?: MountingCap | null
+	hatch?: MountingHatch | null
+}
+
+export interface ScadPattern {
+	type: string
+	spacing_mm: number
+	clip_to_body?: boolean
+}
+
+export interface ScadFeature {
+	shape: 'rect' | 'circle'
+	label: string
+	position_mm: [number, number]
+	width_mm?: number
+	length_mm?: number
+	diameter_mm?: number
+	depth_mm?: number
+	z_anchor?: string
+	through_surface?: boolean
+	pattern?: ScadPattern | null
 }
 
 export interface CatalogComponent {
@@ -249,6 +282,7 @@ export interface CatalogComponent {
 	internal_nets?: string[][]
 	pin_groups?: PinGroup[] | null
 	configurable?: Record<string, unknown> | null
+	scad?: { features: ScadFeature[] } | null
 	source_file?: string
 }
 
