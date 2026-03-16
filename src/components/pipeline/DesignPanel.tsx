@@ -41,8 +41,16 @@ export default function DesignPanel (): ReactElement {
 		if (scene3dTimerRef.current) clearTimeout(scene3dTimerRef.current)
 		scene3dTimerRef.current = setTimeout(() => {
 			setScene3dDesign(scene3dDesignRef.current)
+			scene3dTimerRef.current = null
 		}, 500)
 	}, [setDesign])
+
+	useEffect(() => {
+		scene3dDesignRef.current = design
+		if (!scene3dTimerRef.current) {
+			setScene3dDesign(design)
+		}
+	}, [design])
 
 	useEffect(() => {
 		if (currentSession) {
