@@ -6,6 +6,7 @@ import {
 	useCallback,
 	useContext,
 	useEffect,
+	useLayoutEffect,
 	useMemo,
 	useState
 } from 'react'
@@ -68,6 +69,17 @@ export function useSession (): SessionContextValue {
 }
 
 const STAGE_ORDER: PipelineStage[] = ['design', 'circuit', 'manufacture']
+const VALID_STAGES = new Set<string>(STAGE_ORDER)
+
+function syncTabParam (stage: PipelineStage): void {
+	const url = new URL(window.location.href)
+	if (stage === 'design') {
+		url.searchParams.delete('tab')
+	} else {
+		url.searchParams.set('tab', stage)
+	}
+	window.history.replaceState(null, '', url.toString())
+}
 
 export function isStageAccessible (
 	stage: PipelineStage,
@@ -88,7 +100,19 @@ export function isStageAccessible (
 export function SessionProvider ({ children }: { children: ReactNode }) {
 	const [sessions, setSessions] = useState<SessionMeta[]>([])
 	const [currentSession, setCurrentSession] = useState<SessionMeta | null>(null)
-	const [activeStage, setActiveStage] = useState<PipelineStage>('design')
+	const [activeStage, _setActiveStage] = useState<PipelineStage>('design')
+
+	useLayoutEffect(() => {
+		const tab = new URLSearchParams(window.location.search).get('tab')
+		if (tab && VALID_STAGES.has(tab)) {
+			_setActiveStage(tab as PipelineStage)
+		}
+	}, [])
+
+	const setActiveStage = useCallback((stage: PipelineStage) => {
+		_setActiveStage(stage)
+		syncTabParam(stage)
+	}, [])
 	const [loading, setLoading] = useState(false)
 	const [printer, _setPrinter] = useState<Printer | null>(null)
 	const [pendingInvalidation, setPendingInvalidation] = useState<string[] | null>(null)
@@ -114,7 +138,6 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 		try {
 			const session = await getSession(id)
 			setCurrentSession(session)
-			setActiveStage('design')
 			const url = new URL(window.location.href)
 			url.searchParams.set('session', id)
 			window.history.replaceState(null, '', url.toString())
@@ -125,10 +148,11 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 
 	const clearSession = useCallback(() => {
 		setCurrentSession(null)
-		setActiveStage('design')
+		_setActiveStage('design')
 		setPendingInvalidation(null)
 		const url = new URL(window.location.href)
 		url.searchParams.delete('session')
+		url.searchParams.delete('tab')
 		window.history.replaceState(null, '', url.toString())
 	}, [])
 
