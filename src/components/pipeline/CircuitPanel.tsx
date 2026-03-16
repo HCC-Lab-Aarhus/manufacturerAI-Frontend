@@ -236,32 +236,6 @@ export default function CircuitPanel (): ReactElement {
 	return (
 		<div className="flex h-full">
 			<div className={`flex flex-col border-r border-border ${circuit?.components ? 'w-1/2' : 'flex-1'}`}>
-				<div className="flex items-center justify-between border-b border-border px-4 py-1.5">
-					<span className="text-xs font-medium text-fg-secondary">Chat</span>
-					{hasConversation && !circuit?.components && (
-						<div className="flex items-center gap-2">
-							{streaming ? (
-								<>
-									<LoadingSpinner size="sm" label="Generating circuit…" />
-									<button
-										onClick={cancel}
-										className="rounded px-2 py-1 text-xs text-danger hover:bg-danger/10 transition-colors"
-									>
-										{'Stop'}
-									</button>
-								</>
-							) : (
-								<button
-									onClick={handleGenerate}
-									disabled={!currentSession}
-									className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-40 transition-colors"
-								>
-									{'Re-run Circuit'}
-								</button>
-							)}
-						</div>
-					)}
-				</div>
 				{chatColumn}
 			</div>
 			{detailsColumn && (
