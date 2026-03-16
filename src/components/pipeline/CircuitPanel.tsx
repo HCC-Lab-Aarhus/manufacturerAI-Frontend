@@ -49,6 +49,7 @@ export default function CircuitPanel (): ReactElement {
 		runCircuit,
 		sendFeedback,
 		loadConversation,
+		resetConversation,
 		cancel
 	} = useCircuitAgent()
 
@@ -67,6 +68,8 @@ export default function CircuitPanel (): ReactElement {
 	useEffect(() => {
 		if (currentSession) {
 			loadConversation(currentSession.id)
+		} else {
+			resetConversation()
 		}
 	}, [currentSession?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 

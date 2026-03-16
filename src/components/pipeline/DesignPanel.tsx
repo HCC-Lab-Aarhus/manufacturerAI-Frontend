@@ -26,6 +26,7 @@ export default function DesignPanel (): ReactElement {
 		sendMessage,
 		loadConversation,
 		notifyDesignEdited,
+		resetConversation,
 		cancel
 	} = useDesignAgent()
 
@@ -47,6 +48,8 @@ export default function DesignPanel (): ReactElement {
 	useEffect(() => {
 		if (currentSession) {
 			loadConversation(currentSession.id)
+		} else {
+			resetConversation()
 		}
 	}, [currentSession?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -320,6 +320,17 @@ export function useDesignAgent () {
 		}
 	}, [currentSession])
 
+	const resetConversation = useCallback(() => {
+		abortRef.current?.abort()
+		streamingRef.current = false
+		setStreaming(false)
+		setMessages([])
+		setTokenUsage(null)
+		loadedSessionRef.current = null
+		idCounter.current = 0
+		eventCursor.current = 0
+	}, [])
+
 	const notifyDesignEdited = useCallback(() => {
 		setMessages(prev => {
 			const last = prev[prev.length - 1]
@@ -341,6 +352,7 @@ export function useDesignAgent () {
 		tokenUsage,
 		sendMessage,
 		loadConversation,
+		resetConversation,
 		notifyDesignEdited,
 		cancel
 	}

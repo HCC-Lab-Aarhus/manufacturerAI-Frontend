@@ -293,6 +293,14 @@ export function useCircuitAgent () {
 		}
 	}, [currentSession])
 
+	const resetConversation = useCallback(() => {
+		abortRef.current?.abort()
+		streamingRef.current = false
+		setStreaming(false)
+		setMessages([])
+		loadedSessionRef.current = null
+	}, [])
+
 	return {
 		messages,
 		streaming,
@@ -300,6 +308,7 @@ export function useCircuitAgent () {
 		runCircuit,
 		sendFeedback,
 		loadConversation,
+		resetConversation,
 		cancel
 	}
 }
