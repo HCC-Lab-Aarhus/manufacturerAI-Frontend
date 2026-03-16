@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { type ReactElement, useCallback, useEffect, useState } from 'react'
+import { type ReactElement, useCallback, useEffect, useRef, useState } from 'react'
 
 import ColorPicker from '@/components/ui/ColorPicker'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
@@ -20,11 +20,17 @@ export default function Sidebar (): ReactElement {
 		refreshSessions,
 		patchSession,
 		setActiveStage,
+		renameSession,
+		deleteSession,
 		printer,
 		setPrinter
 	} = useSession()
 	const { clearAll } = usePipeline()
 	const [printers, setPrinters] = useState<Printer[]>([])
+	const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
+	const [renamingId, setRenamingId] = useState<string | null>(null)
+	const [renameValue, setRenameValue] = useState('')
+	const menuRef = useRef<HTMLDivElement>(null)
 
 	useEffect(() => {
 		listPrinters().then(setPrinters).catch(() => {})
@@ -61,6 +67,36 @@ export default function Sidebar (): ReactElement {
 			pipeline_errors: result.pipeline_errors,
 		})
 	}, [currentSession, printers, setPrinter, patchSession])
+
+	useEffect(() => {
+		if (!menuOpenId) { return }
+		const handleClick = (e: MouseEvent) => {
+			if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+				setMenuOpenId(null)
+			}
+		}
+		document.addEventListener('mousedown', handleClick)
+		return () => { document.removeEventListener('mousedown', handleClick) }
+	}, [menuOpenId])
+
+	const handleRenameStart = useCallback((id: string, currentName: string) => {
+		setMenuOpenId(null)
+		setRenamingId(id)
+		setRenameValue(currentName)
+	}, [])
+
+	const handleRenameSubmit = useCallback(async (id: string) => {
+		const trimmed = renameValue.trim()
+		if (trimmed) {
+			await renameSession(id, trimmed)
+		}
+		setRenamingId(null)
+	}, [renameValue, renameSession])
+
+	const handleDelete = useCallback(async (id: string) => {
+		setMenuOpenId(null)
+		await deleteSession(id)
+	}, [deleteSession])
 
 	useEffect(() => {
 		refreshSessions()
@@ -112,22 +148,69 @@ export default function Sidebar (): ReactElement {
 					) : (
 						<ul className="space-y-1">
 							{sessions.map(s => (
-								<li key={s.id}>
-									<button
-										onClick={() => { handleSelectSession(s.id) }}
-										className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-											currentSession?.id === s.id
-										? 'bg-surface-active text-accent-text'
-										: 'text-fg-secondary hover:bg-surface-hover hover:text-fg'
-										}`}
-									>
-										<span className="block truncate font-medium">
-											{s.name ?? s.description ?? s.id}
-										</span>
-										<span className="block text-xs text-fg-secondary">
-											{new Date(s.created).toLocaleString()}
-										</span>
-									</button>
+								<li key={s.id} className="group relative">
+									{renamingId === s.id ? (
+										<form
+											onSubmit={e => { e.preventDefault(); handleRenameSubmit(s.id) }}
+											className="rounded-lg px-3 py-2"
+										>
+											<input
+												autoFocus
+												value={renameValue}
+												onChange={e => { setRenameValue(e.target.value) }}
+												onBlur={() => { handleRenameSubmit(s.id) }}
+												onKeyDown={e => { if (e.key === 'Escape') { setRenamingId(null) } }}
+												className="w-full rounded border border-accent bg-surface-card px-2 py-1 text-sm text-fg outline-none"
+											/>
+										</form>
+									) : (
+										<div className={`flex items-center rounded-lg transition-colors ${
+										currentSession?.id === s.id
+									? 'bg-surface-active text-accent-text'
+									: 'text-fg-secondary hover:bg-surface-hover hover:text-fg'
+									}`}>
+											<button
+												onClick={() => { handleSelectSession(s.id) }}
+												className="flex-1 min-w-0 px-3 py-2 text-left text-sm"
+											>
+												<span className="block truncate font-medium">
+													{s.name ?? s.description ?? s.id}
+												</span>
+												<span className="block text-xs text-fg-secondary">
+													{new Date(s.created).toLocaleString()}
+												</span>
+											</button>
+											<div className="relative" ref={menuOpenId === s.id ? menuRef : undefined}>
+												<button
+													onClick={e => { e.stopPropagation(); setMenuOpenId(prev => prev === s.id ? null : s.id) }}
+													className="shrink-0 rounded p-1 text-fg-secondary opacity-0 group-hover:opacity-100 hover:bg-surface-hover hover:text-fg transition-all"
+													title="Session options"
+												>
+													<svg className="size-4" viewBox="0 0 16 16" fill="currentColor">
+														<circle cx={8} cy={3} r={1.5} />
+														<circle cx={8} cy={8} r={1.5} />
+														<circle cx={8} cy={13} r={1.5} />
+													</svg>
+												</button>
+												{menuOpenId === s.id && (
+													<div className="absolute right-0 top-full z-50 mt-1 w-36 rounded-lg border border-border bg-surface-card py-1 shadow-lg">
+														<button
+															onClick={() => { handleRenameStart(s.id, s.name ?? s.description ?? '') }}
+															className="w-full px-3 py-1.5 text-left text-sm text-fg hover:bg-surface-hover transition-colors"
+														>
+															{'Rename'}
+														</button>
+														<button
+															onClick={() => { handleDelete(s.id) }}
+															className="w-full px-3 py-1.5 text-left text-sm text-danger hover:bg-surface-hover transition-colors"
+														>
+															{'Delete'}
+														</button>
+													</div>
+												)}
+											</div>
+										</div>
+									)}
 								</li>
 							))}
 						</ul>

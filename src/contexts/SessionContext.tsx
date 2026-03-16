@@ -11,7 +11,7 @@ import {
 	useState
 } from 'react'
 
-import { getSession, listSessions } from '@/lib/api'
+import { deleteSession as apiDeleteSession, getSession, listSessions, renameSession as apiRenameSession } from '@/lib/api'
 import type { PipelineError, PipelineStage, Printer, SessionMeta } from '@/types/models'
 
 const PRINTER_COOKIE = 'printer-id'
@@ -43,6 +43,8 @@ interface SessionContextValue {
 	refreshSessions: () => Promise<void>
 	patchSession: (data: { artifacts?: Record<string, boolean>; pipeline_errors?: Record<string, PipelineError>; invalidated_steps?: string[] }) => void
 	clearInvalidation: () => void
+	renameSession: (id: string, name: string) => Promise<void>
+	deleteSession: (id: string) => Promise<void>
 	printer: Printer | null
 	setPrinter: (p: Printer | null) => void
 }
@@ -60,6 +62,8 @@ const SessionContext = createContext<SessionContextValue>({
 	refreshSessions: async () => {},
 	patchSession: () => {},
 	clearInvalidation: () => {},
+	renameSession: async () => {},
+	deleteSession: async () => {},
 	printer: null,
 	setPrinter: () => {}
 })
@@ -174,6 +178,27 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 		setPendingInvalidation(null)
 	}, [])
 
+	const renameSession = useCallback(async (id: string, name: string) => {
+		await apiRenameSession(id, name)
+		setSessions(prev => prev.map(s => s.id === id ? { ...s, name } : s))
+		setCurrentSession(prev => prev?.id === id ? { ...prev, name } : prev)
+	}, [])
+
+	const deleteSessionCb = useCallback(async (id: string) => {
+		await apiDeleteSession(id)
+		setSessions(prev => prev.filter(s => s.id !== id))
+		setCurrentSession(prev => {
+			if (prev?.id === id) {
+				const url = new URL(window.location.href)
+				url.searchParams.delete('session')
+				url.searchParams.delete('tab')
+				window.history.replaceState(null, '', url.toString())
+				return null
+			}
+			return prev
+		})
+	}, [])
+
 	useEffect(() => {
 		const init = async () => {
 			await refreshSessions()
@@ -200,9 +225,11 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 		refreshSessions,
 		patchSession,
 		clearInvalidation,
+		renameSession,
+		deleteSession: deleteSessionCb,
 		printer,
 		setPrinter
-	}), [sessions, currentSession, activeStage, loading, pendingInvalidation, selectSession, clearSession, refreshSession, refreshSessions, patchSession, clearInvalidation, printer])
+	}), [sessions, currentSession, activeStage, loading, pendingInvalidation, selectSession, clearSession, refreshSession, refreshSessions, patchSession, clearInvalidation, renameSession, deleteSessionCb, printer])
 
 	return (
 		<SessionContext.Provider value={value}>

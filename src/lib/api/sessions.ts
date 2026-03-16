@@ -18,3 +18,12 @@ export async function getSession (sessionId: string): Promise<SessionMeta> {
 	const { data } = await apiClient.get<SessionMeta>(`/api/v2/sessions/${encodeURIComponent(sessionId)}`)
 	return data
 }
+
+export async function renameSession (sessionId: string, name: string): Promise<{ id: string; name: string }> {
+	const { data } = await apiClient.patch(`/api/v2/sessions/${encodeURIComponent(sessionId)}`, { name })
+	return data
+}
+
+export async function deleteSession (sessionId: string): Promise<void> {
+	await apiClient.delete(`/api/v2/sessions/${encodeURIComponent(sessionId)}`)
+}
