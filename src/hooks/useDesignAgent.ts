@@ -239,7 +239,7 @@ export function useDesignAgent () {
 			for (const msg of convo) {
 				if (typeof msg.content === 'string') {
 					entries.push({
-						id: `${msg.role}-${entries.length}`,
+						id: `l-${msg.role}-${entries.length}`,
 						role: msg.role,
 						content: msg.content
 					})
@@ -255,26 +255,26 @@ export function useDesignAgent () {
 							} catch { /* not JSON */ }
 							if (isInteractiveDesigner) {
 								entries.push({
-									id: `status-${entries.length}`,
+									id: `l-status-${entries.length}`,
 									role: 'status',
 									content: 'Design updated from editor'
 								})
 							} else {
 								entries.push({
-									id: `${msg.role}-${entries.length}`,
+									id: `l-${msg.role}-${entries.length}`,
 									role: msg.role,
 									content: block.text
 								})
 							}
 						} else if (block.type === 'thinking' && block.thinking) {
 							entries.push({
-								id: `thinking-${entries.length}`,
+								id: `l-thinking-${entries.length}`,
 								role: 'thinking',
 								content: block.thinking
 							})
 						} else if (block.type === 'tool_use') {
 							entries.push({
-								id: `tool-call-${entries.length}`,
+								id: `l-tool-call-${entries.length}`,
 								role: 'tool_call',
 								content: JSON.stringify(block.input, null, 2),
 								toolName: block.name,
@@ -282,7 +282,7 @@ export function useDesignAgent () {
 							})
 						} else if (block.type === 'tool_result') {
 							entries.push({
-								id: `tool-result-${entries.length}`,
+								id: `l-tool-result-${entries.length}`,
 								role: 'tool_result',
 								content: block.content ?? '',
 								toolName: block.name,
