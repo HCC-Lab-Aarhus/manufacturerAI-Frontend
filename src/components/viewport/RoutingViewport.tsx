@@ -18,6 +18,7 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 	const components = routing.components ?? []
 	const traces = routing.traces ?? []
 	const failedNets = routing.failed_nets ?? []
+	const jumpers = routing.jumpers ?? []
 	const traceWidth = (routing.trace_width_mm ?? 0.3) * SCALE
 
 	const uniqueNets = [...new Set(traces.map(t => t.net_id))]
@@ -70,6 +71,34 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 						)
 					))
 				})}
+
+				{jumpers.map((j, ji) => {
+					const color = netColor(uniqueNets.indexOf(j.net_id), uniqueNets.length)
+					const [sx, sy] = j.start
+					const [ex, ey] = j.end
+					return (
+						<g key={`jumper-${ji}`}>
+							<line
+								x1={sx * SCALE} y1={sy * SCALE}
+								x2={ex * SCALE} y2={ey * SCALE}
+								stroke={color}
+								strokeWidth={traceWidth * 0.8}
+								strokeDasharray={`${traceWidth * 2},${traceWidth}`}
+								strokeLinecap="round"
+							/>
+							<rect
+								x={sx * SCALE - traceWidth} y={sy * SCALE - traceWidth}
+								width={traceWidth * 2} height={traceWidth * 2}
+								fill={color} opacity={0.7}
+							/>
+							<rect
+								x={ex * SCALE - traceWidth} y={ey * SCALE - traceWidth}
+								width={traceWidth * 2} height={traceWidth * 2}
+								fill={color} opacity={0.7}
+							/>
+						</g>
+					)
+				})}
 			</OutlineSVG>
 
 			<div className="w-40 shrink-0 overflow-y-auto border-l border-border px-3 py-3">
@@ -101,6 +130,25 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 									<span className="text-[11px] text-danger truncate">{netId}</span>
 								</div>
 							))}
+						</div>
+					</div>
+				)}
+
+				{jumpers.length > 0 && (
+					<div className="mt-3">
+						<span className="text-[10px] font-semibold text-warning uppercase tracking-wide">{'Jumper Wires'}</span>
+						<div className="mt-1.5 flex flex-col gap-1">
+							{jumpers.map((j, i) => {
+								const color = netColor(uniqueNets.indexOf(j.net_id), uniqueNets.length)
+								return (
+									<div key={i} className="flex items-center gap-2">
+										<svg className="size-2.5 shrink-0" viewBox="0 0 10 10">
+											<rect width={10} height={10} rx={2} fill={color} />
+										</svg>
+										<span className="text-[11px] text-fg-secondary truncate">{j.net_id} ({j.length_mm.toFixed(1)}mm)</span>
+									</div>
+								)
+							})}
 						</div>
 					</div>
 				)}

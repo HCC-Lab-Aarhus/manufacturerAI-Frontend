@@ -128,6 +128,13 @@ export interface Trace {
 	path: [number, number][]
 }
 
+export interface JumperWire {
+	net_id: string
+	start: [number, number]
+	end: [number, number]
+	length_mm: number
+}
+
 export interface RoutingResult {
 	traces: Trace[]
 	trace_width_mm: number
@@ -136,6 +143,7 @@ export interface RoutingResult {
 	components: PlacedComponent[]
 	nets: Net[]
 	failed_nets?: string[]
+	jumpers?: JumperWire[]
 	pcb_contour?: [number, number][]
 }
 
