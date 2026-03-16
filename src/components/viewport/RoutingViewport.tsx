@@ -17,6 +17,7 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 	const outline = normalizeOutline(routing.outline)
 	const components = routing.components ?? []
 	const traces = routing.traces ?? []
+	const failedNets = routing.failed_nets ?? []
 	const traceWidth = (routing.trace_width_mm ?? 0.3) * SCALE
 
 	const uniqueNets = [...new Set(traces.map(t => t.net_id))]
@@ -71,21 +72,39 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 				})}
 			</OutlineSVG>
 
-			{uniqueNets.length > 0 && (
-				<div className="w-40 shrink-0 overflow-y-auto border-l border-border px-3 py-3">
-					<span className="text-[10px] font-semibold text-fg-secondary uppercase tracking-wide">Nets</span>
-					<div className="mt-1.5 flex flex-col gap-1">
-						{uniqueNets.map((netId, i) => (
-							<div key={netId} className="flex items-center gap-2">
-								<svg className="size-2.5 shrink-0" viewBox="0 0 10 10">
-									<circle cx={5} cy={5} r={5} fill={netColor(i, uniqueNets.length)} />
-								</svg>
-								<span className="text-[11px] text-fg-secondary truncate">{netId}</span>
-							</div>
-						))}
+			<div className="w-40 shrink-0 overflow-y-auto border-l border-border px-3 py-3">
+				{uniqueNets.length > 0 && (
+					<>
+						<span className="text-[10px] font-semibold text-fg-secondary uppercase tracking-wide">{'Routed Nets'}</span>
+						<div className="mt-1.5 flex flex-col gap-1">
+							{uniqueNets.map((netId, i) => (
+								<div key={netId} className="flex items-center gap-2">
+									<svg className="size-2.5 shrink-0" viewBox="0 0 10 10">
+										<circle cx={5} cy={5} r={5} fill={netColor(i, uniqueNets.length)} />
+									</svg>
+									<span className="text-[11px] text-fg-secondary truncate">{netId}</span>
+								</div>
+							))}
+						</div>
+					</>
+				)}
+
+				{failedNets.length > 0 && (
+					<div className={uniqueNets.length > 0 ? 'mt-3' : ''}>
+						<span className="text-[10px] font-semibold text-danger uppercase tracking-wide">{'Failed Nets'}</span>
+						<div className="mt-1.5 flex flex-col gap-1">
+							{failedNets.map(netId => (
+								<div key={netId} className="flex items-center gap-2">
+									<svg className="size-2.5 shrink-0" viewBox="0 0 10 10">
+										<circle cx={5} cy={5} r={5} fill="#ef4444" />
+									</svg>
+									<span className="text-[11px] text-danger truncate">{netId}</span>
+								</div>
+							))}
+						</div>
 					</div>
-				</div>
-			)}
+				)}
+			</div>
 		</div>
 	)
 }

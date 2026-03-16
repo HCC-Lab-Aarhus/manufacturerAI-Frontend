@@ -135,6 +135,7 @@ export interface RoutingResult {
 	enclosure: Enclosure
 	components: PlacedComponent[]
 	nets: Net[]
+	failed_nets?: string[]
 	pcb_contour?: [number, number][]
 }
 

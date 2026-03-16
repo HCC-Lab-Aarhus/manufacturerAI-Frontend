@@ -55,10 +55,15 @@ const POLL_MAP: Record<ManufactureStep, PollFn> = {
 }
 
 function initSteps (artifacts: Record<string, boolean>, errors?: Record<string, PipelineError>): ManufactureStepState[] {
+	let upstreamFailed = false
 	return STEP_DEFS.map(({ step, label }) => {
 		const err = errors?.[step]
 		if (err) {
+			upstreamFailed = true
 			return { step, label, status: 'error' as StepStatus, message: err.reason, responsibleAgent: err.responsible_agent }
+		}
+		if (upstreamFailed) {
+			return { step, label, status: 'pending' as StepStatus }
 		}
 		const done = !!artifacts[step]
 		return { step, label, status: done ? 'done' as StepStatus : 'pending' as StepStatus }
@@ -110,13 +115,14 @@ export function useManufacture () {
 		setSteps(initSteps(currentSession?.artifacts ?? {}, currentSession?.pipeline_errors))
 		if (currentSession?.id) {
 			const a = currentSession.artifacts ?? {}
+			const errors = currentSession.pipeline_errors ?? {}
 			if (a.placement) {
 				getPlacementResult(currentSession.id).then(setPlacementResult).catch(() => {})
 			}
-			if (a.routing) {
+			if (a.routing || errors.routing) {
 				getRoutingResult(currentSession.id).then(setRoutingResult).catch(() => {})
 			}
-			if (a.routing) {
+			if (a.routing && !errors.routing) {
 				getBitmap(currentSession.id).then(setBitmapResult).catch(() => {})
 			}
 		}
@@ -160,7 +166,8 @@ export function useManufacture () {
 
 		setSteps(prev => prev.map((s, i) => {
 			if (i < startIdx || i > endIdx) { return s }
-			if (i >= startIdx && s.status === 'done' && !fromStep) { return s }
+			if (s.status === 'done' && !fromStep) { return s }
+			if (s.status === 'error') { return { ...s, status: 'pending' as StepStatus, message: undefined, responsibleAgent: undefined } }
 			return { ...s, status: 'pending', message: undefined, responsibleAgent: undefined }
 		}))
 
@@ -168,6 +175,8 @@ export function useManufacture () {
 			const idx = allSteps.indexOf(step)
 			if (idx < startIdx || idx > endIdx) { return false }
 			if (fromStep) { return true }
+			// Re-run steps that errored in a previous attempt
+			if (currentSession.pipeline_errors?.[step]) { return true }
 			return !artifacts[step]
 		}
 
@@ -280,6 +289,10 @@ export function useManufacture () {
 							? { ...s, status: 'pending' as StepStatus, message: undefined, responsibleAgent: undefined }
 							: s
 					))
+					// Fetch partial routing result so the viewport can show what was routed
+					if (activeStep === 'routing') {
+						getRoutingResult(sessionId).then(setRoutingResult).catch(() => {})
+					}
 				}
 				if (!responsibleAgent) {
 					addError(message)
