@@ -271,7 +271,6 @@ export function useManufacture () {
 				updateStep('gcode', { status: 'done', message: 'Using existing' })
 			}
 
-			await refreshSession()
 		} catch (err) {
 			if (err instanceof CancelError) {
 				if (activeStep) {
@@ -301,6 +300,9 @@ export function useManufacture () {
 		} finally {
 			setRunning(false)
 			setCurrentStep(null)
+			// Always refresh session so currentSession.artifacts and pipeline_errors
+			// are up-to-date for the next pipeline run.
+			refreshSession().catch(() => {})
 		}
 	}, [currentSession, running, updateStep, refreshSession, addError])
 
