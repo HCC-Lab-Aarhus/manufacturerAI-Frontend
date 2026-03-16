@@ -18,6 +18,10 @@ import {
 	getRoutingResult,
 	getBitmap
 } from '@/lib/api'
+import { pollBitmap } from '@/lib/api/pipeline/bitmap'
+import { pollPlacement } from '@/lib/api/pipeline/placement'
+import { pollRouting } from '@/lib/api/pipeline/routing'
+import { pollScad } from '@/lib/api/pipeline/scad'
 import type { ManufactureStep, PlacementResult, RoutingResult, BitmapResult, GCodeStatus, PipelineError } from '@/types/models'
 
 export type StepStatus = 'pending' | 'running' | 'done' | 'error' | 'skipped'
@@ -39,6 +43,17 @@ const STEP_DEFS: { step: ManufactureStep; label: string; artifact: string }[] = 
 	{ step: 'gcode', label: 'G-Code Pipeline', artifact: 'gcode' }
 ]
 
+type PollFn = (sessionId: string) => Promise<{ status: string; message?: string; detail?: Record<string, unknown> }>
+
+const POLL_MAP: Record<ManufactureStep, PollFn> = {
+	placement: pollPlacement,
+	routing: pollRouting,
+	bitmap: pollBitmap as PollFn,
+	scad: pollScad,
+	compile: pollCompile as PollFn,
+	gcode: pollGCode as PollFn
+}
+
 function initSteps (artifacts: Record<string, boolean>, errors?: Record<string, PipelineError>): ManufactureStepState[] {
 	return STEP_DEFS.map(({ step, label }) => {
 		const err = errors?.[step]
@@ -48,6 +63,32 @@ function initSteps (artifacts: Record<string, boolean>, errors?: Record<string, 
 		const done = !!artifacts[step]
 		return { step, label, status: done ? 'done' as StepStatus : 'pending' as StepStatus }
 	})
+}
+
+async function waitForStep (
+	sessionId: string,
+	step: ManufactureStep,
+	cancelRef: React.RefObject<boolean>,
+	interval: number = 2000
+): Promise<{ status: string; message?: string; detail?: Record<string, unknown> }> {
+	const poll = POLL_MAP[step]
+	if (!poll) {
+		return { status: 'done' }
+	}
+
+	for (;;) {
+		if (cancelRef.current) {
+			throw new CancelError()
+		}
+		const s = await poll(sessionId)
+		if (s.status === 'done') {
+			return s
+		}
+		if (s.status === 'error') {
+			throw new StepError(s.message ?? `${step} failed`, s.detail)
+		}
+		await new Promise(resolve => setTimeout(resolve, interval))
+	}
 }
 
 export function useManufacture () {
@@ -64,15 +105,20 @@ export function useManufacture () {
 	const [bitmapResult, setBitmapResult] = useState<BitmapResult | null>(null)
 	const [gcodeStatus, setGcodeStatus] = useState<GCodeStatus | null>(null)
 	const cancelRef = useRef(false)
-	const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
 	useEffect(() => {
 		setSteps(initSteps(currentSession?.artifacts ?? {}, currentSession?.pipeline_errors))
 		if (currentSession?.id) {
 			const a = currentSession.artifacts ?? {}
-			if (a.placement) getPlacementResult(currentSession.id).then(setPlacementResult).catch(() => {})
-			if (a.routing) getRoutingResult(currentSession.id).then(setRoutingResult).catch(() => {})
-			if (a.routing) getBitmap(currentSession.id).then(setBitmapResult).catch(() => {})
+			if (a.placement) {
+				getPlacementResult(currentSession.id).then(setPlacementResult).catch(() => {})
+			}
+			if (a.routing) {
+				getRoutingResult(currentSession.id).then(setRoutingResult).catch(() => {})
+			}
+			if (a.routing) {
+				getBitmap(currentSession.id).then(setBitmapResult).catch(() => {})
+			}
 		}
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [currentSession?.id])
@@ -97,10 +143,6 @@ export function useManufacture () {
 
 	const stop = useCallback(() => {
 		cancelRef.current = true
-		if (pollRef.current) {
-			clearInterval(pollRef.current)
-			pollRef.current = null
-		}
 	}, [])
 
 	const runPipeline = useCallback(async (fromStep?: ManufactureStep, options?: { filament?: string; silverink_only?: boolean; toStep?: ManufactureStep }) => {
@@ -136,7 +178,9 @@ export function useManufacture () {
 				activeStep = 'placement'
 				setCurrentStep('placement')
 				updateStep('placement', { status: 'running' })
-				const pr = await runPlacement(sessionId)
+				await runPlacement(sessionId)
+				await waitForStep(sessionId, 'placement', cancelRef)
+				const pr = await getPlacementResult(sessionId)
 				setPlacementResult(pr)
 				updateStep('placement', { status: 'done' })
 			} else {
@@ -149,7 +193,9 @@ export function useManufacture () {
 				activeStep = 'routing'
 				setCurrentStep('routing')
 				updateStep('routing', { status: 'running' })
-				const rr = await runRouting(sessionId)
+				await runRouting(sessionId)
+				await waitForStep(sessionId, 'routing', cancelRef)
+				const rr = await getRoutingResult(sessionId)
 				setRoutingResult(rr)
 				updateStep('routing', { status: 'done' })
 			} else {
@@ -163,6 +209,7 @@ export function useManufacture () {
 				setCurrentStep('bitmap')
 				updateStep('bitmap', { status: 'running' })
 				await generateBitmap(sessionId)
+				await waitForStep(sessionId, 'bitmap', cancelRef)
 				const br = await getBitmap(sessionId)
 				setBitmapResult(br)
 				updateStep('bitmap', { status: 'done' })
@@ -177,6 +224,7 @@ export function useManufacture () {
 				setCurrentStep('scad')
 				updateStep('scad', { status: 'running' })
 				await generateScad(sessionId)
+				await waitForStep(sessionId, 'scad', cancelRef)
 				updateStep('scad', { status: 'done' })
 			} else {
 				updateStep('scad', { status: 'done', message: 'Using existing' })
@@ -188,37 +236,8 @@ export function useManufacture () {
 				activeStep = 'compile'
 				setCurrentStep('compile')
 				updateStep('compile', { status: 'running' })
-				const compileResult = await startCompile(sessionId, true)
-				if (compileResult.status === 'compiling' || compileResult.status === 'pending') {
-					await new Promise<void>((resolve, reject) => {
-						pollRef.current = setInterval(async () => {
-							if (cancelRef.current) {
-								if (pollRef.current) { clearInterval(pollRef.current) }
-								pollRef.current = null
-								reject(new CancelError())
-								return
-							}
-							try {
-								const s = await pollCompile(sessionId)
-								if (s.status === 'done') {
-									if (pollRef.current) { clearInterval(pollRef.current) }
-									pollRef.current = null
-									resolve()
-								} else if (s.status === 'error') {
-									if (pollRef.current) { clearInterval(pollRef.current) }
-									pollRef.current = null
-									reject(new Error(s.message ?? 'STL compilation failed'))
-								}
-							} catch (err) {
-								if (pollRef.current) { clearInterval(pollRef.current) }
-								pollRef.current = null
-								reject(err)
-							}
-						}, 3000)
-					})
-				} else if (compileResult.status === 'error') {
-					throw new Error(compileResult.message ?? 'STL compilation failed')
-				}
+				await startCompile(sessionId, true)
+				await waitForStep(sessionId, 'compile', cancelRef, 3000)
 				updateStep('compile', { status: 'done' })
 			} else {
 				updateStep('compile', { status: 'done', message: 'Using existing' })
@@ -226,42 +245,22 @@ export function useManufacture () {
 
 			// G-code
 			if (cancelRef.current) { throw new CancelError() }
-			activeStep = 'gcode'
-			setCurrentStep('gcode')
-			updateStep('gcode', { status: 'running' })
-			await startGCode(sessionId, {
-				force: true,
-				filament: options?.filament || undefined,
-				silverink_only: options?.silverink_only
-			})
-			await new Promise<void>((resolve, reject) => {
-				pollRef.current = setInterval(async () => {
-					if (cancelRef.current) {
-						if (pollRef.current) { clearInterval(pollRef.current) }
-						pollRef.current = null
-						reject(new CancelError())
-						return
-					}
-					try {
-						const s = await pollGCode(sessionId)
-						setGcodeStatus(s)
-						if (s.status === 'done') {
-							if (pollRef.current) { clearInterval(pollRef.current) }
-							pollRef.current = null
-							resolve()
-						} else if (s.status === 'error') {
-							if (pollRef.current) { clearInterval(pollRef.current) }
-							pollRef.current = null
-							reject(new Error(s.message ?? 'G-code pipeline failed'))
-						}
-					} catch (err) {
-						if (pollRef.current) { clearInterval(pollRef.current) }
-						pollRef.current = null
-						reject(err)
-					}
-				}, 3000)
-			})
-			updateStep('gcode', { status: 'done' })
+			if (shouldRun('gcode')) {
+				activeStep = 'gcode'
+				setCurrentStep('gcode')
+				updateStep('gcode', { status: 'running' })
+				await startGCode(sessionId, {
+					force: true,
+					filament: options?.filament || undefined,
+					silverink_only: options?.silverink_only
+				})
+				await waitForStep(sessionId, 'gcode', cancelRef, 3000)
+				const gs = await pollGCode(sessionId)
+				setGcodeStatus(gs)
+				updateStep('gcode', { status: 'done' })
+			} else {
+				updateStep('gcode', { status: 'done', message: 'Using existing' })
+			}
 
 			await refreshSession()
 		} catch (err) {
@@ -281,14 +280,12 @@ export function useManufacture () {
 		} finally {
 			setRunning(false)
 			setCurrentStep(null)
-			pollRef.current = null
 		}
 	}, [currentSession, running, updateStep, refreshSession, addError])
 
 	useEffect(() => {
 		return () => {
 			cancelRef.current = true
-			if (pollRef.current) { clearInterval(pollRef.current) }
 		}
 	}, [])
 
@@ -315,7 +312,21 @@ class CancelError extends Error {
 	}
 }
 
+class StepError extends Error {
+	detail?: Record<string, unknown>
+	constructor (message: string, detail?: Record<string, unknown>) {
+		super(message)
+		this.name = 'StepError'
+		this.detail = detail
+	}
+}
+
 function extractPipelineError (err: unknown): { message: string; responsibleAgent?: 'design' | 'circuit' } {
+	if (err instanceof StepError && err.detail) {
+		const reason = (err.detail.reason ?? err.detail.message ?? err.message) as string
+		const agent = err.detail.responsible_agent as 'design' | 'circuit' | undefined
+		return { message: reason, responsibleAgent: agent }
+	}
 	const axiosErr = err as AxiosError<Record<string, unknown>>
 	const data = axiosErr?.response?.data
 	if (data) {

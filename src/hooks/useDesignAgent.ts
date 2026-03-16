@@ -5,7 +5,14 @@ import { useCallback, useRef, useState } from 'react'
 import { useError } from '@/contexts/ErrorContext/ErrorContext'
 import { usePipeline } from '@/contexts/PipelineContext'
 import { useSession } from '@/contexts/SessionContext'
-import { streamDesign, getDesignConversation, getDesignResult } from '@/lib/api'
+import {
+	startDesign,
+	streamDesignEvents,
+	getDesignStatus,
+	stopDesign,
+	getDesignConversation,
+	getDesignResult
+} from '@/lib/api'
 import { createSession } from '@/lib/api/sessions'
 import type { SSEEventType } from '@/types/events'
 import type { DesignSpec, TokenUsage } from '@/types/models'
@@ -31,6 +38,7 @@ export function useDesignAgent () {
 	const streamingRef = useRef(false)
 	const sentFirstRef = useRef(false)
 	const idCounter = useRef(0)
+	const eventCursor = useRef(0)
 	const nextId = useCallback((prefix: string) => `${prefix}-${++idCounter.current}`, [])
 
 	const appendMessage = useCallback((entry: ChatEntry) => {
@@ -63,113 +71,91 @@ export function useDesignAgent () {
 		})
 	}, [])
 
-	const sendMessage = useCallback(async (prompt: string) => {
-		if (streaming) { return }
-
-		appendMessage({
-			id: nextId('user'),
-			role: 'user',
-			content: prompt
-		})
-
-		setStreaming(true)
-		streamingRef.current = true
-		sentFirstRef.current = true
-
-		let sessionId = currentSession?.id
-		if (!sessionId) {
-			const { session_id } = await createSession()
-			sessionId = session_id
-			refreshSessions()
-			selectSession(sessionId)
+	const handleEvent = useCallback((type: SSEEventType, data: unknown) => {
+		eventCursor.current++
+		const d = data as Record<string, unknown>
+		switch (type) {
+			case 'thinking_start':
+				appendMessage({
+					id: nextId('thinking'),
+					role: 'thinking',
+					content: '',
+					isStreaming: true
+				})
+				break
+			case 'thinking_delta':
+				updateLastThinking((d.text as string) ?? '')
+				break
+			case 'message_start':
+				appendMessage({
+					id: nextId('assistant'),
+					role: 'assistant',
+					content: '',
+					isStreaming: true
+				})
+				break
+			case 'message_delta':
+				updateLastAssistant((d.text as string) ?? '')
+				break
+			case 'block_stop':
+				setMessages(prev =>
+					prev.map(m => m.isStreaming ? { ...m, isStreaming: false } : m)
+				)
+				break
+			case 'tool_call':
+				appendMessage({
+					id: nextId('tool-call'),
+					role: 'tool_call',
+					content: JSON.stringify(d.input, null, 2),
+					toolName: d.name as string
+				})
+				break
+			case 'tool_result':
+				appendMessage({
+					id: nextId('tool-result'),
+					role: 'tool_result',
+					content: d.content as string,
+					toolName: d.name as string,
+					isError: d.is_error as boolean
+				})
+				break
+			case 'design':
+				setDesign((d.design ?? d) as unknown as DesignSpec)
+				break
+			case 'invalidated':
+				patchSession({
+					invalidated_steps: d.invalidated_steps as string[],
+					artifacts: d.artifacts as Record<string, boolean>,
+					pipeline_errors: d.pipeline_errors as Record<string, import('@/types/models').PipelineError>,
+				})
+				break
+			case 'token_usage':
+				setTokenUsage({
+					input_tokens: d.input_tokens as number,
+					budget: d.budget as number ?? 50000
+				})
+				break
+			case 'session_named':
+				refreshSession()
+				break
+			case 'error':
+				addError(d.message ?? d)
+				break
+			case 'done':
+				appendMessage({
+					id: nextId('status'),
+					role: 'status',
+					content: 'Design agent finished'
+				})
+				break
 		}
+	}, [appendMessage, updateLastAssistant, updateLastThinking, setDesign, patchSession, addError, nextId, refreshSession])
 
-		let designReceived = false
-
-		const handleEvent = (type: SSEEventType, data: unknown) => {
-			const d = data as Record<string, unknown>
-			switch (type) {
-				case 'thinking_start':
-					appendMessage({
-						id: nextId('thinking'),
-						role: 'thinking',
-						content: '',
-						isStreaming: true
-					})
-					break
-				case 'thinking_delta':
-					updateLastThinking((d.text as string) ?? '')
-					break
-				case 'message_start':
-					appendMessage({
-						id: nextId('assistant'),
-						role: 'assistant',
-						content: '',
-						isStreaming: true
-					})
-					break
-				case 'message_delta':
-					updateLastAssistant((d.text as string) ?? '')
-					break
-				case 'block_stop':
-					setMessages(prev =>
-						prev.map(m => m.isStreaming ? { ...m, isStreaming: false } : m)
-					)
-					break
-				case 'tool_call':
-					appendMessage({
-						id: nextId('tool-call'),
-						role: 'tool_call',
-						content: JSON.stringify(d.input, null, 2),
-						toolName: d.name as string
-					})
-					break
-				case 'tool_result':
-					appendMessage({
-						id: nextId('tool-result'),
-						role: 'tool_result',
-						content: d.content as string,
-						toolName: d.name as string,
-						isError: d.is_error as boolean
-					})
-					break
-				case 'design':
-					designReceived = true
-					setDesign((d.design ?? d) as unknown as DesignSpec)
-					break
-				case 'invalidated':
-					patchSession({
-						invalidated_steps: d.invalidated_steps as string[],
-						artifacts: d.artifacts as Record<string, boolean>,
-						pipeline_errors: d.pipeline_errors as Record<string, import('@/types/models').PipelineError>,
-					})
-					break
-				case 'token_usage':
-					setTokenUsage({
-						input_tokens: d.input_tokens as number,
-						budget: d.budget as number ?? 50000
-					})
-					break
-				case 'session_named':
-					refreshSession()
-					break
-				case 'error':
-					addError(d.message ?? d)
-					break
-				case 'done':
-					appendMessage({
-						id: nextId('status'),
-						role: 'status',
-						content: designReceived
-							? 'Design validated and saved'
-							: 'Design agent finished'
-					})
-					break
-			}
-		}
-
-		abortRef.current = streamDesign(
-			prompt,
+	const subscribeToStream = useCallback((sessionId: string, after: number = 0) => {
+		abortRef.current?.abort()
+		eventCursor.current = after
+		abortRef.current = streamDesignEvents(
+			sessionId,
 			{
 				onEvent: handleEvent,
 				onError: (err) => {
@@ -183,17 +169,56 @@ export function useDesignAgent () {
 					refreshSession()
 				}
 			},
-			sessionId
+			after
 		)
-	}, [streaming, currentSession, appendMessage, updateLastAssistant, updateLastThinking, setDesign, refreshSession, refreshSessions, selectSession, patchSession, addError, nextId])
+	}, [handleEvent, addError, refreshSession])
+
+	const sendMessage = useCallback(async (prompt: string) => {
+		if (streaming) { return }
+
+		setStreaming(true)
+		streamingRef.current = true
+		sentFirstRef.current = true
+
+		let sessionId = currentSession?.id
+		if (!sessionId) {
+			const { session_id } = await createSession()
+			sessionId = session_id
+			refreshSessions()
+			selectSession(sessionId)
+		}
+
+		appendMessage({
+			id: nextId('user'),
+			role: 'user',
+			content: prompt
+		})
+
+		try {
+			await startDesign(prompt, sessionId)
+			subscribeToStream(sessionId, 0)
+		} catch (err) {
+			addError(err)
+			streamingRef.current = false
+			setStreaming(false)
+		}
+	}, [streaming, currentSession, appendMessage, subscribeToStream, refreshSessions, selectSession, addError, nextId])
 
 	const loadConversation = useCallback(async (sessionId: string) => {
 		if (streamingRef.current) return
 		sentFirstRef.current = false
 		try {
-			const [convo, design] = await Promise.all([
+			const status = await getDesignStatus(sessionId).catch(() => null)
+			const isRunning = status?.status === 'running'
+
+			if (isRunning) {
+				await new Promise(resolve => setTimeout(resolve, 150))
+			}
+
+			const [convo, design, freshStatus] = await Promise.all([
 				getDesignConversation(sessionId),
-				getDesignResult(sessionId).catch(() => null)
+				getDesignResult(sessionId).catch(() => null),
+				isRunning ? getDesignStatus(sessionId).catch(() => null) : Promise.resolve(null)
 			])
 
 			const entries: ChatEntry[] = []
@@ -242,16 +267,28 @@ export function useDesignAgent () {
 			if (design) {
 				setDesign(design)
 			}
+
+			if (isRunning) {
+				const cursor = freshStatus?.last_save_cursor ?? status?.last_save_cursor ?? 0
+				setStreaming(true)
+				streamingRef.current = true
+				subscribeToStream(sessionId, cursor)
+			}
 		} catch {
 			setMessages([])
 		}
-	}, [setDesign])
+	}, [setDesign, subscribeToStream])
 
-	const cancel = useCallback(() => {
+	const cancel = useCallback(async () => {
 		abortRef.current?.abort()
 		streamingRef.current = false
 		setStreaming(false)
-	}, [])
+		if (currentSession?.id) {
+			try {
+				await stopDesign(currentSession.id)
+			} catch { /* already stopped */ }
+		}
+	}, [currentSession])
 
 	return {
 		messages,

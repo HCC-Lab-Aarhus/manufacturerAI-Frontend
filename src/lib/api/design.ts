@@ -11,6 +11,40 @@ import { type SSECallbacks, consumeSSEStream } from './sse'
 
 const baseUrl = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000').replace(/\/+$/, '')
 
+export async function startDesign (
+	prompt: string,
+	sessionId: string
+): Promise<{ status: string }> {
+	const { data } = await apiClient.post<{ status: string }>(
+		`/api/v2/sessions/${encodeURIComponent(sessionId)}/design`,
+		{ prompt }
+	)
+	return data
+}
+
+export function streamDesignEvents (
+	sessionId: string,
+	callbacks: SSECallbacks,
+	after: number = 0
+): AbortController {
+	return consumeSSEStream(
+		`${baseUrl}/api/v2/sessions/${encodeURIComponent(sessionId)}/design/stream?after=${after}`,
+		{ method: 'GET' },
+		callbacks
+	)
+}
+
+export async function getDesignStatus (sessionId: string): Promise<{ status: string; event_count: number; last_save_cursor: number; error?: string }> {
+	const { data } = await apiClient.get(
+		`/api/v2/sessions/${encodeURIComponent(sessionId)}/design/status`
+	)
+	return data as { status: string; event_count: number; last_save_cursor: number; error?: string }
+}
+
+export async function stopDesign (sessionId: string): Promise<void> {
+	await apiClient.post(`/api/v2/sessions/${encodeURIComponent(sessionId)}/design/stop`)
+}
+
 export function streamDesign (
 	prompt: string,
 	callbacks: SSECallbacks,
