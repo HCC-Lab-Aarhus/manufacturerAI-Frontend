@@ -134,7 +134,8 @@ export function useCircuitAgent () {
 					role: 'status',
 					content: circuitReceivedRef.current
 						? 'Circuit validated and saved'
-						: 'Circuit agent finished'
+						: 'Circuit agent finished',
+					isCompletion: true
 				})
 				break
 		}
