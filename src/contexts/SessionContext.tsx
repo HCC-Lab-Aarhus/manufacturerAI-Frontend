@@ -188,15 +188,15 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 		await apiDeleteSession(id)
 		setSessions(prev => prev.filter(s => s.id !== id))
 		setCurrentSession(prev => {
-			if (prev?.id === id) {
-				const url = new URL(window.location.href)
-				url.searchParams.delete('session')
-				url.searchParams.delete('tab')
-				window.history.replaceState(null, '', url.toString())
-				return null
-			}
+			if (prev?.id === id) return null
 			return prev
 		})
+		const url = new URL(window.location.href)
+		if (url.searchParams.has('session')) {
+			url.searchParams.delete('session')
+			url.searchParams.delete('tab')
+			window.history.replaceState(null, '', url.toString())
+		}
 	}, [])
 
 	useEffect(() => {
