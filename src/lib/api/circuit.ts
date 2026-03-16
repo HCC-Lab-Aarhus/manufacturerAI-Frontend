@@ -1,4 +1,4 @@
-import type { CircuitSpec, ConversationMessage, TokenUsage } from '@/types/models'
+import type { CircuitSpec, ConversationMessage, PipelineError, TokenUsage } from '@/types/models'
 
 import apiClient from './client'
 import { type SSECallbacks, consumeSSEStream } from './sse'
@@ -81,6 +81,22 @@ export async function getCircuitResult (sessionId: string): Promise<CircuitSpec>
 export async function getCircuitTokenUsage (sessionId: string): Promise<TokenUsage> {
 	const { data } = await apiClient.get<TokenUsage>(
 		`/api/v2/sessions/${encodeURIComponent(sessionId)}/circuit/tokens`
+	)
+	return data
+}
+
+export interface RevalidateResult {
+	valid: boolean
+	errors?: string
+	circuit?: CircuitSpec
+	invalidated_steps?: string[]
+	artifacts?: Record<string, boolean>
+	pipeline_errors?: Record<string, PipelineError>
+}
+
+export async function revalidateCircuit (sessionId: string): Promise<RevalidateResult> {
+	const { data } = await apiClient.post<RevalidateResult>(
+		`/api/v2/sessions/${encodeURIComponent(sessionId)}/circuit/revalidate`
 	)
 	return data
 }

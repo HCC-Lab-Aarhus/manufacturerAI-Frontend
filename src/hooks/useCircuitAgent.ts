@@ -12,7 +12,8 @@ import {
 	stopCircuit,
 	getCircuitConversation,
 	getCircuitResult,
-	getCircuitTokenUsage
+	getCircuitTokenUsage,
+	revalidateCircuit
 } from '@/lib/api'
 import type { SSEEventType } from '@/types/events'
 import type { CircuitSpec, TokenUsage } from '@/types/models'
@@ -20,8 +21,8 @@ import type { CircuitSpec, TokenUsage } from '@/types/models'
 import type { ChatEntry } from './useDesignAgent'
 
 export function useCircuitAgent () {
-	const { currentSession, refreshSession, patchSession } = useSession()
-	const { setCircuit } = usePipeline()
+	const { currentSession, refreshSession, patchSession, setActiveStage } = useSession()
+	const { setCircuit, setPendingFeedback } = usePipeline()
 	const { addError } = useError()
 
 	const [messages, setMessages] = useState<ChatEntry[]>([])
@@ -32,6 +33,7 @@ export function useCircuitAgent () {
 	const abortRef = useRef<AbortController | null>(null)
 	const streamingRef = useRef(false)
 	const circuitReceivedRef = useRef(false)
+	const designFeedbackRef = useRef(false)
 	const idCounter = useRef(0)
 	const eventCursor = useRef(0)
 	const nextId = useCallback((prefix: string) => `${prefix}-${++idCounter.current}`, [])
@@ -120,6 +122,19 @@ export function useCircuitAgent () {
 				circuitReceivedRef.current = true
 				setCircuit((d.circuit ?? d) as unknown as CircuitSpec)
 				break
+			case 'design_feedback':
+				designFeedbackRef.current = true
+				setPendingFeedback({
+					target: 'design',
+					message:
+						'The circuit agent submitted a valid circuit, but the enclosure ' +
+						'dimensions are incompatible:\n\n' +
+						(d.message as string) +
+						'\n\nPlease adjust the enclosure to satisfy these constraints ' +
+						'and resubmit the design.'
+				})
+				setActiveStage('design')
+				break
 			case 'invalidated':
 				patchSession({
 					invalidated_steps: d.invalidated_steps as string[],
@@ -133,18 +148,22 @@ export function useCircuitAgent () {
 			case 'token_usage':
 				setTokenUsage(d as unknown as TokenUsage)
 				break
-			case 'done':
+			case 'done': {
+				const content = designFeedbackRef.current
+					? 'Circuit saved — enclosure adjustment requested from design agent'
+					: circuitReceivedRef.current
+						? 'Circuit validated and saved'
+						: 'Circuit agent finished'
 				appendMessage({
 					id: nextId('status'),
 					role: 'status',
-					content: circuitReceivedRef.current
-						? 'Circuit validated and saved'
-						: 'Circuit agent finished',
+					content,
 					isCompletion: true
 				})
 				break
+			}
 		}
-	}, [appendMessage, updateLastAssistant, updateLastThinking, setCircuit, patchSession, addError, nextId])
+	}, [appendMessage, updateLastAssistant, updateLastThinking, setCircuit, patchSession, addError, nextId, setPendingFeedback, setActiveStage])
 
 	const subscribeToStream = useCallback((sessionId: string, after: number = 0) => {
 		abortRef.current?.abort()
@@ -175,6 +194,7 @@ export function useCircuitAgent () {
 		setStreaming(true)
 		streamingRef.current = true
 		circuitReceivedRef.current = false
+		designFeedbackRef.current = false
 		if (outline) {
 			appendMessage({ id: nextId('user'), role: 'user', content: outline })
 		}
@@ -198,6 +218,7 @@ export function useCircuitAgent () {
 		setStreaming(true)
 		streamingRef.current = true
 		circuitReceivedRef.current = false
+		designFeedbackRef.current = false
 		try {
 			await startCircuit(currentSession.id, feedback)
 			subscribeToStream(currentSession.id, 0)
@@ -313,6 +334,36 @@ export function useCircuitAgent () {
 		loadedSessionRef.current = null
 	}, [])
 
+	const revalidate = useCallback(async () => {
+		if (!currentSession || streaming) { return false }
+		try {
+			const result = await revalidateCircuit(currentSession.id)
+			if (result.valid) {
+				if (result.circuit) {
+					setCircuit(result.circuit as unknown as CircuitSpec)
+				}
+				if (result.invalidated_steps?.length) {
+					patchSession({
+						invalidated_steps: result.invalidated_steps,
+						artifacts: result.artifacts,
+						pipeline_errors: result.pipeline_errors
+					})
+				}
+				await refreshSession()
+				appendMessage({
+					id: nextId('status'),
+					role: 'status',
+					content: 'Circuit re-validated successfully after design update',
+					isCompletion: true
+				})
+				return true
+			}
+			return false
+		} catch {
+			return false
+		}
+	}, [currentSession, streaming, setCircuit, patchSession, refreshSession, appendMessage, nextId])
+
 	return {
 		messages,
 		streaming,
@@ -322,6 +373,7 @@ export function useCircuitAgent () {
 		sendFeedback,
 		loadConversation,
 		resetConversation,
+		revalidate,
 		cancel
 	}
 }

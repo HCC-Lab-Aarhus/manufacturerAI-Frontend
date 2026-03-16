@@ -52,11 +52,14 @@ export default function CircuitPanel (): ReactElement {
 		sendFeedback,
 		loadConversation,
 		resetConversation,
+		revalidate,
 		cancel
 	} = useCircuitAgent()
 
 	const [editingOutline, setEditingOutline] = useState(false)
+	const [revalidating, setRevalidating] = useState(false)
 	const feedbackSentRef = useRef(false)
+	const revalidateAttemptedRef = useRef<string | null>(null)
 
 	const defaultOutline = useMemo(() => design ? buildOutline(design) : '', [design])
 	const [outline, setOutline] = useState('')
@@ -93,12 +96,37 @@ export default function CircuitPanel (): ReactElement {
 		}
 	}, [pendingFeedback, streaming, currentSession]) // eslint-disable-line react-hooks/exhaustive-deps
 
+	useEffect(() => {
+		if (
+			currentSession &&
+			!streaming &&
+			!conversationLoading &&
+			currentSession.artifacts?.circuit_pending &&
+			currentSession.pipeline_state.circuit !== 'complete' &&
+			currentSession.pipeline_state.circuit !== 'done' &&
+			revalidateAttemptedRef.current !== currentSession.id
+		) {
+			revalidateAttemptedRef.current = currentSession.id
+			revalidate()
+		}
+	}, [currentSession?.id, currentSession?.pipeline_state.circuit, currentSession?.artifacts?.circuit_pending, streaming, conversationLoading]) // eslint-disable-line react-hooks/exhaustive-deps
+
 	const hasDesign = !!design || currentSession?.pipeline_state.design === 'complete'
 	const hasConversation = messages.length > 0 || streaming
+	const hasPendingCircuit = !!currentSession?.artifacts?.circuit_pending
 
 	const handleGenerate = useCallback(() => {
 		runCircuit(outline || undefined)
 	}, [runCircuit, outline])
+
+	const handleRevalidate = useCallback(async () => {
+		setRevalidating(true)
+		try {
+			await revalidate()
+		} finally {
+			setRevalidating(false)
+		}
+	}, [revalidate])
 
 	if (loading || conversationLoading) {
 		return (
@@ -120,6 +148,20 @@ export default function CircuitPanel (): ReactElement {
 		<div className="flex h-full flex-col">
 			{hasConversation ? (
 				<>
+					{hasPendingCircuit && !streaming && (
+						<div className="flex items-center justify-between border-b border-border px-4 py-2 bg-surface-card">
+							<span className="text-xs text-fg-muted">
+								{'Circuit pending design update'}
+							</span>
+							<button
+								onClick={handleRevalidate}
+								disabled={revalidating}
+								className="rounded-lg bg-accent px-3 py-1 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-40 transition-colors"
+							>
+								{revalidating ? 'Validating\u2026' : '\u21bb Re-validate'}
+							</button>
+						</div>
+					)}
 					<ChatLog messages={messages} />
 					<div className="border-t border-border p-3">
 						<ChatInput
