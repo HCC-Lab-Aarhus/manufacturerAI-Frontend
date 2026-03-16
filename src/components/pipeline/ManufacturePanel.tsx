@@ -45,17 +45,23 @@ const STEP_ICONS: Record<string, string> = {
 interface StepRowProps {
 	s: ManufactureStepState
 	running: boolean
+	selected?: boolean
+	onSelect?: () => void
 	onInform?: (agent: 'design' | 'circuit', message: string) => void
 	onRetry?: (step: ManufactureStep) => void
 	onContinue?: (step: ManufactureStep) => void
 	onRunStep?: (step: ManufactureStep) => void
 }
 
-function StepRow ({ s, running, onInform, onRetry, onContinue, onRunStep }: StepRowProps): ReactElement {
+function StepRow ({ s, running, selected, onSelect, onInform, onRetry, onContinue, onRunStep }: StepRowProps): ReactElement {
+	const hasView = s.step in STEP_TO_TAB
 	return (
-		<div className={`flex flex-col gap-1 px-3 py-1.5 rounded-lg transition-colors ${
-			s.status === 'running' ? 'bg-surface-active' : ''
-		}`}>
+		<div
+			onClick={hasView && onSelect ? onSelect : undefined}
+			className={`flex flex-col gap-1 px-3 py-1.5 rounded-lg transition-colors ${
+				selected ? 'bg-surface-active ring-1 ring-accent/40' : s.status === 'running' ? 'bg-surface-active' : ''
+			} ${hasView && onSelect ? 'cursor-pointer hover:bg-surface-hover' : ''}`}
+		>
 			<div className="flex items-center gap-2.5">
 				<span className="text-[10px] font-mono font-semibold text-fg-secondary w-7">{STEP_ICONS[s.step]}</span>
 				<span className={`flex-1 text-xs font-medium ${STATUS_STYLES[s.status]}`}>
@@ -179,12 +185,10 @@ export default function ManufacturePanel (): ReactElement {
 		runPipeline(step, { ...opts(), toStep: step })
 	}, [runPipeline, opts])
 
-	const VIEW_TABS: { key: ViewTab; label: string; enabled: boolean }[] = [
-		{ key: 'placement', label: 'Placement', enabled: !!placementResult },
-		{ key: 'routing', label: 'Routing', enabled: !!routingResult },
-		{ key: 'bitmap', label: 'Bitmap', enabled: !!bitmapResult },
-		{ key: '3d', label: '3D', enabled: !!placementResult }
-	]
+	const handleSelectStep = useCallback((step: ManufactureStep) => {
+		if (step in STEP_TO_TAB) { setViewTab(STEP_TO_TAB[step]) }
+	}, [])
+
 
 	return (
 		<div className="flex h-full flex-col">
@@ -262,6 +266,8 @@ export default function ManufacturePanel (): ReactElement {
 								key={s.step}
 								s={s}
 								running={running}
+								selected={STEP_TO_TAB[s.step] === viewTab}
+								onSelect={() => handleSelectStep(s.step)}
 								onInform={!running ? handleInform : undefined}
 								onRetry={!running ? handleRetry : undefined}
 								onContinue={!running ? handleContinue : undefined}
@@ -298,20 +304,6 @@ export default function ManufacturePanel (): ReactElement {
 
 				{/* Right: Viewport */}
 				<div className="flex-1 flex flex-col overflow-hidden">
-					<div className="flex items-center gap-1 border-b border-border px-3 py-1.5">
-						{VIEW_TABS.map(t => (
-							<button
-								key={t.key}
-								onClick={() => setViewTab(t.key)}
-								disabled={!t.enabled}
-								className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-									viewTab === t.key ? 'bg-accent text-white' : 'text-fg-secondary hover:bg-surface-hover'
-								} disabled:opacity-30`}
-							>
-								{t.label}
-							</button>
-						))}
-					</div>
 					<div className="flex-1 overflow-hidden">
 						{viewTab === 'placement' && placementResult ? (
 							<PlacementViewport placement={placementResult} className="w-full h-full" />
