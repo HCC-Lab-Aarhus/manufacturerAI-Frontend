@@ -12,7 +12,7 @@ import type { CircuitSpec } from '@/types/models'
 import type { ChatEntry } from './useDesignAgent'
 
 export function useCircuitAgent () {
-	const { currentSession, refreshSession } = useSession()
+	const { currentSession, refreshSession, patchSession } = useSession()
 	const { setCircuit } = usePipeline()
 	const { addError } = useError()
 
@@ -105,6 +105,13 @@ export function useCircuitAgent () {
 				circuitReceivedRef.current = true
 				setCircuit((d.circuit ?? d) as unknown as CircuitSpec)
 				break
+			case 'invalidated':
+				patchSession({
+					invalidated_steps: d.invalidated_steps as string[],
+					artifacts: d.artifacts as Record<string, boolean>,
+					pipeline_errors: d.pipeline_errors as Record<string, import('@/types/models').PipelineError>,
+				})
+				break
 			case 'error':
 				addError(d.message ?? d)
 				break
@@ -118,7 +125,7 @@ export function useCircuitAgent () {
 				})
 				break
 		}
-	}, [appendMessage, updateLastAssistant, updateLastThinking, setCircuit, addError, nextId])
+	}, [appendMessage, updateLastAssistant, updateLastThinking, setCircuit, patchSession, addError, nextId])
 
 	const startStream = useCallback((feedback?: string, outline?: string) => {
 		if (!currentSession) { return }

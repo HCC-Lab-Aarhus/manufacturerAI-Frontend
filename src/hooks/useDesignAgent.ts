@@ -20,7 +20,7 @@ export interface ChatEntry {
 }
 
 export function useDesignAgent () {
-	const { currentSession, selectSession, refreshSession, refreshSessions } = useSession()
+	const { currentSession, selectSession, refreshSession, refreshSessions, patchSession } = useSession()
 	const { setDesign } = usePipeline()
 	const { addError } = useError()
 
@@ -137,6 +137,13 @@ export function useDesignAgent () {
 					designReceived = true
 					setDesign((d.design ?? d) as unknown as DesignSpec)
 					break
+				case 'invalidated':
+					patchSession({
+						invalidated_steps: d.invalidated_steps as string[],
+						artifacts: d.artifacts as Record<string, boolean>,
+						pipeline_errors: d.pipeline_errors as Record<string, import('@/types/models').PipelineError>,
+					})
+					break
 				case 'token_usage':
 					setTokenUsage({
 						input_tokens: d.input_tokens as number,
@@ -178,7 +185,7 @@ export function useDesignAgent () {
 			},
 			sessionId
 		)
-	}, [streaming, currentSession, appendMessage, updateLastAssistant, updateLastThinking, setDesign, refreshSession, refreshSessions, selectSession, addError, nextId])
+	}, [streaming, currentSession, appendMessage, updateLastAssistant, updateLastThinking, setDesign, refreshSession, refreshSessions, selectSession, patchSession, addError, nextId])
 
 	const loadConversation = useCallback(async (sessionId: string) => {
 		if (streamingRef.current) return

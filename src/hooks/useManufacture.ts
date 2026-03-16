@@ -51,7 +51,7 @@ function initSteps (artifacts: Record<string, boolean>, errors?: Record<string, 
 }
 
 export function useManufacture () {
-	const { currentSession, refreshSession } = useSession()
+	const { currentSession, refreshSession, pendingInvalidation, clearInvalidation } = useSession()
 	const { addError } = useError()
 
 	const [steps, setSteps] = useState<ManufactureStepState[]>(() =>
@@ -67,9 +67,7 @@ export function useManufacture () {
 	const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
 	useEffect(() => {
-		if (!running) {
-			setSteps(initSteps(currentSession?.artifacts ?? {}, currentSession?.pipeline_errors))
-		}
+		setSteps(initSteps(currentSession?.artifacts ?? {}, currentSession?.pipeline_errors))
 		if (currentSession?.id) {
 			const a = currentSession.artifacts ?? {}
 			if (a.placement) getPlacementResult(currentSession.id).then(setPlacementResult).catch(() => {})
@@ -77,7 +75,19 @@ export function useManufacture () {
 			if (a.routing) getBitmap(currentSession.id).then(setBitmapResult).catch(() => {})
 		}
 	// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [currentSession?.id, currentSession?.artifacts])
+	}, [currentSession?.id])
+
+	useEffect(() => {
+		if (!pendingInvalidation?.length) { return }
+		setSteps(prev => prev.map(s =>
+			pendingInvalidation.includes(s.step)
+				? { ...s, status: 'pending' as StepStatus, message: undefined, responsibleAgent: undefined }
+				: s
+		))
+		if (pendingInvalidation.includes('placement')) { setPlacementResult(null) }
+		if (pendingInvalidation.includes('routing')) { setRoutingResult(null); setBitmapResult(null) }
+		clearInvalidation()
+	}, [pendingInvalidation, clearInvalidation])
 
 	const updateStep = useCallback((step: ManufactureStep, update: Partial<ManufactureStepState>) => {
 		setSteps(prev => prev.map(s =>

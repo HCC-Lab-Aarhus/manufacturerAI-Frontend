@@ -18,6 +18,7 @@ export default function Sidebar (): ReactElement {
 		selectSession,
 		clearSession,
 		refreshSessions,
+		patchSession,
 		printer,
 		setPrinter
 	} = useSession()
@@ -52,7 +53,12 @@ export default function Sidebar (): ReactElement {
 		const result = await setSessionPrinter(currentSession.id, printerId)
 		const found = printers.find(p => p.id === result.printer_id) ?? null
 		setPrinter(found)
-	}, [currentSession, printers, setPrinter])
+		patchSession({
+			invalidated_steps: result.invalidated_steps,
+			artifacts: result.artifacts,
+			pipeline_errors: result.pipeline_errors,
+		})
+	}, [currentSession, printers, setPrinter, patchSession])
 
 	useEffect(() => {
 		refreshSessions()

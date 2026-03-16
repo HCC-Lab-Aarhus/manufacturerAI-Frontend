@@ -9,6 +9,7 @@ export type SSEEventType =
 	| 'tool_result'
 	| 'design'
 	| 'circuit'
+	| 'invalidated'
 	| 'token_usage'
 	| 'session_named'
 	| 'error'

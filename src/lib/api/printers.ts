@@ -1,4 +1,4 @@
-import type { Filament, Printer } from '@/types/models'
+import type { Filament, PipelineError, Printer } from '@/types/models'
 
 import apiClient from './client'
 
@@ -7,11 +7,19 @@ export async function listPrinters (): Promise<Printer[]> {
 	return data.printers
 }
 
+interface SetPrinterResponse {
+	printer_id: string
+	label: string
+	invalidated_steps: string[]
+	artifacts: Record<string, boolean>
+	pipeline_errors: Record<string, PipelineError>
+}
+
 export async function setSessionPrinter (
 	sessionId: string,
 	printerId: string
-): Promise<{ printer_id: string; label: string }> {
-	const { data } = await apiClient.put(`/api/v2/sessions/${encodeURIComponent(sessionId)}/printer`, null, {
+): Promise<SetPrinterResponse> {
+	const { data } = await apiClient.put<SetPrinterResponse>(`/api/v2/sessions/${encodeURIComponent(sessionId)}/printer`, null, {
 		params: { printer_id: printerId }
 	})
 	return data

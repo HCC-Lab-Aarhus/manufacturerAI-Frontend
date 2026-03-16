@@ -2,6 +2,7 @@
 
 import { type ReactElement, useEffect, useRef } from 'react'
 
+import { useSession } from '@/contexts/SessionContext'
 import type { CatalogBody, CatalogPin, DesignSpec, UIPlacement } from '@/types/models'
 import { normalizeOutline, normaliseOutline, buildOutlinePath, outlineBBox, snapToEdge, nearestEdge, SCALE, PAD } from '@/lib/viewport'
 import { validateUIPlacement, putDesign, submitDesignToConversation } from '@/lib/api/design'
@@ -48,6 +49,7 @@ const DRAG_COLORS = {
 }
 
 export default function DesignViewport ({ design, sessionId, onDesignUpdate, className }: Props): ReactElement {
+	const { patchSession } = useSession()
 	const outline = normalizeOutline(design.outline)
 	const placements = (design.ui_placements ?? []) as EnrichedPlacement[]
 	const norm = normaliseOutline(outline)
@@ -292,6 +294,13 @@ export default function DesignViewport ({ design, sessionId, onDesignUpdate, cla
 					const saved = await putDesign(sessionId, stripped)
 					if (!abort.signal.aborted && seq === commitSeqRef.current) {
 						onDesignUpdateRef.current?.(saved)
+					}
+					if (saved.invalidated_steps || saved.artifacts) {
+						patchSession({
+							invalidated_steps: saved.invalidated_steps,
+							artifacts: saved.artifacts,
+							pipeline_errors: saved.pipeline_errors,
+						})
 					}
 					await submitDesignToConversation(sessionId, stripped)
 				} catch {

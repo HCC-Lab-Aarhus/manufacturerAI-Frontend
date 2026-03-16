@@ -1,6 +1,7 @@
 import type {
 	ConversationMessage,
 	DesignSpec,
+	PipelineError,
 	PlacementValidation,
 	TokenUsage
 } from '@/types/models'
@@ -40,8 +41,14 @@ export async function getDesignResult (sessionId: string): Promise<DesignSpec> {
 	return data
 }
 
-export async function putDesign (sessionId: string, design: DesignSpec): Promise<DesignSpec> {
-	const { data } = await apiClient.put<DesignSpec>(
+type PutDesignResponse = DesignSpec & {
+	invalidated_steps?: string[]
+	artifacts?: Record<string, boolean>
+	pipeline_errors?: Record<string, PipelineError>
+}
+
+export async function putDesign (sessionId: string, design: DesignSpec): Promise<PutDesignResponse> {
+	const { data } = await apiClient.put<PutDesignResponse>(
 		`/api/v2/sessions/${encodeURIComponent(sessionId)}/design`,
 		design
 	)

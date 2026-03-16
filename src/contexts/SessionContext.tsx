@@ -11,7 +11,7 @@ import {
 } from 'react'
 
 import { getSession, listSessions } from '@/lib/api'
-import type { PipelineStage, Printer, SessionMeta } from '@/types/models'
+import type { PipelineError, PipelineStage, Printer, SessionMeta } from '@/types/models'
 
 const PRINTER_COOKIE = 'printer-id'
 
@@ -34,11 +34,14 @@ interface SessionContextValue {
 	currentSession: SessionMeta | null
 	activeStage: PipelineStage
 	loading: boolean
+	pendingInvalidation: string[] | null
 	setActiveStage: (stage: PipelineStage) => void
 	selectSession: (id: string) => Promise<void>
 	clearSession: () => void
 	refreshSession: () => Promise<void>
 	refreshSessions: () => Promise<void>
+	patchSession: (data: { artifacts?: Record<string, boolean>; pipeline_errors?: Record<string, PipelineError>; invalidated_steps?: string[] }) => void
+	clearInvalidation: () => void
 	printer: Printer | null
 	setPrinter: (p: Printer | null) => void
 }
@@ -48,11 +51,14 @@ const SessionContext = createContext<SessionContextValue>({
 	currentSession: null,
 	activeStage: 'design',
 	loading: false,
+	pendingInvalidation: null,
 	setActiveStage: () => {},
 	selectSession: async () => {},
 	clearSession: () => {},
 	refreshSession: async () => {},
 	refreshSessions: async () => {},
+	patchSession: () => {},
+	clearInvalidation: () => {},
 	printer: null,
 	setPrinter: () => {}
 })
@@ -85,6 +91,7 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 	const [activeStage, setActiveStage] = useState<PipelineStage>('design')
 	const [loading, setLoading] = useState(false)
 	const [printer, _setPrinter] = useState<Printer | null>(null)
+	const [pendingInvalidation, setPendingInvalidation] = useState<string[] | null>(null)
 
 	const setPrinter = useCallback((p: Printer | null) => {
 		_setPrinter(p)
@@ -119,9 +126,24 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 	const clearSession = useCallback(() => {
 		setCurrentSession(null)
 		setActiveStage('design')
+		setPendingInvalidation(null)
 		const url = new URL(window.location.href)
 		url.searchParams.delete('session')
 		window.history.replaceState(null, '', url.toString())
+	}, [])
+
+	const patchSession = useCallback((data: { artifacts?: Record<string, boolean>; pipeline_errors?: Record<string, PipelineError>; invalidated_steps?: string[] }) => {
+		const { invalidated_steps, ...sessionPatch } = data
+		if (Object.keys(sessionPatch).length > 0) {
+			setCurrentSession(prev => prev ? { ...prev, ...sessionPatch } : prev)
+		}
+		if (invalidated_steps?.length) {
+			setPendingInvalidation(invalidated_steps)
+		}
+	}, [])
+
+	const clearInvalidation = useCallback(() => {
+		setPendingInvalidation(null)
 	}, [])
 
 	useEffect(() => {
@@ -142,14 +164,17 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 		currentSession,
 		activeStage,
 		loading,
+		pendingInvalidation,
 		setActiveStage,
 		selectSession,
 		clearSession,
 		refreshSession,
 		refreshSessions,
+		patchSession,
+		clearInvalidation,
 		printer,
 		setPrinter
-	}), [sessions, currentSession, activeStage, loading, selectSession, clearSession, refreshSession, refreshSessions, printer])
+	}), [sessions, currentSession, activeStage, loading, pendingInvalidation, selectSession, clearSession, refreshSession, refreshSessions, patchSession, clearInvalidation, printer])
 
 	return (
 		<SessionContext.Provider value={value}>
