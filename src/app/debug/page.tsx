@@ -3,17 +3,30 @@
 import Link from 'next/link'
 import { type ReactElement, useEffect, useState } from 'react'
 
-import { listPrinters, listFilaments, generateCalibration } from '@/lib/api'
+import { listPrinters, listFilaments, generateCalibration, generateSilverinkTest } from '@/lib/api'
 import type { Printer, Filament } from '@/types/models'
+
+type TestMode = 'calibration' | 'silverink'
 
 export default function DebugPage (): ReactElement {
 	const [printers, setPrinters] = useState<Printer[]>([])
 	const [filaments, setFilaments] = useState<Filament[]>([])
 	const [printer, setPrinter] = useState('')
 	const [filament, setFilament] = useState('')
+	const [testMode, setTestMode] = useState<TestMode>('calibration')
+
+	// Shared params
 	const [boxSize, setBoxSize] = useState(100)
 	const [padding, setPadding] = useState(5)
+
+	// Calibration-specific
 	const [squareSize, setSquareSize] = useState(5)
+
+	// Silverink test-specific
+	const [rectWidth, setRectWidth] = useState(10)
+	const [rectHeight, setRectHeight] = useState(20)
+	const [layers, setLayers] = useState(4)
+
 	const [generating, setGenerating] = useState(false)
 	const [error, setError] = useState('')
 	const [gcodeUrl, setGcodeUrl] = useState<string | null>(null)
@@ -38,19 +51,29 @@ export default function DebugPage (): ReactElement {
 		setPrinter(id)
 	}
 
-	const handleGenerate = async () => {
-		setGenerating(true)
-		setError('')
+	const clearDownloads = () => {
 		setGcodeUrl(null)
 		setBitmapUrl(null)
 		setContractUrl(null)
+	}
+
+	const handleGenerate = async () => {
+		setGenerating(true)
+		setError('')
+		clearDownloads()
 		try {
-			const data = await generateCalibration({
-				printer, filament,
-				box_size: boxSize, padding, square_size: squareSize
-			})
-			setGcodeFilename(String(data.contract.gcode_file || 'calibration.gcode'))
-			setBitmapFilename(String(data.contract.bitmap_file || 'calibration_bitmap.txt'))
+			const data = testMode === 'calibration'
+				? await generateCalibration({
+					printer, filament,
+					box_size: boxSize, padding, square_size: squareSize
+				})
+				: await generateSilverinkTest({
+					printer, filament,
+					padding,
+					rect_width: rectWidth, rect_height: rectHeight, layers
+				})
+			setGcodeFilename(String(data.contract.gcode_file || `${testMode}.gcode`))
+			setBitmapFilename(String(data.contract.bitmap_file || `${testMode}_bitmap.txt`))
 			setGcodeUrl(URL.createObjectURL(new Blob([data.gcode], { type: 'text/plain' })))
 			setBitmapUrl(URL.createObjectURL(new Blob([data.bitmap], { type: 'text/plain' })))
 			setContractUrl(URL.createObjectURL(new Blob([JSON.stringify(data.contract, null, 2)], { type: 'application/json' })))
@@ -75,13 +98,41 @@ export default function DebugPage (): ReactElement {
 		</div>
 	)
 
+	const titles: Record<TestMode, { heading: string; description: string }> = {
+		calibration: {
+			heading: 'Calibration Generator',
+			description: 'Generates alignment squares to calibrate inkjet-to-PLA offset.'
+		},
+		silverink: {
+			heading: 'Silverink Test Generator',
+			description: 'Generates ironed rectangles with silver traces to test ink adhesion and conductivity.'
+		}
+	}
+
 	return (
 		<div className="flex h-screen items-start justify-center bg-surface p-8">
 			<Link href="/" className="absolute left-4 top-4 text-sm text-accent hover:underline">{'← Back to main'}</Link>
 			<div className="w-full max-w-md space-y-6">
 				<div>
-					<h1 className="text-xl font-semibold text-fg">{'Calibration Generator'}</h1>
-					<p className="mt-1 text-sm text-fg-muted">{'Generates alignment squares to calibrate inkjet-to-PLA offset.'}</p>
+					<h1 className="text-xl font-semibold text-fg">{titles[testMode].heading}</h1>
+					<p className="mt-1 text-sm text-fg-muted">{titles[testMode].description}</p>
+				</div>
+
+				{/* Test mode selector */}
+				<div className="flex rounded-xl bg-surface-card p-1 shadow-sm">
+					{(['calibration', 'silverink'] as const).map(mode => (
+						<button
+							key={mode}
+							onClick={() => { setTestMode(mode); clearDownloads() }}
+							className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+								testMode === mode
+									? 'bg-accent text-white'
+									: 'text-fg-secondary hover:text-fg'
+							}`}
+						>
+							{mode === 'calibration' ? 'Calibration' : 'Silverink Test'}
+						</button>
+					))}
 				</div>
 
 				{selectedPrinter && (
@@ -113,16 +164,33 @@ export default function DebugPage (): ReactElement {
 							{filaments.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
 						</select>
 					</div>
-					{field('Bounding Box (mm)', boxSize, setBoxSize)}
 					{field('Padding (mm)', padding, setPadding, 0.5)}
-					{field('Square Size (mm)', squareSize, setSquareSize, 0.5)}
+
+					{testMode === 'calibration' && (
+						<>
+							{field('Bounding Box (mm)', boxSize, setBoxSize)}
+							{field('Square Size (mm)', squareSize, setSquareSize, 0.5)}
+						</>
+					)}
+
+					{testMode === 'silverink' && (
+						<>
+							{field('Rectangle Width (mm)', rectWidth, setRectWidth, 1)}
+							{field('Rectangle Height (mm)', rectHeight, setRectHeight, 1)}
+							{field('Layers', layers, setLayers)}
+						</>
+					)}
 
 					<button
 						onClick={handleGenerate}
 						disabled={generating}
 						className="w-full rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
 					>
-						{generating ? 'Generating…' : 'Generate Calibration Files'}
+						{generating
+							? 'Generating…'
+							: testMode === 'calibration'
+								? 'Generate Calibration Files'
+								: 'Generate Silverink Test Files'}
 					</button>
 
 					{error && <p className="text-sm text-danger text-center">{error}</p>}
@@ -150,16 +218,30 @@ export default function DebugPage (): ReactElement {
 					)}
 				</div>
 
-				<div className="rounded-2xl bg-surface-card p-4 shadow-sm space-y-3">
-					<h2 className="text-sm font-medium text-fg">{'Calibration Procedure'}</h2>
-					<ol className="list-decimal list-inside text-sm text-fg-secondary space-y-1.5">
-						<li>{'Print the G-code — four PLA square outlines will appear on the bed.'}</li>
-						<li>{'Run the sweep with the bitmap — the inkjet deposits four filled squares.'}</li>
-						<li>{'Measure the X and Y distance between each PLA outline and its ink square.'}</li>
-						<li>{'Average the four measurements — this is your inkjet offset.'}</li>
-						<li>{'Update the offset in the printer configuration.'}</li>
-					</ol>
-				</div>
+				{testMode === 'calibration' && (
+					<div className="rounded-2xl bg-surface-card p-4 shadow-sm space-y-3">
+						<h2 className="text-sm font-medium text-fg">{'Calibration Procedure'}</h2>
+						<ol className="list-decimal list-inside text-sm text-fg-secondary space-y-1.5">
+							<li>{'Print the G-code — four PLA square outlines will appear on the bed.'}</li>
+							<li>{'Run the sweep with the bitmap — the inkjet deposits four filled squares.'}</li>
+							<li>{'Measure the X and Y distance between each PLA outline and its ink square.'}</li>
+							<li>{'Average the four measurements — this is your inkjet offset.'}</li>
+							<li>{'Update the offset in the printer configuration.'}</li>
+						</ol>
+					</div>
+				)}
+
+				{testMode === 'silverink' && (
+					<div className="rounded-2xl bg-surface-card p-4 shadow-sm space-y-3">
+						<h2 className="text-sm font-medium text-fg">{'Silverink Test Procedure'}</h2>
+						<ol className="list-decimal list-inside text-sm text-fg-secondary space-y-1.5">
+							<li>{'Print the G-code — three ironed PLA rectangles in an L-pattern.'}</li>
+							<li>{'Run the sweep with the bitmap — a single trace is deposited through each rectangle.'}</li>
+							<li>{'Visually inspect that traces are centred and continuous on the ironed surface.'}</li>
+							<li>{'Test conductivity of each trace with a multimeter.'}</li>
+						</ol>
+					</div>
+				)}
 
 			</div>
 		</div>
