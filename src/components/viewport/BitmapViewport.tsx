@@ -2,7 +2,7 @@
 
 import { type ReactElement, useEffect, useRef, useState } from 'react'
 
-import { SCALE, netColor, normalizeOutline } from '@/lib/viewport'
+import { SCALE, netColor, normalizeOutline, normaliseOutline } from '@/lib/viewport'
 import type { BitmapResult } from '@/types/models'
 
 interface Props {
@@ -65,6 +65,44 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 	const partW = maxX - minX
 	const partH = maxY - minY
 
+	// Build Bézier-expanded outline path matching other viewports
+	const outlinePathD = (() => {
+		const norm = normaliseOutline(outline)
+		const { verts, corners } = norm
+		const n = verts.length
+		if (n < 3) return ''
+		const parts: string[] = []
+		for (let i = 0; i < n; i++) {
+			const C = verts[i]
+			const prev = (i - 1 + n) % n
+			const next = (i + 1) % n
+			const P = verts[prev], N = verts[next]
+			const eIn = corners[i].ease_in ?? 0
+			const eOut = corners[i].ease_out ?? 0
+			const cx = padX + (C[0] + bed_offset_x) * bedScale
+			const cy = padY + (C[1] + bed_offset_y) * bedScale
+			if (eIn === 0 && eOut === 0) {
+				parts.push(i === 0 ? `M${cx},${cy}` : `L${cx},${cy}`)
+				continue
+			}
+			const dPx = P[0] - C[0], dPy = P[1] - C[1]
+			const dNx = N[0] - C[0], dNy = N[1] - C[1]
+			const lenP = Math.hypot(dPx, dPy)
+			const lenN = Math.hypot(dNx, dNy)
+			const tIn = Math.min(eIn / lenP, 0.5)
+			const tOut = Math.min(eOut / lenN, 0.5)
+			const ax = padX + (C[0] + dPx * tIn + bed_offset_x) * bedScale
+			const ay = padY + (C[1] + dPy * tIn + bed_offset_y) * bedScale
+			const bx = padX + (C[0] + dNx * tOut + bed_offset_x) * bedScale
+			const by = padY + (C[1] + dNy * tOut + bed_offset_y) * bedScale
+			if (i === 0) parts.push(`M${ax},${ay}`)
+			else parts.push(`L${ax},${ay}`)
+			parts.push(`Q${cx},${cy} ${bx},${by}`)
+		}
+		parts.push('Z')
+		return parts.join(' ')
+	})()
+
 	return (
 		<div className={className ?? 'w-full h-full flex flex-col'}>
 			<div className="flex items-center gap-4 px-3 py-1.5 text-xs text-fg-secondary border-b border-border">
@@ -85,11 +123,9 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 						{'Build plate '}{bed_width}{' × '}{bed_depth}{' mm'}
 					</text>
 
-					{outline.length >= 3 && (
-						<polygon
-							points={outline.map(p =>
-								`${padX + (p.x + bed_offset_x) * bedScale},${padY + (p.y + bed_offset_y) * bedScale}`
-							).join(' ')}
+					{outlinePathD && (
+						<path
+							d={outlinePathD}
 							fill="rgba(86,114,160,0.08)" stroke="#5672a0" strokeWidth={1.5}
 						/>
 					)}
