@@ -99,7 +99,8 @@ export function useCircuitAgent () {
 					id: nextId('tool-call'),
 					role: 'tool_call',
 					content: JSON.stringify(d.input, null, 2),
-					toolName: d.name as string
+					toolName: d.name as string,
+					toolUseId: d.id as string
 				})
 				break
 			case 'tool_result':
@@ -108,6 +109,7 @@ export function useCircuitAgent () {
 					role: 'tool_result',
 					content: d.content as string,
 					toolName: d.name as string,
+					toolUseId: d.id as string,
 					isError: d.is_error as boolean
 				})
 				break
@@ -119,7 +121,7 @@ export function useCircuitAgent () {
 				patchSession({
 					invalidated_steps: d.invalidated_steps as string[],
 					artifacts: d.artifacts as Record<string, boolean>,
-					pipeline_errors: d.pipeline_errors as Record<string, import('@/types/models').PipelineError>,
+					pipeline_errors: d.pipeline_errors as Record<string, import('@/types/models').PipelineError>
 				})
 				break
 			case 'error':
@@ -200,7 +202,7 @@ export function useCircuitAgent () {
 	}, [streaming, currentSession, appendMessage, nextId, subscribeToStream, addError])
 
 	const loadConversation = useCallback(async (sessionId: string) => {
-		if (streamingRef.current) return
+		if (streamingRef.current) { return }
 		try {
 			const status = await getCircuitStatus(sessionId).catch(() => null)
 			const isRunning = status?.status === 'running'
@@ -242,14 +244,16 @@ export function useCircuitAgent () {
 								id: `tool-call-${entries.length}`,
 								role: 'tool_call',
 								content: JSON.stringify(block.input, null, 2),
-								toolName: block.name
+								toolName: block.name,
+								toolUseId: block.id
 							})
 						} else if (block.type === 'tool_result') {
 							entries.push({
 								id: `tool-result-${entries.length}`,
 								role: 'tool_result',
 								content: block.content ?? '',
-								toolName: block.name
+								toolName: block.name,
+								toolUseId: block.tool_use_id
 							})
 						}
 					}

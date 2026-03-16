@@ -51,15 +51,19 @@ function ToolCallPair ({ call, result }: { call: ChatEntry; result?: ChatEntry }
 
 function ToolCallGroup ({ entries }: { entries: ChatEntry[] }): ReactElement {
 	const pairs = useMemo(() => {
+		const callMap = new Map<string, { call: ChatEntry; result?: ChatEntry }>()
 		const result: { call: ChatEntry; result?: ChatEntry }[] = []
-		for (let i = 0; i < entries.length; i++) {
-			if (entries[i].role === 'tool_call') {
-				const next = entries[i + 1]
-				if (next?.role === 'tool_result') {
-					result.push({ call: entries[i], result: next })
-					i++
-				} else {
-					result.push({ call: entries[i] })
+		for (const entry of entries) {
+			if (entry.role === 'tool_call') {
+				const pair = { call: entry }
+				result.push(pair)
+				if (entry.toolUseId) {
+					callMap.set(entry.toolUseId, pair)
+				}
+			} else if (entry.role === 'tool_result' && entry.toolUseId) {
+				const pair = callMap.get(entry.toolUseId)
+				if (pair) {
+					pair.result = entry
 				}
 			}
 		}
@@ -137,7 +141,7 @@ export default function ChatMessage ({ entry }: ChatMessageProps): ReactElement 
 				) : entry.content.length > 0 && (
 					<ThinkingPreview content={entry.content} />
 				)}
-				{entry.content.length > 0 && !entry.isStreaming && (
+				{entry.content.length > 0 && (
 					<button
 						onClick={() => setExpanded(!expanded)}
 						className="text-[11px] text-fg-muted/60 hover:text-fg-secondary transition-colors mt-1"

@@ -22,6 +22,7 @@ export interface ChatEntry {
 	role: 'user' | 'assistant' | 'thinking' | 'tool_call' | 'tool_result' | 'status'
 	content: string
 	toolName?: string
+	toolUseId?: string
 	isError?: boolean
 	isStreaming?: boolean
 }
@@ -108,7 +109,8 @@ export function useDesignAgent () {
 					id: nextId('tool-call'),
 					role: 'tool_call',
 					content: JSON.stringify(d.input, null, 2),
-					toolName: d.name as string
+					toolName: d.name as string,
+					toolUseId: d.id as string
 				})
 				break
 			case 'tool_result':
@@ -117,6 +119,7 @@ export function useDesignAgent () {
 					role: 'tool_result',
 					content: d.content as string,
 					toolName: d.name as string,
+					toolUseId: d.id as string,
 					isError: d.is_error as boolean
 				})
 				break
@@ -252,7 +255,8 @@ export function useDesignAgent () {
 								id: `tool-call-${entries.length}`,
 								role: 'tool_call',
 								content: JSON.stringify(block.input, null, 2),
-								toolName: block.name
+								toolName: block.name,
+								toolUseId: block.id
 							})
 						} else if (block.type === 'tool_result') {
 							entries.push({
@@ -260,6 +264,7 @@ export function useDesignAgent () {
 								role: 'tool_result',
 								content: block.content ?? '',
 								toolName: block.name,
+								toolUseId: block.tool_use_id,
 								isError: block.is_error
 							})
 						}

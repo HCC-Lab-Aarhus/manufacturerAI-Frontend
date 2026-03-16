@@ -265,8 +265,10 @@ export interface ConversationContentBlock {
 	type: 'text' | 'thinking' | 'tool_use' | 'tool_result'
 	text?: string
 	thinking?: string
+	id?: string
 	name?: string
 	input?: Record<string, unknown>
+	tool_use_id?: string
 	content?: string
 	is_error?: boolean
 }
