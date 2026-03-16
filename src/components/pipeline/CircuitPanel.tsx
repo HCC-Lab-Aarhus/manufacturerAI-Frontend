@@ -10,6 +10,7 @@ import ChatLog from '@/components/chat/ChatLog'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { usePipeline } from '@/contexts/PipelineContext'
 import { useSession } from '@/contexts/SessionContext'
+import { getDesignResult } from '@/lib/api'
 import { useCircuitAgent } from '@/hooks/useCircuitAgent'
 import type { DesignSpec } from '@/types/models'
 
@@ -41,7 +42,7 @@ function buildOutline (design: DesignSpec): string {
 
 export default function CircuitPanel (): ReactElement {
 	const { currentSession, loading } = useSession()
-	const { design, circuit, pendingFeedback, setPendingFeedback } = usePipeline()
+	const { design, circuit, setDesign, pendingFeedback, setPendingFeedback } = usePipeline()
 	const {
 		messages,
 		streaming,
@@ -58,6 +59,12 @@ export default function CircuitPanel (): ReactElement {
 
 	const defaultOutline = useMemo(() => design ? buildOutline(design) : '', [design])
 	const [outline, setOutline] = useState('')
+
+	useEffect(() => {
+		if (currentSession && !design) {
+			getDesignResult(currentSession.id).then(setDesign).catch(() => {})
+		}
+	}, [currentSession?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
 	useEffect(() => {
 		if (defaultOutline && !outline) {
