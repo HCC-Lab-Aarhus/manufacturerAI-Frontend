@@ -205,6 +205,20 @@ export function useCircuitAgent () {
 								role: 'thinking',
 								content: block.thinking
 							})
+						} else if (block.type === 'tool_use') {
+							entries.push({
+								id: `tool-call-${entries.length}`,
+								role: 'tool_call',
+								content: JSON.stringify(block.input, null, 2),
+								toolName: block.name
+							})
+						} else if (block.type === 'tool_result') {
+							entries.push({
+								id: `tool-result-${entries.length}`,
+								role: 'tool_result',
+								content: block.content ?? '',
+								toolName: block.name
+							})
 						}
 					}
 				}
