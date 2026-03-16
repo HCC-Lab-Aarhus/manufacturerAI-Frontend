@@ -43,7 +43,12 @@ interface SceneData {
 		cap_diameter_mm?: number
 		cap_clearance_mm?: number
 	}[]
-	ui_placements?: UIPlacement[]
+	ui_placements?: (UIPlacement & {
+		body?: { shape?: string; width_mm?: number; length_mm?: number; height_mm?: number; diameter_mm?: number }
+		ui_placement?: boolean
+		cap_diameter_mm?: number
+		cap_clearance_mm?: number
+	})[]
 	traces?: { net_id: string; path: [number, number][] }[]
 	pcb_contour?: [number, number][]
 }
@@ -65,23 +70,56 @@ export function buildSceneContent (data: SceneData): THREE.Group {
 	const { pts: expanded, zs: expandedZ, zbots: expandedZBot, cornerIndices } =
 		expandOutlineVertices(verts, corners, zTops, defaultZ, zBottoms)
 
-	const uiPos: Record<string, { x_mm: number; y_mm: number; rotation_deg: number }> = {}
+	const uiPos: Record<string, { x_mm: number; y_mm: number; rotation_deg: number; body?: { shape?: string; width_mm?: number; length_mm?: number; height_mm?: number; diameter_mm?: number }; ui_placement?: boolean; cap_diameter_mm?: number; cap_clearance_mm?: number }> = {}
 	for (const up of (data.ui_placements ?? [])) {
 		uiPos[up.instance_id] = {
 			x_mm: up.x_mm,
 			y_mm: up.y_mm,
 			rotation_deg: 0,
+			body: (up as Record<string, unknown>).body as typeof uiPos[string]['body'],
+			ui_placement: (up as Record<string, unknown>).ui_placement as boolean | undefined,
+			cap_diameter_mm: (up as Record<string, unknown>).cap_diameter_mm as number | undefined,
+			cap_clearance_mm: (up as Record<string, unknown>).cap_clearance_mm as number | undefined,
 		}
 	}
 
 	const bottomHeightGrid = data.bottom_height_grid ?? null
-	const shellGroup = buildEnclosureShell(expanded, expandedZ, expandedZBot, enclosure, heightGrid, bottomHeightGrid, components, uiPos, cornerIndices)
+
+	// Build merged component list: start with explicit components, then add
+	// ui_placement entries that aren't already present (design-stage scenario
+	// where components[] lacks body data but ui_placements has enriched bodies).
+	const mergedComponents = components.map(comp => {
+		const ui = uiPos[comp.instance_id]
+		if (!comp.body && ui?.body) {
+			return { ...comp, body: ui.body, ui_placement: ui.ui_placement, cap_diameter_mm: ui.cap_diameter_mm, cap_clearance_mm: ui.cap_clearance_mm }
+		}
+		return comp
+	})
+	// Also add ui_placement entries that have no matching component at all
+	const compIds = new Set(components.map(c => c.instance_id))
+	for (const [id, ui] of Object.entries(uiPos)) {
+		if (!compIds.has(id) && ui.body) {
+			mergedComponents.push({
+				instance_id: id,
+				x_mm: ui.x_mm,
+				y_mm: ui.y_mm,
+				rotation_deg: ui.rotation_deg,
+				body: ui.body,
+				ui_placement: ui.ui_placement,
+				cap_diameter_mm: ui.cap_diameter_mm,
+				cap_clearance_mm: ui.cap_clearance_mm,
+			})
+		}
+	}
+
+	const shellGroup = buildEnclosureShell(expanded, expandedZ, expandedZBot, enclosure, heightGrid, bottomHeightGrid, mergedComponents, uiPos, cornerIndices)
 	group.add(shellGroup)
 
 	group.add(buildPCBFloor(expanded, expandedZBot, bottomHeightGrid))
 
 	const FLOOR_Z = 2
-	components.forEach((comp, i) => {
+
+	mergedComponents.forEach((comp, i) => {
 		let x = comp.x_mm, y = comp.y_mm, rot = comp.rotation_deg ?? 0
 		if (x == null || y == null) {
 			const ui = uiPos[comp.instance_id]
