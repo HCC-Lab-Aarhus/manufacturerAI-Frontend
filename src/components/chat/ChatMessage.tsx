@@ -100,17 +100,15 @@ export { ToolCallGroup }
 function ThinkingPreview ({ content }: { content: string }): ReactElement {
 	return (
 		<div
-			className="mt-0.5 overflow-hidden"
+			className="mt-0.5 flex flex-col-reverse overflow-hidden"
 			style={{
 				maxHeight: '4.5lh',
-				maskImage: 'linear-gradient(to bottom, transparent 0%, black 100%)',
-				WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 100%)',
+				maskImage: 'linear-gradient(to top, black 60%, transparent 100%)',
+				WebkitMaskImage: 'linear-gradient(to top, black 60%, transparent 100%)',
 			}}
 		>
-			<div className="flex flex-col-reverse">
-				<div className="text-[11px] leading-snug text-fg-muted/70 break-words">
-					{content}
-				</div>
+			<div className="text-[11px] leading-snug text-fg-muted/70 break-words">
+				{content}
 			</div>
 		</div>
 	)
