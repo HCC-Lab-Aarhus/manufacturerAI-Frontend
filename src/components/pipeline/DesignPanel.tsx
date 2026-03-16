@@ -16,7 +16,7 @@ const DesignViewport = dynamic(() => import('@/components/viewport/DesignViewpor
 const Scene3D = dynamic(() => import('@/components/viewport/Scene3D'), { ssr: false })
 
 export default function DesignPanel (): ReactElement {
-	const { currentSession } = useSession()
+	const { currentSession, loading } = useSession()
 	const { design, setDesign, pendingFeedback, setPendingFeedback } = usePipeline()
 	const {
 		messages,
@@ -107,7 +107,7 @@ export default function DesignPanel (): ReactElement {
 					</div>
 				) : (
 					<div className="flex h-full flex-col">
-						{conversationLoading ? (
+						{(conversationLoading || loading) ? (
 							<div className="flex flex-1 items-center justify-center">
 								<LoadingSpinner size="md" />
 							</div>

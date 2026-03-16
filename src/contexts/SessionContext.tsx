@@ -103,9 +103,13 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 	const [activeStage, _setActiveStage] = useState<PipelineStage>('design')
 
 	useLayoutEffect(() => {
-		const tab = new URLSearchParams(window.location.search).get('tab')
+		const params = new URLSearchParams(window.location.search)
+		const tab = params.get('tab')
 		if (tab && VALID_STAGES.has(tab)) {
 			_setActiveStage(tab as PipelineStage)
+		}
+		if (params.get('session')) {
+			setLoading(true)
 		}
 	}, [])
 

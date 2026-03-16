@@ -34,8 +34,9 @@ export function useDesignAgent () {
 
 	const [messages, setMessages] = useState<ChatEntry[]>([])
 	const [streaming, setStreaming] = useState(false)
-	const [conversationLoading, setConversationLoading] = useState(false)
+	const [_conversationLoading, setConversationLoading] = useState(false)
 	const [tokenUsage, setTokenUsage] = useState<TokenUsage | null>(null)
+	const loadedSessionRef = useRef<string | null>(null)
 	const abortRef = useRef<AbortController | null>(null)
 	const streamingRef = useRef(false)
 	const sentFirstRef = useRef(false)
@@ -286,9 +287,12 @@ export function useDesignAgent () {
 		} catch {
 			setMessages([])
 		} finally {
+			loadedSessionRef.current = sessionId
 			setConversationLoading(false)
 		}
 	}, [setDesign, subscribeToStream])
+
+	const conversationLoading = _conversationLoading || (currentSession?.id != null && loadedSessionRef.current !== currentSession.id)
 
 	const cancel = useCallback(async () => {
 		abortRef.current?.abort()

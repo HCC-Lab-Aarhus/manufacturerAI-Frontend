@@ -25,7 +25,8 @@ export function useCircuitAgent () {
 
 	const [messages, setMessages] = useState<ChatEntry[]>([])
 	const [streaming, setStreaming] = useState(false)
-	const [conversationLoading, setConversationLoading] = useState(false)
+	const [_conversationLoading, setConversationLoading] = useState(false)
+	const loadedSessionRef = useRef<string | null>(null)
 	const abortRef = useRef<AbortController | null>(null)
 	const streamingRef = useRef(false)
 	const circuitReceivedRef = useRef(false)
@@ -274,9 +275,12 @@ export function useCircuitAgent () {
 		} catch {
 			setMessages([])
 		} finally {
+			loadedSessionRef.current = sessionId
 			setConversationLoading(false)
 		}
 	}, [setCircuit, subscribeToStream])
+
+	const conversationLoading = _conversationLoading || (currentSession?.id != null && loadedSessionRef.current !== currentSession.id)
 
 	const cancel = useCallback(async () => {
 		abortRef.current?.abort()

@@ -39,7 +39,7 @@ function buildOutline (design: DesignSpec): string {
 }
 
 export default function CircuitPanel (): ReactElement {
-	const { currentSession } = useSession()
+	const { currentSession, loading } = useSession()
 	const { design, circuit, pendingFeedback, setPendingFeedback } = usePipeline()
 	const {
 		messages,
@@ -89,6 +89,14 @@ export default function CircuitPanel (): ReactElement {
 	const handleGenerate = useCallback(() => {
 		runCircuit(outline || undefined)
 	}, [runCircuit, outline])
+
+	if (loading || conversationLoading) {
+		return (
+			<div className="flex h-full items-center justify-center">
+				<LoadingSpinner size="md" />
+			</div>
+		)
+	}
 
 	if (!hasDesign) {
 		return (
