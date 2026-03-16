@@ -6,7 +6,6 @@ import { type ReactElement, useCallback, useEffect, useRef, useState } from 'rea
 import ChatInput from '@/components/chat/ChatInput'
 import ChatLog from '@/components/chat/ChatLog'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
-import TokenMeter from '@/components/ui/TokenMeter'
 import { usePipeline } from '@/contexts/PipelineContext'
 import { useSession } from '@/contexts/SessionContext'
 import { useDesignAgent } from '@/hooks/useDesignAgent'
@@ -90,6 +89,7 @@ export default function DesignPanel (): ReactElement {
 					placeholder="Describe your device…"
 					streaming={streaming}
 					onStop={cancel}
+					tokenUsage={tokenUsage}
 				/>
 			</div>
 		</div>
@@ -98,10 +98,6 @@ export default function DesignPanel (): ReactElement {
 	return (
 		<div className="flex h-full">
 			<div className={`flex flex-col border-r border-border ${design ? 'w-1/2' : 'flex-1'}`}>
-				<div className="flex items-center justify-between border-b border-border px-4 py-1.5">
-					<span className="text-xs font-medium text-fg-secondary">Chat</span>
-					<TokenMeter usage={tokenUsage} />
-				</div>
 				{chatColumn}
 			</div>
 

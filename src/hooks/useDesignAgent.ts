@@ -11,7 +11,8 @@ import {
 	getDesignStatus,
 	stopDesign,
 	getDesignConversation,
-	getDesignResult
+	getDesignResult,
+	getTokenUsage
 } from '@/lib/api'
 import { createSession } from '@/lib/api/sessions'
 import type { SSEEventType } from '@/types/events'
@@ -223,11 +224,14 @@ export function useDesignAgent () {
 				await new Promise(resolve => setTimeout(resolve, 150))
 			}
 
-			const [convo, design, freshStatus] = await Promise.all([
+			const [convo, design, freshStatus, tokens] = await Promise.all([
 				getDesignConversation(sessionId),
 				getDesignResult(sessionId).catch(() => null),
-				isRunning ? getDesignStatus(sessionId).catch(() => null) : Promise.resolve(null)
+				isRunning ? getDesignStatus(sessionId).catch(() => null) : Promise.resolve(null),
+				getTokenUsage(sessionId).catch(() => null)
 			])
+
+			if (tokens) setTokenUsage(tokens)
 
 			const entries: ChatEntry[] = []
 			for (const msg of convo) {
