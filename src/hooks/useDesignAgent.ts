@@ -299,6 +299,16 @@ export function useDesignAgent () {
 				setDesign(design)
 			}
 
+			if (!isRunning && entries.length > 0 && design) {
+				entries.push({
+					id: `l-status-done`,
+					role: 'status',
+					content: 'Design validated and saved',
+					isCompletion: true
+				})
+				setMessages([...entries])
+			}
+
 			if (isRunning) {
 				const cursor = freshStatus?.last_save_cursor ?? status?.last_save_cursor ?? 0
 				setStreaming(true)

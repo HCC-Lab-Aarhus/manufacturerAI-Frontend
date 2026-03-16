@@ -294,6 +294,16 @@ export function useCircuitAgent () {
 				setCircuit(circuit)
 			}
 
+			if (!isRunning && entries.length > 0 && circuit) {
+				entries.push({
+					id: `l-status-done`,
+					role: 'status',
+					content: 'Circuit validated and saved',
+					isCompletion: true
+				})
+				setMessages([...entries])
+			}
+
 			if (tokens) {
 				setTokenUsage(tokens)
 			}
