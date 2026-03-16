@@ -142,9 +142,11 @@ export function useCircuitAgent () {
 					pipeline_errors: d.pipeline_errors as Record<string, import('@/types/models').PipelineError>
 				})
 				break
-			case 'error':
-				addError(d.message ?? d)
+			case 'error': {
+				const msg = String(d.message ?? d)
+				if (msg !== 'Cancelled') addError(msg)
 				break
+			}
 			case 'token_usage':
 				setTokenUsage(d as unknown as TokenUsage)
 				break
