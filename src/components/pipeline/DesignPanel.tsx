@@ -28,7 +28,6 @@ export default function DesignPanel (): ReactElement {
 		cancel
 	} = useDesignAgent()
 
-	const [viewMode, setViewMode] = useState<'chat' | 'design'>('chat')
 	const feedbackSentRef = useRef(false)
 
 	const scene3dDesignRef = useRef(design)
@@ -56,7 +55,6 @@ export default function DesignPanel (): ReactElement {
 			const msg = pendingFeedback.message
 			setPendingFeedback(null)
 			sendMessage(msg)
-			setViewMode('chat')
 		}
 		if (!pendingFeedback) {
 			feedbackSentRef.current = false
@@ -65,75 +63,57 @@ export default function DesignPanel (): ReactElement {
 
 	const hasMessages = messages.length > 0
 
-	return (
+	const chatColumn = (
 		<div className="flex h-full flex-col">
-			<div className="flex items-center justify-between border-b border-border px-4 py-1.5">
-				<div className="flex items-center gap-1">
-					<button
-						onClick={() => setViewMode('chat')}
-						className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-							viewMode === 'chat' ? 'bg-accent text-white' : 'text-fg-secondary hover:bg-surface-hover'
-						}`}
-					>
-						Chat
-					</button>
-					<button
-						onClick={() => setViewMode('design')}
-						disabled={!design}
-						className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-							viewMode === 'design' ? 'bg-accent text-white' : 'text-fg-secondary hover:bg-surface-hover'
-						} disabled:opacity-30`}
-					>
-						Design
-					</button>
+			{(conversationLoading || loading) ? (
+				<div className="flex flex-1 items-center justify-center">
+					<LoadingSpinner size="md" />
 				</div>
-				<TokenMeter usage={tokenUsage} />
+			) : hasMessages ? (
+				<ChatLog messages={messages} />
+			) : (
+				<div className="flex flex-1 flex-col items-center justify-center gap-4 text-fg-secondary">
+					<h2 className="text-xl font-semibold text-fg-secondary">{'ManufacturerAI'}</h2>
+					<p className="max-w-md text-center text-sm">
+						{'Describe what hardware device you want to build and the design agent will help you create it.'}
+					</p>
+				</div>
+			)}
+			<div className={`border-t border-border p-3 ${!hasMessages ? 'mx-auto w-full max-w-xl' : ''}`}>
+				<ChatInput
+					onSend={sendMessage}
+					disabled={streaming}
+					placeholder="Describe your device…"
+					streaming={streaming}
+					onStop={cancel}
+				/>
+			</div>
+		</div>
+	)
+
+	return (
+		<div className="flex h-full">
+			<div className={`flex flex-col border-r border-border ${design ? 'w-1/2' : 'flex-1'}`}>
+				<div className="flex items-center justify-between border-b border-border px-4 py-1.5">
+					<span className="text-xs font-medium text-fg-secondary">Chat</span>
+					<TokenMeter usage={tokenUsage} />
+				</div>
+				{chatColumn}
 			</div>
 
-			<div className="flex-1 overflow-hidden">
-				{viewMode === 'design' && design ? (
-					<div className="flex h-full">
-						<div className="flex-1 border-r border-border overflow-hidden">
-							<DesignViewport
-								design={design as DesignSpec & { pcb_contour?: [number, number][] }}
-								sessionId={currentSession?.id}
+			{design && (
+				<div className="flex w-1/2 flex-col">
+					<div className="flex-1 border-b border-border overflow-hidden">
+						<DesignViewport
+							design={design as DesignSpec & { pcb_contour?: [number, number][] }}
+							sessionId={currentSession?.id}
 							onDesignUpdate={handleDesignUpdate}
 							className="w-full h-full"
 						/>
 					</div>
 					<div className="flex-1 overflow-hidden">
 						<Scene3D design={scene3dDesign} className="w-full h-full" />
-						</div>
 					</div>
-				) : (
-					<div className="flex h-full flex-col">
-						{(conversationLoading || loading) ? (
-							<div className="flex flex-1 items-center justify-center">
-								<LoadingSpinner size="md" />
-							</div>
-						) : hasMessages ? (
-							<ChatLog messages={messages} />
-						) : (
-						<div className="flex flex-1 flex-col items-center justify-center gap-4 text-fg-secondary">
-							<h2 className="text-xl font-semibold text-fg-secondary">{'ManufacturerAI'}</h2>
-								<p className="max-w-md text-center text-sm">
-									{'Describe what hardware device you want to build and the design agent will help you create it.'}
-								</p>
-							</div>
-						)}
-					</div>
-				)}
-			</div>
-
-			{(viewMode === 'chat') && (
-				<div className={`border-t border-border p-3 ${!hasMessages ? 'mx-auto w-full max-w-xl' : ''}`}>
-					<ChatInput
-						onSend={sendMessage}
-						disabled={streaming}
-						placeholder="Describe your device…"
-						streaming={streaming}
-						onStop={cancel}
-					/>
 				</div>
 			)}
 		</div>
