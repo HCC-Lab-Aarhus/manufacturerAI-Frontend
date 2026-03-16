@@ -124,35 +124,39 @@ export default function CircuitPanel (): ReactElement {
 					</div>
 				</>
 			) : (
-				<div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
-					<div className="flex items-center gap-3">
-						<h2 className="text-lg font-semibold text-fg-secondary">Circuit Outline</h2>
+				<div className="flex flex-1 flex-col items-center p-2 overflow-hidden">
+					<div className="flex w-full max-w-5xl items-center justify-between mb-2">
+						<div className="flex items-center gap-3">
+							<h2 className="text-lg font-semibold text-fg-secondary">Circuit Outline</h2>
+							<button
+								onClick={() => setEditingOutline(!editingOutline)}
+								className="rounded px-2 py-0.5 text-xs text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"
+							>
+								{editingOutline ? 'Preview' : 'Edit'}
+							</button>
+						</div>
 						<button
-							onClick={() => setEditingOutline(!editingOutline)}
-							className="rounded px-2 py-0.5 text-xs text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"
+							onClick={handleGenerate}
+							disabled={!currentSession || !outline.trim()}
+							className="rounded-xl bg-accent px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-accent-hover hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all"
 						>
-							{editingOutline ? 'Preview' : 'Edit'}
+							{'▶ Generate Circuit'}
 						</button>
 					</div>
-					{editingOutline ? (
-						<textarea
-							value={outline}
-							onChange={e => setOutline(e.target.value)}
-							rows={18}
-							className="w-full max-w-2xl rounded-xl border border-border bg-surface-card px-4 py-3 text-sm text-fg placeholder-fg-muted outline-none focus:border-accent transition-colors resize-y"
-						/>
-					) : (
-						<div className="w-full max-w-2xl overflow-y-auto rounded-xl border border-border bg-surface-card px-5 py-4 text-sm text-fg markdown-body [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-							<Markdown remarkPlugins={[remarkGfm]}>{outline}</Markdown>
-						</div>
-					)}
-					<button
-						onClick={handleGenerate}
-						disabled={!currentSession || !outline.trim()}
-						className="rounded-xl bg-accent px-6 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-					>
-						Generate Circuit
-					</button>
+					<div className="flex-1 w-full max-w-5xl overflow-y-auto">
+						{editingOutline ? (
+							<textarea
+								value={outline}
+								onChange={e => setOutline(e.target.value)}
+								rows={18}
+								className="w-full rounded-xl border border-border bg-surface-card px-4 py-3 text-sm text-fg placeholder-fg-muted outline-none focus:border-accent transition-colors resize-y"
+							/>
+						) : (
+							<div className="w-full rounded-xl border border-border bg-surface-card px-5 py-4 text-sm text-fg markdown-body [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+								<Markdown remarkPlugins={[remarkGfm]}>{outline}</Markdown>
+							</div>
+						)}
+					</div>
 				</div>
 			)}
 		</div>
