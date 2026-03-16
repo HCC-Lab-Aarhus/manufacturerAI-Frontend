@@ -118,6 +118,16 @@ export default function ChatMessage ({ entry }: ChatMessageProps): ReactElement 
 	const [expanded, setExpanded] = useState(false)
 
 	if (entry.role === 'status') {
+		if (entry.isCompletion) {
+			return (
+				<div className="flex justify-center py-2">
+					<div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-4 py-2">
+						<span className="text-success text-sm">{'✓'}</span>
+						<span className="text-sm font-medium text-success">{entry.content}</span>
+					</div>
+				</div>
+			)
+		}
 		return (
 			<div className="flex justify-center py-1">
 				<span className="text-[11px] text-fg-muted">{'✓ '}{entry.content}</span>

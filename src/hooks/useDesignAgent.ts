@@ -26,6 +26,7 @@ export interface ChatEntry {
 	toolUseId?: string
 	isError?: boolean
 	isStreaming?: boolean
+	isCompletion?: boolean
 }
 
 export function useDesignAgent () {
@@ -151,7 +152,8 @@ export function useDesignAgent () {
 				appendMessage({
 					id: nextId('status'),
 					role: 'status',
-					content: 'Design agent finished'
+					content: 'Design agent finished',
+					isCompletion: true
 				})
 				break
 		}

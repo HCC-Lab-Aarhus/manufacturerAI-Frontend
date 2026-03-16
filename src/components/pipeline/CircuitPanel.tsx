@@ -10,6 +10,7 @@ import ChatLog from '@/components/chat/ChatLog'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { usePipeline } from '@/contexts/PipelineContext'
 import { useSession } from '@/contexts/SessionContext'
+import { getDesignResult } from '@/lib/api'
 import { useCircuitAgent } from '@/hooks/useCircuitAgent'
 import type { DesignSpec } from '@/types/models'
 
@@ -41,7 +42,7 @@ function buildOutline (design: DesignSpec): string {
 
 export default function CircuitPanel (): ReactElement {
 	const { currentSession, loading } = useSession()
-	const { design, circuit, pendingFeedback, setPendingFeedback } = usePipeline()
+	const { design, circuit, setDesign, pendingFeedback, setPendingFeedback } = usePipeline()
 	const {
 		messages,
 		streaming,
@@ -58,6 +59,12 @@ export default function CircuitPanel (): ReactElement {
 
 	const defaultOutline = useMemo(() => design ? buildOutline(design) : '', [design])
 	const [outline, setOutline] = useState('')
+
+	useEffect(() => {
+		if (currentSession && !design) {
+			getDesignResult(currentSession.id).then(setDesign).catch(() => {})
+		}
+	}, [currentSession?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
 	useEffect(() => {
 		if (defaultOutline && !outline) {
@@ -124,35 +131,39 @@ export default function CircuitPanel (): ReactElement {
 					</div>
 				</>
 			) : (
-				<div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
-					<div className="flex items-center gap-3">
-						<h2 className="text-lg font-semibold text-fg-secondary">Circuit Outline</h2>
+				<div className="flex flex-1 flex-col items-center p-2 overflow-hidden">
+					<div className="flex w-full max-w-5xl items-center justify-between mb-2">
+						<div className="flex items-center gap-3">
+							<h2 className="text-lg font-semibold text-fg-secondary">Circuit Outline</h2>
+							<button
+								onClick={() => setEditingOutline(!editingOutline)}
+								className="rounded px-2 py-0.5 text-xs text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"
+							>
+								{editingOutline ? 'Preview' : 'Edit'}
+							</button>
+						</div>
 						<button
-							onClick={() => setEditingOutline(!editingOutline)}
-							className="rounded px-2 py-0.5 text-xs text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"
+							onClick={handleGenerate}
+							disabled={!currentSession || !outline.trim()}
+							className="rounded-xl bg-accent px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-accent-hover hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all"
 						>
-							{editingOutline ? 'Preview' : 'Edit'}
+							{'▶ Generate Circuit'}
 						</button>
 					</div>
-					{editingOutline ? (
-						<textarea
-							value={outline}
-							onChange={e => setOutline(e.target.value)}
-							rows={18}
-							className="w-full max-w-2xl rounded-xl border border-border bg-surface-card px-4 py-3 text-sm text-fg placeholder-fg-muted outline-none focus:border-accent transition-colors resize-y"
-						/>
-					) : (
-						<div className="w-full max-w-2xl overflow-y-auto rounded-xl border border-border bg-surface-card px-5 py-4 text-sm text-fg markdown-body [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-							<Markdown remarkPlugins={[remarkGfm]}>{outline}</Markdown>
-						</div>
-					)}
-					<button
-						onClick={handleGenerate}
-						disabled={!currentSession || !outline.trim()}
-						className="rounded-xl bg-accent px-6 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-					>
-						Generate Circuit
-					</button>
+					<div className="flex-1 w-full max-w-5xl overflow-y-auto">
+						{editingOutline ? (
+							<textarea
+								value={outline}
+								onChange={e => setOutline(e.target.value)}
+								rows={18}
+								className="w-full rounded-xl border border-border bg-surface-card px-4 py-3 text-sm text-fg placeholder-fg-muted outline-none focus:border-accent transition-colors resize-y"
+							/>
+						) : (
+							<div className="w-full rounded-xl border border-border bg-surface-card px-5 py-4 text-sm text-fg markdown-body [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+								<Markdown remarkPlugins={[remarkGfm]}>{outline}</Markdown>
+							</div>
+						)}
+					</div>
 				</div>
 			)}
 		</div>
@@ -225,32 +236,6 @@ export default function CircuitPanel (): ReactElement {
 	return (
 		<div className="flex h-full">
 			<div className={`flex flex-col border-r border-border ${circuit?.components ? 'w-1/2' : 'flex-1'}`}>
-				<div className="flex items-center justify-between border-b border-border px-4 py-1.5">
-					<span className="text-xs font-medium text-fg-secondary">Chat</span>
-					{hasConversation && !circuit?.components && (
-						<div className="flex items-center gap-2">
-							{streaming ? (
-								<>
-									<LoadingSpinner size="sm" label="Generating circuit…" />
-									<button
-										onClick={cancel}
-										className="rounded px-2 py-1 text-xs text-danger hover:bg-danger/10 transition-colors"
-									>
-										{'Stop'}
-									</button>
-								</>
-							) : (
-								<button
-									onClick={handleGenerate}
-									disabled={!currentSession}
-									className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-40 transition-colors"
-								>
-									{'Re-run Circuit'}
-								</button>
-							)}
-						</div>
-					)}
-				</div>
 				{chatColumn}
 			</div>
 			{detailsColumn && (
