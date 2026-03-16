@@ -3,39 +3,55 @@
 import Link from 'next/link'
 import { type ReactElement, useState } from 'react'
 
+import ComponentPreview3D from '@/components/viewport/ComponentPreview3D'
 import { useCatalog } from '@/hooks/useCatalog'
 import type { CatalogComponent, CatalogPin } from '@/types/models'
 
-function PinDiagram ({ pins, body }: { pins: CatalogPin[]; body: CatalogComponent['body'] }): ReactElement {
-	const w = body.width_mm ?? body.diameter_mm ?? 10
-	const h = body.length_mm ?? body.diameter_mm ?? 10
-	const scale = 6
-	const pad = 30
+const PIN_COLORS = { in: '#3b82f6', out: '#ef4444', bidirectional: '#eab308' } as const
+const SCALE = 10
+const PAD = 30
 
-	const svgW = w * scale + pad * 2
-	const svgH = h * scale + pad * 2
-	const cx = pad
-	const cy = pad
+function PinDiagram ({ pins, body }: { pins: CatalogPin[]; body: CatalogComponent['body'] }): ReactElement {
+	const bodyW = body.width_mm ?? body.diameter_mm ?? 10
+	const bodyH = body.length_mm ?? body.diameter_mm ?? 10
+
+	const xs = pins.map(p => p.position_mm[0]).concat([-bodyW / 2, bodyW / 2])
+	const ys = pins.map(p => p.position_mm[1]).concat([-bodyH / 2, bodyH / 2])
+	const minX = Math.min(...xs)
+	const maxX = Math.max(...xs)
+	const minY = Math.min(...ys)
+	const maxY = Math.max(...ys)
+
+	const svgW = (maxX - minX) * SCALE + PAD * 2 + 40
+	const svgH = (maxY - minY) * SCALE + PAD * 2 + 28
+	const ox = PAD + 20 - minX * SCALE
+	const oy = PAD + 8 - minY * SCALE
 
 	return (
-		<svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full max-w-70">
+		<svg viewBox={`0 0 ${Math.max(svgW, 120)} ${Math.max(svgH, 80)}`} className="w-full max-w-80">
 			{body.shape === 'circle' ? (
-				<circle cx={cx + (w * scale) / 2} cy={cy + (h * scale) / 2} r={(w * scale) / 2} fill="#efeee9" stroke="#888" strokeWidth={1} />
+				<circle cx={ox} cy={oy} r={(bodyW / 2) * SCALE} fill="none" stroke="#888" strokeWidth={1.5} strokeDasharray="4,3" />
 			) : (
-				<rect x={cx} y={cy} width={w * scale} height={h * scale} rx={2} fill="#efeee9" stroke="#888" strokeWidth={1} />
+				<rect x={ox + (-bodyW / 2) * SCALE} y={oy + (-bodyH / 2) * SCALE} width={bodyW * SCALE} height={bodyH * SCALE} rx={2} fill="none" stroke="#888" strokeWidth={1.5} strokeDasharray="4,3" />
 			)}
 			{pins.map(pin => {
-				const [px, py] = pin.position_mm
-				const x = cx + px * scale
-				const y = cy + py * scale
-				const color = pin.direction === 'in' ? '#3b82f6' : pin.direction === 'out' ? '#ef4444' : '#eab308'
+				const px = ox + pin.position_mm[0] * SCALE
+				const py = oy + pin.position_mm[1] * SCALE
+				const color = PIN_COLORS[pin.direction] ?? '#888'
+				const r = Math.max((pin.hole_diameter_mm / 2) * SCALE * 1.5, 3.5)
 				return (
 					<g key={pin.id}>
-						<circle cx={x} cy={y} r={3} fill={color} />
-						<text x={x} y={y - 5} textAnchor="middle" fontSize={7} fill="#555">{pin.label}</text>
+						<circle cx={px} cy={py} r={r} fill={color} opacity={0.85} />
+						<text x={px} y={py - r - 3} textAnchor="middle" fontSize={8} fontFamily="monospace" fill="#555">{pin.id}</text>
 					</g>
 				)
 			})}
+			<circle cx={10} cy={svgH - 10} r={3.5} fill={PIN_COLORS.in} />
+			<text x={18} y={svgH - 7} fontSize={8} fill="#888">{'in'}</text>
+			<circle cx={38} cy={svgH - 10} r={3.5} fill={PIN_COLORS.out} />
+			<text x={46} y={svgH - 7} fontSize={8} fill="#888">{'out'}</text>
+			<circle cx={68} cy={svgH - 10} r={3.5} fill={PIN_COLORS.bidirectional} />
+			<text x={76} y={svgH - 7} fontSize={8} fill="#888">{'bidir'}</text>
 		</svg>
 	)
 }
@@ -64,9 +80,11 @@ function ComponentCard ({ component, onSelect }: { component: CatalogComponent; 
 }
 
 function ComponentDetail ({ component, onClose }: { component: CatalogComponent; onClose: () => void }): ReactElement {
+	const [view3D, setView3D] = useState(false)
+	const m = component.mounting
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
-			<div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-surface-card p-6 shadow-xl" onClick={e => e.stopPropagation()}>
+			<div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-surface-card p-6 shadow-xl" onClick={e => e.stopPropagation()}>
 				<div className="flex items-start justify-between">
 					<div>
 						<h2 className="text-lg font-semibold text-fg">{component.name}</h2>
@@ -75,53 +93,193 @@ function ComponentDetail ({ component, onClose }: { component: CatalogComponent;
 					<button onClick={onClose} className="text-fg-muted hover:text-fg text-xl leading-none">{'×'}</button>
 				</div>
 
-				<div className="mt-4 flex justify-center">
-					<PinDiagram pins={component.pins} body={component.body} />
+				<div className="mt-3 flex flex-wrap gap-1.5">
+					<span className="rounded bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent-text">{m.style}{' mount'}</span>
+					{component.ui_placement && <span className="rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">{'UI placement'}</span>}
+					{m.blocks_routing && <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-danger">{'blocks routing'}</span>}
 				</div>
 
-				<div className="mt-4 space-y-3">
+				<div className="mt-4">
+					<div className="mb-2 flex justify-end">
+						<div className="inline-flex rounded-lg bg-surface-chip p-0.5 text-xs">
+							<button
+								className={`rounded-md px-3 py-1 transition-colors ${!view3D ? 'bg-surface-card text-fg shadow-sm' : 'text-fg-muted hover:text-fg'}`}
+								onClick={() => setView3D(false)}
+							>{'2D'}</button>
+							<button
+								className={`rounded-md px-3 py-1 transition-colors ${view3D ? 'bg-surface-card text-fg shadow-sm' : 'text-fg-muted hover:text-fg'}`}
+								onClick={() => setView3D(true)}
+							>{'3D'}</button>
+						</div>
+					</div>
+					{view3D ? (
+						<ComponentPreview3D component={component} className="h-72 w-full rounded-xl overflow-hidden" />
+					) : (
+						<div className="flex justify-center">
+							<PinDiagram pins={component.pins} body={component.body} />
+						</div>
+					)}
+				</div>
+
+				<div className="mt-4 space-y-4">
+					{/* Body */}
 					<section>
 						<h4 className="text-xs font-semibold uppercase text-fg-muted">{'Body'}</h4>
-						<div className="mt-1 text-sm text-fg">
-							{`${component.body.shape}, ${component.body.height_mm}mm tall`}
-							{component.body.width_mm && `, ${component.body.width_mm}\u00d7${component.body.length_mm}mm`}
-							{component.body.diameter_mm && `, \u2300${component.body.diameter_mm}mm`}
-						</div>
+						<table className="mt-1 w-full text-sm text-fg">
+							<tbody>
+								<tr><td className="w-36 py-0.5 text-fg-muted">{'Shape'}</td><td>{component.body.shape}</td></tr>
+								{component.body.width_mm != null && <tr><td className="py-0.5 text-fg-muted">{'Width'}</td><td>{component.body.width_mm}{' mm'}</td></tr>}
+								{component.body.length_mm != null && <tr><td className="py-0.5 text-fg-muted">{'Length'}</td><td>{component.body.length_mm}{' mm'}</td></tr>}
+								{component.body.diameter_mm != null && <tr><td className="py-0.5 text-fg-muted">{'Diameter'}</td><td>{component.body.diameter_mm}{' mm'}</td></tr>}
+								<tr><td className="py-0.5 text-fg-muted">{'Height'}</td><td>{component.body.height_mm}{' mm'}</td></tr>
+							</tbody>
+						</table>
 					</section>
 
+					{/* Mounting */}
 					<section>
 						<h4 className="text-xs font-semibold uppercase text-fg-muted">{'Mounting'}</h4>
-						<div className="mt-1 text-sm text-fg">
-							{`${component.mounting.style} \u2014 keepout ${component.mounting.keepout_margin_mm}mm`}
-							{component.mounting.blocks_routing && ' (blocks routing)'}
-						</div>
+						<table className="mt-1 w-full text-sm text-fg">
+							<tbody>
+								<tr><td className="w-36 py-0.5 text-fg-muted">{'Style'}</td><td>{m.style}</td></tr>
+								<tr><td className="py-0.5 text-fg-muted">{'Allowed'}</td><td>{m.allowed_styles.join(', ')}</td></tr>
+								<tr><td className="py-0.5 text-fg-muted">{'Keepout'}</td><td>{m.keepout_margin_mm}{' mm'}</td></tr>
+								<tr><td className="py-0.5 text-fg-muted">{'Blocks routing'}</td><td>{m.blocks_routing ? 'Yes' : 'No'}</td></tr>
+								{m.cap && <>
+									<tr><td className="py-0.5 text-fg-muted">{'Cap diameter'}</td><td>{m.cap.diameter_mm}{' mm'}</td></tr>
+									<tr><td className="py-0.5 text-fg-muted">{'Cap height'}</td><td>{m.cap.height_mm}{' mm'}</td></tr>
+									<tr><td className="py-0.5 text-fg-muted">{'Cap clearance'}</td><td>{m.cap.hole_clearance_mm}{' mm'}</td></tr>
+								</>}
+								{m.hatch && <>
+									<tr><td className="py-0.5 text-fg-muted">{'Hatch'}</td><td>{m.hatch.enabled ? 'Enabled' : 'Disabled'}</td></tr>
+									<tr><td className="py-0.5 text-fg-muted">{'Hatch clearance'}</td><td>{m.hatch.clearance_mm}{' mm'}</td></tr>
+									<tr><td className="py-0.5 text-fg-muted">{'Hatch thickness'}</td><td>{m.hatch.thickness_mm}{' mm'}</td></tr>
+								</>}
+							</tbody>
+						</table>
 					</section>
 
+					{/* Pins */}
 					<section>
 						<h4 className="text-xs font-semibold uppercase text-fg-muted">{'Pins ('}{component.pins.length}{')'}</h4>
-						<div className="mt-1 space-y-1">
-							{component.pins.map(pin => (
-								<div key={pin.id} className="flex items-center gap-2 text-xs text-fg-secondary">
-									<span className={`inline-block size-2 rounded-full ${pin.direction === 'in' ? 'bg-blue-500' : pin.direction === 'out' ? 'bg-red-500' : 'bg-yellow-500'}`} />
-									<span className="font-mono font-semibold">{pin.label}</span>
-									<span className="text-fg-muted">{'—'}</span>
-									<span>{pin.description}</span>
-								</div>
-							))}
+						<div className="mt-1 overflow-x-auto">
+							<table className="w-full text-xs">
+								<thead>
+									<tr className="border-b border-border text-left text-fg-muted">
+										<th className="py-1 pr-2">{'ID'}</th>
+										<th className="py-1 pr-2">{'Label'}</th>
+										<th className="py-1 pr-2">{'Position'}</th>
+										<th className="py-1 pr-2">{'Dir'}</th>
+										<th className="py-1 pr-2">{'Voltage'}</th>
+										<th className="py-1 pr-2">{'Current'}</th>
+										<th className="py-1 pr-2">{'Hole \u2300'}</th>
+									</tr>
+								</thead>
+								<tbody>
+									{component.pins.map(pin => (
+										<tr key={pin.id} className="border-b border-border/50">
+											<td className="py-1 pr-2 font-mono font-medium text-fg">{pin.id}</td>
+											<td className="py-1 pr-2 text-fg-secondary">{pin.label}</td>
+											<td className="py-1 pr-2 font-mono text-fg-muted">{'['}{pin.position_mm[0]}{', '}{pin.position_mm[1]}{']'}</td>
+											<td className="py-1 pr-2">
+												<span className={`inline-block size-2 rounded-full mr-1 align-middle ${pin.direction === 'in' ? 'bg-blue-500' : pin.direction === 'out' ? 'bg-red-500' : 'bg-yellow-500'}`} />
+												{pin.direction}
+											</td>
+											<td className="py-1 pr-2 text-fg-muted">{pin.voltage_v != null ? `${pin.voltage_v}V` : '\u2014'}</td>
+											<td className="py-1 pr-2 text-fg-muted">{pin.current_max_ma != null ? `${pin.current_max_ma}mA` : '\u2014'}</td>
+											<td className="py-1 pr-2 text-fg-muted">{pin.hole_diameter_mm}{'mm'}</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
 						</div>
 					</section>
 
-					{component.pin_groups && component.pin_groups.length > 0 && (
+					{/* Internal Nets */}
+					{component.internal_nets && component.internal_nets.length > 0 && (
 						<section>
-							<h4 className="text-xs font-semibold uppercase text-fg-muted">{'Pin Groups'}</h4>
-							<div className="mt-1 space-y-1">
-								{component.pin_groups.map(g => (
-									<div key={g.id} className="text-xs text-fg-secondary">
-										<span className="font-semibold">{g.id}</span>{': '}{g.pin_ids.join(', ')}
-										{g.description && ` \u2014 ${g.description}`}
+							<h4 className="text-xs font-semibold uppercase text-fg-muted">{'Internal Nets'}</h4>
+							<div className="mt-1 space-y-0.5">
+								{component.internal_nets.map((net, i) => (
+									<div key={i} className="text-sm text-fg-secondary">
+										<span className="text-fg-muted">{'Net '}{i + 1}{':'}</span>{' '}{net.join(' \u2194 ')}
 									</div>
 								))}
 							</div>
+						</section>
+					)}
+
+					{/* Pin Groups */}
+					{component.pin_groups && component.pin_groups.length > 0 && (
+						<section>
+							<h4 className="text-xs font-semibold uppercase text-fg-muted">{'Pin Groups'}</h4>
+							<div className="mt-1 overflow-x-auto">
+								<table className="w-full text-xs">
+									<thead>
+										<tr className="border-b border-border text-left text-fg-muted">
+											<th className="py-1 pr-2">{'Group'}</th>
+											<th className="py-1 pr-2">{'Pins'}</th>
+											<th className="py-1 pr-2">{'Allocatable'}</th>
+											<th className="py-1 pr-2">{'Net'}</th>
+											<th className="py-1 pr-2">{'Capabilities'}</th>
+										</tr>
+									</thead>
+									<tbody>
+										{component.pin_groups.map(g => (
+											<tr key={g.id} className="border-b border-border/50">
+												<td className="py-1 pr-2 font-semibold text-fg">{g.id}</td>
+												<td className="py-1 pr-2 max-w-50 wrap-break-word text-fg-secondary">{g.pin_ids.join(', ')}</td>
+												<td className="py-1 pr-2 text-fg-muted">{g.allocatable ? '\u2713' : '\u2014'}</td>
+												<td className="py-1 pr-2 text-fg-muted">{g.fixed_net ?? '\u2014'}</td>
+												<td className="py-1 pr-2 text-fg-muted">{g.capabilities?.join(', ') ?? '\u2014'}</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+						</section>
+					)}
+
+					{/* Configurable */}
+					{component.configurable && Object.keys(component.configurable).length > 0 && (
+						<section>
+							<h4 className="text-xs font-semibold uppercase text-fg-muted">{'Configurable'}</h4>
+							<pre className="mt-1 overflow-x-auto rounded-lg bg-surface-chip p-3 text-xs text-fg-secondary">
+								{JSON.stringify(component.configurable, null, 2)}
+							</pre>
+						</section>
+					)}
+
+					{/* SCAD Features */}
+					{component.scad?.features && component.scad.features.length > 0 && (
+						<section>
+							<h4 className="text-xs font-semibold uppercase text-fg-muted">{'SCAD Features'}</h4>
+							<table className="mt-1 w-full text-xs">
+								<thead>
+									<tr className="border-b border-border text-left text-fg-muted">
+										<th className="py-1 pr-2">{'Label'}</th>
+										<th className="py-1 pr-2">{'Shape'}</th>
+										<th className="py-1 pr-2">{'Position'}</th>
+										<th className="py-1 pr-2">{'Size'}</th>
+										<th className="py-1">{'Depth'}</th>
+									</tr>
+								</thead>
+								<tbody>
+									{component.scad.features.map((f, i) => (
+										<tr key={i} className="border-b border-border/50">
+											<td className="py-1 pr-2 text-fg-secondary">{f.label ?? '—'}</td>
+											<td className="py-1 pr-2 text-fg-secondary">{f.shape}</td>
+											<td className="py-1 pr-2 font-mono text-fg-secondary">{f.position_mm.map(v => v.toFixed(1)).join(', ')}</td>
+											<td className="py-1 pr-2 font-mono text-fg-secondary">
+												{f.shape === 'circle'
+													? `ø${f.diameter_mm?.toFixed(1)}`
+													: `${f.width_mm?.toFixed(1)} × ${f.length_mm?.toFixed(1)}`}
+											</td>
+											<td className="py-1 font-mono text-fg-secondary">{f.depth_mm?.toFixed(2) ?? '—'}</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
 						</section>
 					)}
 				</div>
