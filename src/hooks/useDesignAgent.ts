@@ -240,11 +240,26 @@ export function useDesignAgent () {
 				} else if (Array.isArray(msg.content)) {
 					for (const block of msg.content) {
 						if (block.type === 'text' && block.text) {
-							entries.push({
-								id: `${msg.role}-${entries.length}`,
-								role: msg.role,
-								content: block.text
-							})
+							let isInteractiveDesigner = false
+							try {
+								const parsed = JSON.parse(block.text)
+								if (parsed?.source === 'interactive_designer') {
+									isInteractiveDesigner = true
+								}
+							} catch { /* not JSON */ }
+							if (isInteractiveDesigner) {
+								entries.push({
+									id: `status-${entries.length}`,
+									role: 'status',
+									content: 'Design updated from editor'
+								})
+							} else {
+								entries.push({
+									id: `${msg.role}-${entries.length}`,
+									role: msg.role,
+									content: block.text
+								})
+							}
 						} else if (block.type === 'thinking' && block.thinking) {
 							entries.push({
 								id: `thinking-${entries.length}`,
@@ -305,6 +320,20 @@ export function useDesignAgent () {
 		}
 	}, [currentSession])
 
+	const notifyDesignEdited = useCallback(() => {
+		setMessages(prev => {
+			const last = prev[prev.length - 1]
+			if (last?.role === 'status' && last.content === 'Design updated from editor') {
+				return prev
+			}
+			return [...prev, {
+				id: nextId('status'),
+				role: 'status' as const,
+				content: 'Design updated from editor'
+			}]
+		})
+	}, [nextId])
+
 	return {
 		messages,
 		streaming,
@@ -312,6 +341,7 @@ export function useDesignAgent () {
 		tokenUsage,
 		sendMessage,
 		loadConversation,
+		notifyDesignEdited,
 		cancel
 	}
 }

@@ -25,6 +25,7 @@ export default function DesignPanel (): ReactElement {
 		tokenUsage,
 		sendMessage,
 		loadConversation,
+		notifyDesignEdited,
 		cancel
 	} = useDesignAgent()
 
@@ -108,6 +109,7 @@ export default function DesignPanel (): ReactElement {
 							design={design as DesignSpec & { pcb_contour?: [number, number][] }}
 							sessionId={currentSession?.id}
 							onDesignUpdate={handleDesignUpdate}
+							onDesignSubmitted={notifyDesignEdited}
 							className="w-full h-full"
 						/>
 					</div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactElement, useEffect, useRef } from 'react'
+import { memo, type ReactElement, useEffect, useRef } from 'react'
 
 import { useSession } from '@/contexts/SessionContext'
 import type { CatalogBody, CatalogPin, DesignSpec, UIPlacement } from '@/types/models'
@@ -18,6 +18,7 @@ interface Props {
 	design: DesignSpec & { pcb_contour?: [number, number][] }
 	sessionId?: string
 	onDesignUpdate?: (design: DesignSpec) => void
+	onDesignSubmitted?: () => void
 	className?: string
 }
 
@@ -48,7 +49,7 @@ const DRAG_COLORS = {
 	pending: { fill: 'rgba(251,191,36,0.20)', stroke: '#fbbf24' },
 }
 
-export default function DesignViewport ({ design, sessionId, onDesignUpdate, className }: Props): ReactElement {
+function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted, className }: Props): ReactElement {
 	const { patchSession } = useSession()
 	const outline = normalizeOutline(design.outline)
 	const placements = (design.ui_placements ?? []) as EnrichedPlacement[]
@@ -60,6 +61,8 @@ export default function DesignViewport ({ design, sessionId, onDesignUpdate, cla
 	designRef.current = design
 	const onDesignUpdateRef = useRef(onDesignUpdate)
 	onDesignUpdateRef.current = onDesignUpdate
+	const onDesignSubmittedRef = useRef(onDesignSubmitted)
+	onDesignSubmittedRef.current = onDesignSubmitted
 	const placementsRef = useRef(placements)
 	placementsRef.current = placements
 	const vertsRef = useRef(verts)
@@ -302,7 +305,11 @@ export default function DesignViewport ({ design, sessionId, onDesignUpdate, cla
 							pipeline_errors: saved.pipeline_errors,
 						})
 					}
+					if (abort.signal.aborted || seq !== commitSeqRef.current) return
 					await submitDesignToConversation(sessionId, stripped)
+					if (!abort.signal.aborted && seq === commitSeqRef.current) {
+						onDesignSubmittedRef.current?.()
+					}
 				} catch {
 					/* optimistic update already applied */
 				}
@@ -488,6 +495,8 @@ export default function DesignViewport ({ design, sessionId, onDesignUpdate, cla
 		</div>
 	)
 }
+
+export default memo(DesignViewport)
 
 function SideMountMarker ({ up, verts }: { up: EnrichedPlacement; verts: [number, number][] }): ReactElement {
 	const n = verts.length
