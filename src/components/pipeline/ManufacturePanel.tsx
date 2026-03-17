@@ -121,14 +121,14 @@ function StepRow ({ s, running, selected, onSelect, onInform, onRetry, onContinu
 	)
 }
 
-type ViewTab = 'placement' | 'routing' | 'bitmap' | '3d'
+type ViewTab = 'placement' | 'routing' | 'bitmap' | 'scad' | 'stl'
 
 const STEP_TO_TAB: Record<string, ViewTab> = {
 	placement: 'placement',
 	routing: 'routing',
 	bitmap: 'bitmap',
-	scad: '3d',
-	compile: '3d'
+	scad: 'scad',
+	compile: 'stl'
 }
 
 export default function ManufacturePanel (): ReactElement {
@@ -311,13 +311,15 @@ export default function ManufacturePanel (): ReactElement {
 							<RoutingViewport routing={routingResult} className="w-full h-full" />
 						) : viewTab === 'bitmap' && bitmapResult ? (
 							<BitmapViewport bitmap={bitmapResult} className="w-full h-full" />
-						) : viewTab === '3d' && placementResult ? (
-							<Scene3D
-								placement={placementResult}
-								routing={routingResult}
-								stlUrl={allDone && sessionId ? getStlDownloadUrl(sessionId) : undefined}
-								className="w-full h-full"
-							/>
+					) : viewTab === 'scad' && placementResult ? (
+						<Scene3D placement={placementResult} routing={routingResult} className="w-full h-full" />
+					) : viewTab === 'stl' && sessionId ? (
+						<Scene3D
+							placement={placementResult}
+							routing={routingResult}
+							stlUrl={getStlDownloadUrl(sessionId)}
+							className="w-full h-full"
+						/>
 						) : (
 							<div className="flex items-center justify-center h-full text-xs text-fg-secondary">
 								{running ? 'Running pipeline…' : 'Start the pipeline to view results'}

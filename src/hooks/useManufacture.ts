@@ -16,13 +16,14 @@ import {
 	pollGCode,
 	getPlacementResult,
 	getRoutingResult,
-	getBitmap
+	getBitmap,
+	getScadResult
 } from '@/lib/api'
 import { pollBitmap } from '@/lib/api/pipeline/bitmap'
 import { pollPlacement } from '@/lib/api/pipeline/placement'
 import { pollRouting } from '@/lib/api/pipeline/routing'
 import { pollScad } from '@/lib/api/pipeline/scad'
-import type { ManufactureStep, PlacementResult, RoutingResult, BitmapResult, GCodeStatus, PipelineError } from '@/types/models'
+import type { ManufactureStep, PlacementResult, RoutingResult, BitmapResult, ScadResult, GCodeStatus, PipelineError } from '@/types/models'
 
 export type StepStatus = 'pending' | 'running' | 'done' | 'error' | 'skipped'
 
@@ -108,6 +109,7 @@ export function useManufacture () {
 	const [placementResult, setPlacementResult] = useState<PlacementResult | null>(null)
 	const [routingResult, setRoutingResult] = useState<RoutingResult | null>(null)
 	const [bitmapResult, setBitmapResult] = useState<BitmapResult | null>(null)
+	const [scadResult, setScadResult] = useState<ScadResult | null>(null)
 	const [gcodeStatus, setGcodeStatus] = useState<GCodeStatus | null>(null)
 	const cancelRef = useRef(false)
 
@@ -125,6 +127,9 @@ export function useManufacture () {
 			if (a.routing && !errors.routing) {
 				getBitmap(currentSession.id).then(setBitmapResult).catch(() => {})
 			}
+			if (a.scad) {
+				getScadResult(currentSession.id).then(setScadResult).catch(() => {})
+			}
 		}
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [currentSession?.id])
@@ -138,6 +143,7 @@ export function useManufacture () {
 		))
 		if (pendingInvalidation.includes('placement')) { setPlacementResult(null) }
 		if (pendingInvalidation.includes('routing')) { setRoutingResult(null); setBitmapResult(null) }
+		if (pendingInvalidation.includes('scad')) { setScadResult(null) }
 		clearInvalidation()
 	}, [pendingInvalidation, clearInvalidation])
 
@@ -234,6 +240,8 @@ export function useManufacture () {
 				updateStep('scad', { status: 'running' })
 				await generateScad(sessionId)
 				await waitForStep(sessionId, 'scad', cancelRef)
+				const sr = await getScadResult(sessionId)
+				setScadResult(sr)
 				updateStep('scad', { status: 'done' })
 			} else {
 				updateStep('scad', { status: 'done', message: 'Using existing' })
@@ -322,6 +330,7 @@ export function useManufacture () {
 		placementResult,
 		routingResult,
 		bitmapResult,
+		scadResult,
 		gcodeStatus,
 		runPipeline,
 		stop
