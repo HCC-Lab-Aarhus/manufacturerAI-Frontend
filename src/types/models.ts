@@ -128,10 +128,17 @@ export interface Trace {
 	path: [number, number][]
 }
 
+export interface JumperEndpoint {
+	x: number
+	y: number
+	pin_center?: [number, number] | null
+	pin_radius_mm?: number
+}
+
 export interface JumperWire {
 	net_id: string
-	start: [number, number]
-	end: [number, number]
+	start: JumperEndpoint | [number, number]
+	end: JumperEndpoint | [number, number]
 	length_mm: number
 }
 

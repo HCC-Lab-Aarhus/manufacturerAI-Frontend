@@ -3,10 +3,15 @@
 import type { ReactElement } from 'react'
 
 import { SCALE, netColor, normalizeOutline } from '@/lib/viewport'
-import type { RoutingResult } from '@/types/models'
+import type { JumperEndpoint, RoutingResult } from '@/types/models'
 
 import ComponentIcon from './ComponentIcon'
 import OutlineSVG from './OutlineSVG'
+
+function jumperXY (ep: JumperEndpoint | [number, number]): [number, number] {
+	if (Array.isArray(ep)) return ep
+	return [ep.x, ep.y]
+}
 
 interface Props {
 	routing: RoutingResult
@@ -74,8 +79,8 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 
 				{jumpers.map((j, ji) => {
 					const color = netColor(uniqueNets.indexOf(j.net_id), uniqueNets.length)
-					const [sx, sy] = j.start
-					const [ex, ey] = j.end
+					const [sx, sy] = jumperXY(j.start)
+					const [ex, ey] = jumperXY(j.end)
 					return (
 						<g key={`jumper-${ji}`}>
 							<line
