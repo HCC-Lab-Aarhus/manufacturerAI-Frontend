@@ -214,7 +214,10 @@ export function useDesignAgent () {
 	}, [streaming, currentSession, appendMessage, subscribeToStream, refreshSessions, selectSession, setActiveStage, addError, nextId])
 
 	const loadConversation = useCallback(async (sessionId: string) => {
-		if (streamingRef.current) return
+		if (streamingRef.current) {
+			loadedSessionRef.current = sessionId
+			return
+		}
 		sentFirstRef.current = false
 		setMessages([])
 		setConversationLoading(true)

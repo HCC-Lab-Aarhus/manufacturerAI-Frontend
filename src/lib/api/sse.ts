@@ -32,6 +32,7 @@ export function consumeSSEStream (
 
 			const decoder = new TextDecoder()
 			let buffer = ''
+			let currentEventType: SSEEventType | null = null
 
 			while (true) {
 				const { done, value } = await reader.read()
@@ -41,7 +42,6 @@ export function consumeSSEStream (
 				const lines = buffer.split('\n')
 				buffer = lines.pop() ?? ''
 
-				let currentEventType: SSEEventType | null = null
 				for (const line of lines) {
 					if (line.startsWith('event: ')) {
 						currentEventType = line.slice(7).trim() as SSEEventType

@@ -232,7 +232,10 @@ export function useCircuitAgent () {
 	}, [streaming, currentSession, appendMessage, nextId, subscribeToStream, addError])
 
 	const loadConversation = useCallback(async (sessionId: string) => {
-		if (streamingRef.current) { return }
+		if (streamingRef.current) {
+			loadedSessionRef.current = sessionId
+			return
+		}
 		try {
 			const status = await getCircuitStatus(sessionId).catch(() => null)
 			const isRunning = status?.status === 'running'
