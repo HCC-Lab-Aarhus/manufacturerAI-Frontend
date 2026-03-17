@@ -78,7 +78,6 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 				})}
 
 				{jumpers.map((j, ji) => {
-					const color = netColor(uniqueNets.indexOf(j.net_id), uniqueNets.length)
 					const [sx, sy] = jumperXY(j.start)
 					const [ex, ey] = jumperXY(j.end)
 					return (
@@ -86,7 +85,7 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 							<line
 								x1={sx * SCALE} y1={sy * SCALE}
 								x2={ex * SCALE} y2={ey * SCALE}
-								stroke={color}
+								stroke="#ffffff"
 								strokeWidth={traceWidth * 0.8}
 								strokeDasharray={`${traceWidth * 2},${traceWidth}`}
 								strokeLinecap="round"
@@ -94,12 +93,12 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 							<rect
 								x={sx * SCALE - traceWidth} y={sy * SCALE - traceWidth}
 								width={traceWidth * 2} height={traceWidth * 2}
-								fill={color} opacity={0.7}
+								fill="#ffffff" opacity={0.7}
 							/>
 							<rect
 								x={ex * SCALE - traceWidth} y={ey * SCALE - traceWidth}
 								width={traceWidth * 2} height={traceWidth * 2}
-								fill={color} opacity={0.7}
+								fill="#ffffff" opacity={0.7}
 							/>
 						</g>
 					)
@@ -144,11 +143,10 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 						<span className="text-[10px] font-semibold text-warning uppercase tracking-wide">{'Jumper Wires'}</span>
 						<div className="mt-1.5 flex flex-col gap-1">
 							{jumpers.map((j, i) => {
-								const color = netColor(uniqueNets.indexOf(j.net_id), uniqueNets.length)
 								return (
 									<div key={i} className="flex items-center gap-2">
 										<svg className="size-2.5 shrink-0" viewBox="0 0 10 10">
-											<rect width={10} height={10} rx={2} fill={color} />
+											<rect width={10} height={10} rx={2} fill="#ffffff" />
 										</svg>
 										<span className="text-[11px] text-fg-secondary truncate">{j.net_id} ({j.length_mm.toFixed(1)}mm)</span>
 									</div>
