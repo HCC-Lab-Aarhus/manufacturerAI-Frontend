@@ -220,6 +220,9 @@ export default function Sidebar (): ReactElement {
 
 			<div className="border-t border-border px-3 py-3 space-y-2">
 				<ColorPicker />
+				<Link href="/catalog" className="block text-xs text-fg-muted hover:text-accent transition-colors">
+					{'Component Catalog →'}
+				</Link>
 				<Link href="/debug" className="block text-xs text-fg-muted hover:text-accent transition-colors">
 					{'Calibration Debug →'}
 				</Link>
