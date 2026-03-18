@@ -8,7 +8,8 @@ import type { PipelineStage } from '@/types/models'
 const STAGES: { id: PipelineStage; label: string }[] = [
 	{ id: 'design', label: 'Design' },
 	{ id: 'circuit', label: 'Circuit' },
-	{ id: 'manufacture', label: 'Manufacture' }
+	{ id: 'manufacture', label: 'Manufacture' },
+	{ id: 'setup', label: 'Setup' }
 ]
 
 export default function PipelineTabs (): ReactElement {

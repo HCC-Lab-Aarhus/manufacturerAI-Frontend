@@ -9,6 +9,8 @@ export type SSEEventType =
 	| 'tool_result'
 	| 'design'
 	| 'circuit'
+	| 'firmware'
+	| 'sim_config'
 	| 'invalidated'
 	| 'token_usage'
 	| 'session_named'

@@ -7,11 +7,13 @@ import { useSession } from '@/contexts/SessionContext'
 import CircuitPanel from './CircuitPanel'
 import DesignPanel from './DesignPanel'
 import ManufacturePanel from './ManufacturePanel'
+import SetupPanel from './SetupPanel'
 
 const PANELS: Record<string, () => ReactElement> = {
 	design: DesignPanel,
 	circuit: CircuitPanel,
-	manufacture: ManufacturePanel
+	manufacture: ManufacturePanel,
+	setup: SetupPanel
 }
 
 export default function PipelineContent (): ReactElement {
