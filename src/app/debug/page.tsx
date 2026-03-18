@@ -3,10 +3,14 @@
 import Link from 'next/link'
 import { type ReactElement, useEffect, useState } from 'react'
 
-import { listPrinters, listFilaments, generateCalibration, generateSilverinkTest } from '@/lib/api'
+import {
+	listPrinters, listFilaments,
+	generateCalibration, generateSilverinkTest,
+	generateCubeTrace, generateProgressiveTrace, generateParallelLines,
+} from '@/lib/api'
 import type { Printer, Filament } from '@/types/models'
 
-type TestMode = 'calibration' | 'silverink'
+type TestMode = 'calibration' | 'silverink' | 'cube-trace' | 'progressive-trace' | 'parallel-lines'
 
 export default function DebugPage (): ReactElement {
 	const [printers, setPrinters] = useState<Printer[]>([])
@@ -22,18 +26,27 @@ export default function DebugPage (): ReactElement {
 	// Calibration-specific
 	const [squareSize, setSquareSize] = useState(5)
 
-	// Silverink test-specific
+	// Silverink / progressive / parallel-lines params
 	const [rectWidth, setRectWidth] = useState(10)
 	const [rectHeight, setRectHeight] = useState(20)
 	const [layers, setLayers] = useState(4)
 
+	// Cube-trace params
+	const [plateWidth, setPlateWidth] = useState(40)
+	const [plateHeight, setPlateHeight] = useState(30)
+	const [cubeSize, setCubeSize] = useState(15)
+
+	// Parallel-lines params (landscape, 2x)
+	const [plRectWidth, setPlRectWidth] = useState(40)
+	const [plRectHeight, setPlRectHeight] = useState(20)
+	const [plLayers, setPlLayers] = useState(4)
+
 	const [generating, setGenerating] = useState(false)
 	const [error, setError] = useState('')
 	const [gcodeUrl, setGcodeUrl] = useState<string | null>(null)
-	const [bitmapUrl, setBitmapUrl] = useState<string | null>(null)
+	const [bitmapUrls, setBitmapUrls] = useState<{ url: string; filename: string }[]>([])
 	const [contractUrl, setContractUrl] = useState<string | null>(null)
 	const [gcodeFilename, setGcodeFilename] = useState('calibration.gcode')
-	const [bitmapFilename, setBitmapFilename] = useState('calibration_bitmap.txt')
 
 	const selectedPrinter = printers.find(p => p.id === printer)
 
@@ -53,30 +66,69 @@ export default function DebugPage (): ReactElement {
 
 	const clearDownloads = () => {
 		setGcodeUrl(null)
-		setBitmapUrl(null)
+		setBitmapUrls([])
 		setContractUrl(null)
 	}
+
+	const makeBlobUrl = (text: string, type = 'text/plain') =>
+		URL.createObjectURL(new Blob([text], { type }))
 
 	const handleGenerate = async () => {
 		setGenerating(true)
 		setError('')
 		clearDownloads()
 		try {
-			const data = testMode === 'calibration'
-				? await generateCalibration({
-					printer, filament,
-					box_size: boxSize, padding, square_size: squareSize
+			if (testMode === 'progressive-trace') {
+				const data = await generateProgressiveTrace({
+					printer, filament, padding,
+					rect_width: rectWidth, rect_height: rectHeight, layers,
 				})
-				: await generateSilverinkTest({
-					printer, filament,
-					padding,
-					rect_width: rectWidth, rect_height: rectHeight, layers
-				})
-			setGcodeFilename(String(data.contract.gcode_file || `${testMode}.gcode`))
-			setBitmapFilename(String(data.contract.bitmap_file || `${testMode}_bitmap.txt`))
-			setGcodeUrl(URL.createObjectURL(new Blob([data.gcode], { type: 'text/plain' })))
-			setBitmapUrl(URL.createObjectURL(new Blob([data.bitmap], { type: 'text/plain' })))
-			setContractUrl(URL.createObjectURL(new Blob([JSON.stringify(data.contract, null, 2)], { type: 'application/json' })))
+				setGcodeFilename(String(data.contract.gcode_file || 'progressive_trace.gcode'))
+				setGcodeUrl(makeBlobUrl(data.gcode))
+				setBitmapUrls([
+					{ url: makeBlobUrl(data.bitmap_1), filename: 'progressive_trace_1.txt' },
+					{ url: makeBlobUrl(data.bitmap_2), filename: 'progressive_trace_2.txt' },
+					{ url: makeBlobUrl(data.bitmap_3), filename: 'progressive_trace_3.txt' },
+				])
+				setContractUrl(makeBlobUrl(JSON.stringify(data.contract, null, 2), 'application/json'))
+			} else {
+				let data
+				switch (testMode) {
+					case 'calibration':
+						data = await generateCalibration({
+							printer, filament,
+							box_size: boxSize, padding, square_size: squareSize,
+						})
+						break
+					case 'silverink':
+						data = await generateSilverinkTest({
+							printer, filament, padding,
+							rect_width: rectWidth, rect_height: rectHeight, layers,
+						})
+						break
+					case 'cube-trace':
+						data = await generateCubeTrace({
+							printer, filament, padding,
+							plate_width: plateWidth, plate_height: plateHeight,
+							cube_size: cubeSize,
+						})
+						break
+					case 'parallel-lines':
+						data = await generateParallelLines({
+							printer, filament, padding,
+							rect_width: plRectWidth, rect_height: plRectHeight,
+							layers: plLayers,
+						})
+						break
+				}
+				setGcodeFilename(String(data.contract.gcode_file || `${testMode}.gcode`))
+				setGcodeUrl(makeBlobUrl(data.gcode))
+				setBitmapUrls([{
+					url: makeBlobUrl(data.bitmap),
+					filename: String(data.contract.bitmap_file || `${testMode}_bitmap.txt`),
+				}])
+				setContractUrl(makeBlobUrl(JSON.stringify(data.contract, null, 2), 'application/json'))
+			}
 		} catch (e) {
 			setError(e instanceof Error ? e.message : 'Generation failed')
 		} finally {
@@ -106,7 +158,27 @@ export default function DebugPage (): ReactElement {
 		silverink: {
 			heading: 'Silverink Test Generator',
 			description: 'Generates ironed rectangles with silver traces to test ink adhesion and conductivity.'
+		},
+		'cube-trace': {
+			heading: 'Cube Trace Test',
+			description: 'Plate with an extruded cube, pinholes, and trace cutouts. Tests routed traces under enclosure walls.'
+		},
+		'progressive-trace': {
+			heading: 'Progressive Trace Test',
+			description: 'Three rectangles with an increasing number of centred traces across three bitmaps.'
+		},
+		'parallel-lines': {
+			heading: 'Parallel Lines Test',
+			description: 'Three landscape rectangles with parallel lines at increasing spacing (1–20 px). Tests minimum separation.'
 		}
+	}
+
+	const modeLabels: Record<TestMode, string> = {
+		calibration: 'Calibration',
+		silverink: 'Silverink',
+		'cube-trace': 'Cube Trace',
+		'progressive-trace': 'Progressive',
+		'parallel-lines': 'Parallel Lines'
 	}
 
 	return (
@@ -119,18 +191,18 @@ export default function DebugPage (): ReactElement {
 				</div>
 
 				{/* Test mode selector */}
-				<div className="flex rounded-xl bg-surface-card p-1 shadow-sm">
-					{(['calibration', 'silverink'] as const).map(mode => (
+				<div className="grid grid-cols-3 gap-1 rounded-xl bg-surface-card p-1 shadow-sm">
+					{(['calibration', 'silverink', 'cube-trace', 'progressive-trace', 'parallel-lines'] as const).map(mode => (
 						<button
 							key={mode}
 							onClick={() => { setTestMode(mode); clearDownloads() }}
-							className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+							className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
 								testMode === mode
 									? 'bg-accent text-white'
 									: 'text-fg-secondary hover:text-fg'
 							}`}
 						>
-							{mode === 'calibration' ? 'Calibration' : 'Silverink Test'}
+							{modeLabels[mode]}
 						</button>
 					))}
 				</div>
@@ -173,11 +245,27 @@ export default function DebugPage (): ReactElement {
 						</>
 					)}
 
-					{testMode === 'silverink' && (
+					{(testMode === 'silverink' || testMode === 'progressive-trace') && (
 						<>
 							{field('Rectangle Width (mm)', rectWidth, setRectWidth, 1)}
 							{field('Rectangle Height (mm)', rectHeight, setRectHeight, 1)}
 							{field('Layers', layers, setLayers)}
+						</>
+					)}
+
+					{testMode === 'cube-trace' && (
+						<>
+							{field('Plate Width (mm)', plateWidth, setPlateWidth, 1)}
+							{field('Plate Height (mm)', plateHeight, setPlateHeight, 1)}
+							{field('Cube Size (mm)', cubeSize, setCubeSize, 1)}
+						</>
+					)}
+
+					{testMode === 'parallel-lines' && (
+						<>
+							{field('Rectangle Width (mm)', plRectWidth, setPlRectWidth, 1)}
+							{field('Rectangle Height (mm)', plRectHeight, setPlRectHeight, 1)}
+							{field('Layers', plLayers, setPlLayers)}
 						</>
 					)}
 
@@ -186,16 +274,12 @@ export default function DebugPage (): ReactElement {
 						disabled={generating}
 						className="w-full rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
 					>
-						{generating
-							? 'Generating…'
-							: testMode === 'calibration'
-								? 'Generate Calibration Files'
-								: 'Generate Silverink Test Files'}
+						{generating ? 'Generating…' : 'Generate Files'}
 					</button>
 
 					{error && <p className="text-sm text-danger text-center">{error}</p>}
 
-					{(gcodeUrl || bitmapUrl || contractUrl) && (
+					{(gcodeUrl || bitmapUrls.length > 0 || contractUrl) && (
 						<div className="flex flex-col gap-3 pt-2">
 							<div className="flex gap-3">
 								{gcodeUrl && (
@@ -203,12 +287,12 @@ export default function DebugPage (): ReactElement {
 										{'Download G-code'}
 									</a>
 								)}
-								{bitmapUrl && (
-									<a href={bitmapUrl} download={bitmapFilename} className="flex-1 rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-accent-hover transition-colors">
-										{'Download Bitmap'}
-									</a>
-								)}
 							</div>
+							{bitmapUrls.map(b => (
+								<a key={b.filename} href={b.url} download={b.filename} className="rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-accent-hover transition-colors">
+									{bitmapUrls.length > 1 ? `Download ${b.filename}` : 'Download Bitmap'}
+								</a>
+							))}
 							{contractUrl && (
 								<a href={contractUrl} download="print_job.json" className="rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-accent-hover transition-colors">
 									{'Download Contract (print_job.json)'}

@@ -40,3 +40,65 @@ export async function generateSilverinkTest (params: SilverinkTestParams): Promi
 	)
 	return data
 }
+
+export interface CubeTraceParams {
+	printer: string
+	filament: string
+	padding: number
+	plate_width: number
+	plate_height: number
+	cube_size: number
+}
+
+export async function generateCubeTrace (params: CubeTraceParams): Promise<CalibrationResult> {
+	const { data } = await apiClient.post<CalibrationResult>(
+		'/api/v2/debug/cube-trace',
+		null,
+		{ params: params as unknown as Record<string, string> }
+	)
+	return data
+}
+
+export interface ProgressiveTraceParams {
+	printer: string
+	filament: string
+	padding: number
+	rect_width: number
+	rect_height: number
+	layers: number
+}
+
+export interface ProgressiveTraceResult {
+	gcode: string
+	bitmap_1: string
+	bitmap_2: string
+	bitmap_3: string
+	contract: Record<string, unknown>
+}
+
+export async function generateProgressiveTrace (params: ProgressiveTraceParams): Promise<ProgressiveTraceResult> {
+	const { data } = await apiClient.post<ProgressiveTraceResult>(
+		'/api/v2/debug/progressive-trace',
+		null,
+		{ params: params as unknown as Record<string, string> }
+	)
+	return data
+}
+
+export interface ParallelLinesParams {
+	printer: string
+	filament: string
+	padding: number
+	rect_width: number
+	rect_height: number
+	layers: number
+}
+
+export async function generateParallelLines (params: ParallelLinesParams): Promise<CalibrationResult> {
+	const { data } = await apiClient.post<CalibrationResult>(
+		'/api/v2/debug/parallel-lines',
+		null,
+		{ params: params as unknown as Record<string, string> }
+	)
+	return data
+}
