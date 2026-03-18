@@ -7,10 +7,11 @@ import {
 	listPrinters, listFilaments,
 	generateCalibration, generateSilverinkTest,
 	generateCubeTrace, generateProgressiveTrace, generateParallelLines,
+	generateTraceWidth,
 } from '@/lib/api'
 import type { Printer, Filament } from '@/types/models'
 
-type TestMode = 'calibration' | 'silverink' | 'cube-trace' | 'progressive-trace' | 'parallel-lines'
+type TestMode = 'calibration' | 'silverink' | 'cube-trace' | 'progressive-trace' | 'parallel-lines' | 'trace-width'
 
 export default function DebugPage (): ReactElement {
 	const [printers, setPrinters] = useState<Printer[]>([])
@@ -40,6 +41,11 @@ export default function DebugPage (): ReactElement {
 	const [plRectWidth, setPlRectWidth] = useState(40)
 	const [plRectHeight, setPlRectHeight] = useState(20)
 	const [plLayers, setPlLayers] = useState(4)
+
+	// Trace-width params
+	const [twRectWidth, setTwRectWidth] = useState(40)
+	const [twRectHeight, setTwRectHeight] = useState(20)
+	const [twLayers, setTwLayers] = useState(4)
 
 	const [generating, setGenerating] = useState(false)
 	const [error, setError] = useState('')
@@ -120,6 +126,13 @@ export default function DebugPage (): ReactElement {
 							layers: plLayers,
 						})
 						break
+					case 'trace-width':
+						data = await generateTraceWidth({
+							printer, filament, padding,
+							rect_width: twRectWidth, rect_height: twRectHeight,
+							layers: twLayers,
+						})
+						break
 				}
 				setGcodeFilename(String(data.contract.gcode_file || `${testMode}.gcode`))
 				setGcodeUrl(makeBlobUrl(data.gcode))
@@ -170,6 +183,10 @@ export default function DebugPage (): ReactElement {
 		'parallel-lines': {
 			heading: 'Parallel Lines Test',
 			description: 'Three landscape rectangles with parallel lines at increasing spacing (1–20 px). Tests minimum separation.'
+		},
+		'trace-width': {
+			heading: 'Trace Width Test',
+			description: 'Single rectangle with lines of increasing thickness (1–10 px) at 10 px spacing. Tests printable trace widths.'
 		}
 	}
 
@@ -178,7 +195,8 @@ export default function DebugPage (): ReactElement {
 		silverink: 'Silverink',
 		'cube-trace': 'Cube Trace',
 		'progressive-trace': 'Progressive',
-		'parallel-lines': 'Parallel Lines'
+		'parallel-lines': 'Parallel Lines',
+		'trace-width': 'Trace Width'
 	}
 
 	return (
@@ -192,7 +210,7 @@ export default function DebugPage (): ReactElement {
 
 				{/* Test mode selector */}
 				<div className="grid grid-cols-3 gap-1 rounded-xl bg-surface-card p-1 shadow-sm">
-					{(['calibration', 'silverink', 'cube-trace', 'progressive-trace', 'parallel-lines'] as const).map(mode => (
+					{(['calibration', 'silverink', 'cube-trace', 'progressive-trace', 'parallel-lines', 'trace-width'] as const).map(mode => (
 						<button
 							key={mode}
 							onClick={() => { setTestMode(mode); clearDownloads() }}
@@ -266,6 +284,14 @@ export default function DebugPage (): ReactElement {
 							{field('Rectangle Width (mm)', plRectWidth, setPlRectWidth, 1)}
 							{field('Rectangle Height (mm)', plRectHeight, setPlRectHeight, 1)}
 							{field('Layers', plLayers, setPlLayers)}
+						</>
+					)}
+
+					{testMode === 'trace-width' && (
+						<>
+							{field('Rectangle Width (mm)', twRectWidth, setTwRectWidth, 1)}
+							{field('Rectangle Height (mm)', twRectHeight, setTwRectHeight, 1)}
+							{field('Layers', twLayers, setTwLayers)}
 						</>
 					)}
 

@@ -102,3 +102,21 @@ export async function generateParallelLines (params: ParallelLinesParams): Promi
 	)
 	return data
 }
+
+export interface TraceWidthParams {
+	printer: string
+	filament: string
+	padding: number
+	rect_width: number
+	rect_height: number
+	layers: number
+}
+
+export async function generateTraceWidth (params: TraceWidthParams): Promise<CalibrationResult> {
+	const { data } = await apiClient.post<CalibrationResult>(
+		'/api/v2/debug/trace-width',
+		null,
+		{ params: params as unknown as Record<string, string> }
+	)
+	return data
+}
