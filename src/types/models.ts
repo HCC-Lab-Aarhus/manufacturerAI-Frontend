@@ -168,7 +168,7 @@ export interface BitmapResult {
 	trace_width_mm: number
 }
 
-export type PipelineStage = 'design' | 'circuit' | 'manufacture'
+export type PipelineStage = 'design' | 'circuit' | 'manufacture' | 'setup'
 
 export type ManufactureStep = 'placement' | 'routing' | 'bitmap' | 'scad' | 'compile' | 'gcode'
 

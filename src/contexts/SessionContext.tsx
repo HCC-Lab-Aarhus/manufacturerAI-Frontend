@@ -72,7 +72,7 @@ export function useSession (): SessionContextValue {
 	return useContext(SessionContext)
 }
 
-const STAGE_ORDER: PipelineStage[] = ['design', 'circuit', 'manufacture']
+const STAGE_ORDER: PipelineStage[] = ['design', 'circuit', 'manufacture', 'setup']
 const VALID_STAGES = new Set<string>(STAGE_ORDER)
 
 function syncTabParam (stage: PipelineStage): void {
@@ -96,6 +96,10 @@ export function isStageAccessible (
 	}
 	if (stage === 'manufacture') {
 		const s = pipelineState.circuit
+		return s === 'complete' || s === 'done'
+	}
+	if (stage === 'setup') {
+		const s = pipelineState.gcode
 		return s === 'complete' || s === 'done'
 	}
 	return true
