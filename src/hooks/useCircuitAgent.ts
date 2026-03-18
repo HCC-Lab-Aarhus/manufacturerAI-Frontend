@@ -373,6 +373,22 @@ export function useCircuitAgent () {
 				})
 				return true
 			}
+			appendMessage({
+				id: nextId('status'),
+				role: 'status',
+				content: `Re-validation failed — design needs adjustment:\n${result.errors ?? 'Unknown error'}`,
+				isError: true
+			})
+			setPendingFeedback({
+				target: 'design',
+				message:
+					'The circuit was re-validated against the updated design, but the enclosure ' +
+					'dimensions are incompatible:\n\n' +
+					(result.errors ?? 'Unknown error') +
+					'\n\nPlease adjust the enclosure to satisfy these constraints ' +
+					'and resubmit the design.'
+			})
+			setActiveStage('design')
 			return false
 		} catch {
 			return false
