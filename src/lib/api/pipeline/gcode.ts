@@ -5,16 +5,16 @@ const sid = (id: string) => encodeURIComponent(id)
 
 export async function startGCode (
 	sessionId: string,
-	options?: { force?: boolean; filament?: string; silverink_only?: boolean }
+	options: { force?: boolean; filament: string; silverink_only?: boolean }
 ): Promise<void> {
 	await apiClient.post(
 		`/api/v2/sessions/${sid(sessionId)}/manufacture/gcode`,
 		null,
 		{
 			params: {
-				...(options?.force ? { force: 'true' } : {}),
-				...(options?.filament ? { filament: options.filament } : {}),
-				...(options?.silverink_only ? { silverink_only: 'true' } : {})
+				...(options.force ? { force: 'true' } : {}),
+				filament: options.filament,
+				...(options.silverink_only ? { silverink_only: 'true' } : {})
 			}
 		}
 	)

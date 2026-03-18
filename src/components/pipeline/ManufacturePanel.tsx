@@ -7,8 +7,8 @@ import { usePipeline } from '@/contexts/PipelineContext'
 import { useSession } from '@/contexts/SessionContext'
 import type { StepStatus, ManufactureStepState } from '@/hooks/useManufacture'
 import { useManufacture } from '@/hooks/useManufacture'
-import { getBundleDownloadUrl, getGCodeDownloadUrl, getBitmapDownloadUrl, getPrintJobDownloadUrl, getStlDownloadUrl, listFilaments } from '@/lib/api'
-import type { Filament, ManufactureStep } from '@/types/models'
+import { getBundleDownloadUrl, getGCodeDownloadUrl, getBitmapDownloadUrl, getPrintJobDownloadUrl, getStlDownloadUrl } from '@/lib/api'
+import type { ManufactureStep } from '@/types/models'
 
 const PlacementViewport = dynamic(() => import('@/components/viewport/PlacementViewport'), { ssr: false })
 const RoutingViewport = dynamic(() => import('@/components/viewport/RoutingViewport'), { ssr: false })
@@ -132,18 +132,12 @@ const STEP_TO_TAB: Record<string, ViewTab> = {
 }
 
 export default function ManufacturePanel (): ReactElement {
-	const { currentSession, setActiveStage } = useSession()
+	const { currentSession, setActiveStage, filament } = useSession()
 	const { setPendingFeedback } = usePipeline()
 	const { steps, running, allDone, placementResult, routingResult, bitmapResult, runPipeline, stop } = useManufacture()
-	const [filaments, setFilaments] = useState<Filament[]>([])
-	const [selectedFilament, setSelectedFilament] = useState<string>('')
 	const [silverinkOnly, setSilverinkOnly] = useState(false)
 	const [viewTab, setViewTab] = useState<ViewTab>('placement')
 	const prevDoneRef = useRef<Set<string>>(new Set(steps.filter(s => s.status === 'done').map(s => s.step)))
-
-	useEffect(() => {
-		listFilaments().then(setFilaments).catch(() => {})
-	}, [])
 
 	useEffect(() => {
 		const nowDone = new Set(steps.filter(s => s.status === 'done').map(s => s.step))
@@ -169,7 +163,11 @@ export default function ManufacturePanel (): ReactElement {
 		setActiveStage(agent === 'design' ? 'design' : 'circuit')
 	}, [steps, setPendingFeedback, setActiveStage])
 
-	const opts = useCallback(() => ({ filament: selectedFilament || undefined, silverink_only: silverinkOnly }), [selectedFilament, silverinkOnly])
+	const selectedFilament = filament?.id ?? ''
+
+	const opts = useCallback(() => ({ filament: selectedFilament, silverink_only: silverinkOnly }), [selectedFilament, silverinkOnly])
+
+	const canStart = !!selectedFilament
 
 	const handleRetry = useCallback((step: ManufactureStep) => {
 		runPipeline(step, { ...opts(), toStep: step })
@@ -220,45 +218,32 @@ export default function ManufacturePanel (): ReactElement {
 								<>
 									<span className="text-[11px] font-medium text-success">{'Complete'}</span>
 									<button
-										onClick={() => runPipeline('placement', { filament: selectedFilament || undefined, silverink_only: silverinkOnly })}
-										className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
+										disabled={!canStart}
+										onClick={() => runPipeline('placement', { filament: selectedFilament, silverink_only: silverinkOnly })}
+										className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
 									>
 										{'Re-run'}
 									</button>
 								</>
 							) : canResume ? (
 								<button
-									onClick={() => runPipeline(firstIncomplete!.step, { filament: selectedFilament || undefined, silverink_only: silverinkOnly })}
-									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
+									disabled={!canStart}
+									onClick={() => runPipeline(firstIncomplete!.step, { filament: selectedFilament, silverink_only: silverinkOnly })}
+									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
 								>
 									{'Resume'}
 								</button>
 							) : (
 								<button
-									onClick={() => runPipeline(undefined, { filament: selectedFilament || undefined, silverink_only: silverinkOnly })}
-									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
+									disabled={!canStart}
+									onClick={() => runPipeline(undefined, { filament: selectedFilament, silverink_only: silverinkOnly })}
+									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
 								>
 									{'Start'}
 								</button>
 							)}
 						</div>
 					</div>
-
-					{filaments.length > 0 && !running && !allDone && (
-						<div className="px-3 py-1.5 border-b border-border">
-							<select
-								value={selectedFilament}
-								onChange={e => setSelectedFilament(e.target.value)}
-								title="Filament"
-								className="w-full rounded-md border border-border bg-surface-card px-2 py-1 text-[11px] text-fg-secondary"
-							>
-								<option value="">{'Default filament'}</option>
-								{filaments.map(f => (
-									<option key={f.id} value={f.id}>{f.label}</option>
-								))}
-							</select>
-						</div>
-					)}
 
 					<div className="flex-1 overflow-y-auto py-1">
 						{steps.map(s => (

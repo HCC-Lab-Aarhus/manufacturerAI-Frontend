@@ -12,7 +12,7 @@ import {
 } from 'react'
 
 import { deleteSession as apiDeleteSession, getSession, listSessions, renameSession as apiRenameSession } from '@/lib/api'
-import type { PipelineError, PipelineStage, Printer, SessionMeta } from '@/types/models'
+import type { Filament, PipelineError, PipelineStage, Printer, SessionMeta } from '@/types/models'
 
 const PRINTER_COOKIE = 'printer-id'
 
@@ -47,6 +47,8 @@ interface SessionContextValue {
 	deleteSession: (id: string) => Promise<void>
 	printer: Printer | null
 	setPrinter: (p: Printer | null) => void
+	filament: Filament | null
+	setFilament: (f: Filament | null) => void
 }
 
 const SessionContext = createContext<SessionContextValue>({
@@ -65,7 +67,9 @@ const SessionContext = createContext<SessionContextValue>({
 	renameSession: async () => {},
 	deleteSession: async () => {},
 	printer: null,
-	setPrinter: () => {}
+	setPrinter: () => {},
+	filament: null,
+	setFilament: () => {}
 })
 
 export function useSession (): SessionContextValue {
@@ -127,6 +131,7 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 	}, [])
 	const [loading, setLoading] = useState(false)
 	const [printer, _setPrinter] = useState<Printer | null>(null)
+	const [filament, setFilament] = useState<Filament | null>(null)
 	const [pendingInvalidation, setPendingInvalidation] = useState<string[] | null>(null)
 
 	const setPrinter = useCallback((p: Printer | null) => {
@@ -232,8 +237,10 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 		renameSession,
 		deleteSession: deleteSessionCb,
 		printer,
-		setPrinter
-	}), [sessions, currentSession, activeStage, loading, pendingInvalidation, selectSession, clearSession, refreshSession, refreshSessions, patchSession, clearInvalidation, renameSession, deleteSessionCb, printer])
+		setPrinter,
+		filament,
+		setFilament
+	}), [sessions, currentSession, activeStage, loading, pendingInvalidation, selectSession, clearSession, refreshSession, refreshSessions, patchSession, clearInvalidation, renameSession, deleteSessionCb, printer, filament, setFilament])
 
 	return (
 		<SessionContext.Provider value={value}>

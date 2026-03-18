@@ -60,11 +60,10 @@ export default function DebugPage (): ReactElement {
 	useEffect(() => {
 		listPrinters().then(p => {
 			setPrinters(p)
-			if (p.length) {
-				setPrinter(p[0].id)
-			}
+			const mk3s = p.find(pr => pr.id === 'mk3s')
+			if (mk3s) { setPrinter(mk3s.id) } else if (p.length) { setPrinter(p[0].id) }
 		}).catch(() => {})
-		listFilaments().then(f => { setFilaments(f); if (f.length) { setFilament(f[0].id) } }).catch(() => {})
+		listFilaments().then(f => { setFilaments(f) }).catch(() => {})
 	}, [])
 
 	const handlePrinterChange = (id: string) => {
@@ -252,6 +251,7 @@ export default function DebugPage (): ReactElement {
 					<div className="flex items-center justify-between gap-4">
 						<label className="text-sm text-fg-secondary">{'Filament'}</label>
 						<select value={filament} onChange={e => setFilament(e.target.value)} title="Filament" className="rounded-lg border border-border bg-surface-card px-2.5 py-1.5 text-sm text-fg">
+							<option value="">{'Select filament…'}</option>
 							{filaments.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
 						</select>
 					</div>
@@ -299,7 +299,7 @@ export default function DebugPage (): ReactElement {
 
 					<button
 						onClick={handleGenerate}
-						disabled={generating}
+						disabled={generating || !filament}
 						className="w-full rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
 					>
 						{generating ? 'Generating…' : 'Generate Files'}
