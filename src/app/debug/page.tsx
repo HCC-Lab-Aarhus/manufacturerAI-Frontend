@@ -33,9 +33,10 @@ export default function DebugPage (): ReactElement {
 	const [layers, setLayers] = useState(4)
 
 	// Cube-trace params
-	const [plateWidth, setPlateWidth] = useState(40)
-	const [plateHeight, setPlateHeight] = useState(30)
+	const [plateWidth, setPlateWidth] = useState(15)
+	const [plateHeight, setPlateHeight] = useState(20)
 	const [cubeSize, setCubeSize] = useState(15)
+	const [cubeWidth, setCubeWidth] = useState(5)
 
 	// Parallel-lines params (landscape, 2x)
 	const [plRectWidth, setPlRectWidth] = useState(40)
@@ -116,7 +117,7 @@ export default function DebugPage (): ReactElement {
 						data = await generateCubeTrace({
 							printer, filament, padding,
 							plate_width: plateWidth, plate_height: plateHeight,
-							cube_size: cubeSize,
+							cube_size: cubeSize, cube_width: cubeWidth,
 						})
 						break
 					case 'parallel-lines':
@@ -276,6 +277,7 @@ export default function DebugPage (): ReactElement {
 							{field('Plate Width (mm)', plateWidth, setPlateWidth, 1)}
 							{field('Plate Height (mm)', plateHeight, setPlateHeight, 1)}
 							{field('Cube Size (mm)', cubeSize, setCubeSize, 1)}
+							{field('Cube Width (mm)', cubeWidth, setCubeWidth, 1)}
 						</>
 					)}
 
