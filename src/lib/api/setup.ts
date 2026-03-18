@@ -51,3 +51,27 @@ export async function getSetupConversation (sessionId: string): Promise<Conversa
 	)
 	return data
 }
+
+export interface SimPeripheral {
+	instance_id: string
+	type: 'button' | 'led' | 'ir_output'
+	port: string
+	pin: number
+	active_low?: boolean
+	pwm?: boolean
+	carrier_freq?: number
+}
+
+export interface SimConfig {
+	mcu: string
+	frequency: number
+	elf_path: string
+	peripherals: SimPeripheral[]
+}
+
+export async function getSimConfig (sessionId: string): Promise<SimConfig> {
+	const { data } = await apiClient.get<SimConfig>(
+		`/api/v2/sessions/${encodeURIComponent(sessionId)}/setup/sim-config`
+	)
+	return data
+}
