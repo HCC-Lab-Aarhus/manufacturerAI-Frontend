@@ -31,6 +31,7 @@ export function consumeSSEStream (
 			}
 
 			const decoder = new TextDecoder()
+			const MAX_BUFFER = 10 * 1024 * 1024 // 10 MB
 			let buffer = ''
 			let currentEventType: SSEEventType | null = null
 
@@ -39,6 +40,9 @@ export function consumeSSEStream (
 				if (done) { break }
 
 				buffer += decoder.decode(value, { stream: true })
+				if (buffer.length > MAX_BUFFER) {
+					throw new Error('SSE buffer exceeded 10 MB')
+				}
 				const lines = buffer.split('\n')
 				buffer = lines.pop() ?? ''
 
