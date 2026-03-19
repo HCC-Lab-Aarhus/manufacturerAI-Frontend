@@ -14,10 +14,10 @@ const ErrorProvider: React.FC<ErrorProviderProps> = ({ children }) => {
 
 	const addError = useCallback((error: unknown) => {
 		console.error(error)
-		setErrors(prevErrors => [...prevErrors, {
-			id: Date.now(),
-			error
-		}])
+		setErrors(prevErrors => {
+			const next = [...prevErrors, { id: Date.now(), error }]
+			return next.length > 50 ? next.slice(-50) : next
+		})
 	}, [])
 
 	const removeError = useCallback((id: number) => {
