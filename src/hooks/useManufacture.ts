@@ -38,7 +38,7 @@ export interface ManufactureStepState {
 const STEP_DEFS: { step: ManufactureStep; label: string; artifact: string }[] = [
 	{ step: 'placement', label: 'Component Placement', artifact: 'placement' },
 	{ step: 'routing', label: 'Trace Routing', artifact: 'routing' },
-	{ step: 'bitmap', label: 'Trace Bitmap', artifact: '' },
+	{ step: 'bitmap', label: 'Trace Bitmap', artifact: 'bitmap' },
 	{ step: 'scad', label: 'Enclosure Generation', artifact: 'scad' },
 	{ step: 'compile', label: 'STL Compilation', artifact: '' },
 	{ step: 'gcode', label: 'G-Code Pipeline', artifact: 'gcode' }
@@ -142,7 +142,8 @@ export function useManufacture () {
 				: s
 		))
 		if (pendingInvalidation.includes('placement')) { setPlacementResult(null) }
-		if (pendingInvalidation.includes('routing')) { setRoutingResult(null); setBitmapResult(null) }
+		if (pendingInvalidation.includes('routing')) { setRoutingResult(null) }
+		if (pendingInvalidation.includes('bitmap')) { setBitmapResult(null) }
 		if (pendingInvalidation.includes('scad')) { setScadResult(null) }
 		clearInvalidation()
 	}, [pendingInvalidation, clearInvalidation])
