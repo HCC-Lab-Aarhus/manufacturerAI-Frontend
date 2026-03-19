@@ -6,10 +6,13 @@ import { useError } from '@/contexts/ErrorContext/ErrorContext'
 import { useSession } from '@/contexts/SessionContext'
 import {
 	startSetup,
+	stopSetup,
 	streamSetupEvents,
 	getSetupStatus,
 	getSetupConversation,
-	getSetupFirmware
+	getSetupFirmware,
+	recompileFirmware,
+	getSimConfig
 } from '@/lib/api'
 import type { SSEEventType } from '@/types/events'
 import type { TokenUsage } from '@/types/models'
@@ -25,6 +28,8 @@ export function useSetupAgent () {
 	const [conversationLoading, setConversationLoading] = useState(false)
 	const [firmwareCode, setFirmwareCode] = useState<string | null>(null)
 	const [compiled, setCompiled] = useState(false)
+	const [compileError, setCompileError] = useState<string | null>(null)
+	const [recompiling, setRecompiling] = useState(false)
 	const [tokenUsage, setTokenUsage] = useState<TokenUsage | null>(null)
 	const loadedSessionRef = useRef<string | null>(null)
 	const abortRef = useRef<AbortController | null>(null)
@@ -169,16 +174,20 @@ export function useSetupAgent () {
 		)
 	}, [handleEvent, addError, refreshSession])
 
-	const runSetup = useCallback(async () => {
+	const runSetup = useCallback(async (outline?: string) => {
 		if (!currentSession || streaming) return
 		setMessages([])
 		setFirmwareCode(null)
 		setCompiled(false)
+		setCompileError(null)
 		setStreaming(true)
 		streamingRef.current = true
 		firmwareReceivedRef.current = false
+		if (outline) {
+			appendMessage({ id: nextId('user'), role: 'user', content: outline })
+		}
 		try {
-			const result = await startSetup(currentSession.id)
+			const result = await startSetup(currentSession.id, undefined, outline)
 			if (result.status === 'skipped') {
 				appendMessage({
 					id: nextId('status'),
@@ -189,6 +198,26 @@ export function useSetupAgent () {
 				setStreaming(false)
 				return
 			}
+			subscribeToStream(currentSession.id, 0)
+		} catch (err) {
+			addError(err)
+			streamingRef.current = false
+			setStreaming(false)
+		}
+	}, [streaming, currentSession, appendMessage, nextId, subscribeToStream, addError])
+
+	const sendFeedback = useCallback(async (feedback: string) => {
+		if (!currentSession || streaming) { return }
+		appendMessage({
+			id: nextId('user'),
+			role: 'user',
+			content: feedback
+		})
+		setStreaming(true)
+		streamingRef.current = true
+		firmwareReceivedRef.current = false
+		try {
+			await startSetup(currentSession.id, feedback)
 			subscribeToStream(currentSession.id, 0)
 		} catch (err) {
 			addError(err)
@@ -263,7 +292,17 @@ export function useSetupAgent () {
 
 			if (firmware?.code) {
 				setFirmwareCode(firmware.code)
-				setCompiled(true)
+				const setupState = currentSession?.pipeline_state?.setup
+				if (setupState === 'compile_skipped') {
+					setCompiled(false)
+					setCompileError('arduino-cli is not installed — compilation was skipped')
+				} else if (setupState === 'compile_failed') {
+					setCompiled(false)
+					setCompileError('Firmware compilation failed')
+				} else {
+					setCompiled(true)
+					setCompileError(null)
+				}
 			}
 
 			if (!isRunning && entries.length > 0 && firmware?.code) {
@@ -292,6 +331,15 @@ export function useSetupAgent () {
 
 	const _conversationLoading = conversationLoading || (currentSession?.id != null && loadedSessionRef.current !== currentSession.id)
 
+	const cancel = useCallback(async () => {
+		abortRef.current?.abort()
+		streamingRef.current = false
+		setStreaming(false)
+		if (currentSession?.id) {
+			try { await stopSetup(currentSession.id) } catch { /* already stopped */ }
+		}
+	}, [currentSession])
+
 	const resetConversation = useCallback(() => {
 		abortRef.current?.abort()
 		streamingRef.current = false
@@ -299,9 +347,32 @@ export function useSetupAgent () {
 		setMessages([])
 		setFirmwareCode(null)
 		setCompiled(false)
+		setCompileError(null)
 		setTokenUsage(null)
 		loadedSessionRef.current = null
 	}, [])
+
+	const recompile = useCallback(async () => {
+		if (!currentSession || recompiling) { return }
+		setRecompiling(true)
+		setCompileError(null)
+		try {
+			const result = await recompileFirmware(currentSession.id)
+			if (result.status === 'complete') {
+				setCompiled(true)
+				setCompileError(null)
+				refreshSession()
+			} else {
+				setCompiled(false)
+				setCompileError(result.stderr ?? 'Compilation failed')
+			}
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err)
+			setCompileError(msg)
+		} finally {
+			setRecompiling(false)
+		}
+	}, [currentSession, recompiling, refreshSession])
 
 	return {
 		messages,
@@ -309,8 +380,13 @@ export function useSetupAgent () {
 		conversationLoading: _conversationLoading,
 		firmwareCode,
 		compiled,
+		compileError,
+		recompiling,
 		tokenUsage,
 		runSetup,
+		sendFeedback,
+		cancel,
+		recompile,
 		loadConversation,
 		resetConversation
 	}

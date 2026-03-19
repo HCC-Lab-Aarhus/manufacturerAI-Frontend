@@ -1,14 +1,19 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { type ReactElement, useCallback, useEffect, useState } from 'react'
+import { type ReactElement, useCallback, useEffect, useMemo, useState } from 'react'
 
+import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+
+import ChatInput from '@/components/chat/ChatInput'
 import ChatLog from '@/components/chat/ChatLog'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import { usePipeline } from '@/contexts/PipelineContext'
 import { useSession } from '@/contexts/SessionContext'
 import { useSetupAgent } from '@/hooks/useSetupAgent'
-import { getPlacementResult, getSimConfig } from '@/lib/api'
-import type { PlacementResult } from '@/types/models'
+import { getCircuitResult, getPlacementResult, getSimConfig } from '@/lib/api'
+import type { CircuitSpec, PlacementResult } from '@/types/models'
 import type { SimConfig } from '@/lib/api/setup'
 
 const DeviceSimulator = dynamic(() => import('@/components/viewport/DeviceSimulator'), { ssr: false })
@@ -17,13 +22,20 @@ type RightTab = 'code' | 'simulator'
 
 export default function SetupPanel (): ReactElement {
 	const { currentSession, loading } = useSession()
+	const { circuit } = usePipeline()
 	const {
 		messages,
 		streaming,
 		conversationLoading,
 		firmwareCode,
 		compiled,
+		compileError,
+		recompiling,
+		tokenUsage,
 		runSetup,
+		sendFeedback,
+		cancel,
+		recompile,
 		loadConversation,
 		resetConversation
 	} = useSetupAgent()
@@ -31,6 +43,41 @@ export default function SetupPanel (): ReactElement {
 	const [rightTab, setRightTab] = useState<RightTab>('simulator')
 	const [placement, setPlacement] = useState<PlacementResult | null>(null)
 	const [simConfig, setSimConfig] = useState<SimConfig | null>(null)
+	const [editingOutline, setEditingOutline] = useState(false)
+	const [circuitData, setCircuitData] = useState<CircuitSpec | null>(null)
+
+	const effectiveCircuit = circuit ?? circuitData
+
+	const defaultOutline = useMemo(() => {
+		if (!effectiveCircuit) return ''
+		const lines = [
+			'Generate Arduino firmware for the ATmega328P MCU based on this circuit.',
+			'',
+			'**Components:**'
+		]
+		for (const c of effectiveCircuit.components) {
+			lines.push(`- ${c.instance_id} (${c.catalog_id})`)
+		}
+		lines.push('')
+		lines.push('**Nets:**')
+		for (const n of effectiveCircuit.nets) {
+			lines.push(`- ${n.id}: ${n.pins.join(', ')}`)
+		}
+		lines.push('')
+		lines.push(
+			'Write complete firmware that initialises all peripherals and implements ' +
+			'the expected device behaviour. Use the Arduino framework.'
+		)
+		return lines.join('\n')
+	}, [effectiveCircuit])
+
+	const [outline, setOutline] = useState('')
+
+	useEffect(() => {
+		if (defaultOutline && !outline) {
+			setOutline(defaultOutline)
+		}
+	}, [defaultOutline]) // eslint-disable-line react-hooks/exhaustive-deps
 
 	useEffect(() => {
 		if (currentSession) {
@@ -40,17 +87,23 @@ export default function SetupPanel (): ReactElement {
 		}
 	}, [currentSession?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
+	useEffect(() => {
+		if (currentSession && !effectiveCircuit) {
+			getCircuitResult(currentSession.id).then(setCircuitData).catch(() => {})
+		}
+	}, [currentSession?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
 	// Load placement + sim config when firmware is ready
 	useEffect(() => {
 		if (!currentSession) return
 		getPlacementResult(currentSession.id).then(setPlacement).catch(() => {})
 		getSimConfig(currentSession.id).then(setSimConfig).catch(() => {})
-	}, [currentSession?.id, firmwareCode]) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [currentSession?.id, firmwareCode, compiled]) // eslint-disable-line react-hooks/exhaustive-deps
 
 	const hasManufacture = currentSession?.pipeline_state.gcode === 'complete' ||
 		currentSession?.pipeline_state.gcode === 'done'
 	const hasConversation = messages.length > 0 || streaming
-	const hasSimulator = !!placement && !!simConfig && simConfig.peripherals.length > 0
+	const hasSimulator = !!placement && !!simConfig && simConfig.peripherals.length > 0 && !!simConfig.elf_path
 
 	const handleDownload = useCallback(() => {
 		if (!firmwareCode) return
@@ -62,6 +115,10 @@ export default function SetupPanel (): ReactElement {
 		a.click()
 		URL.revokeObjectURL(url)
 	}, [firmwareCode])
+
+	const handleGenerate = useCallback(() => {
+		runSetup(outline || undefined)
+	}, [runSetup, outline])
 
 	if (loading || conversationLoading) {
 		return (
@@ -83,22 +140,54 @@ export default function SetupPanel (): ReactElement {
 	const chatColumn = (
 		<div className="flex h-full flex-col">
 			{hasConversation ? (
-				<ChatLog messages={messages} />
-			) : (
-				<div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
-					<div className="text-center">
-						<h2 className="text-lg font-semibold text-fg mb-2">Firmware Generation</h2>
-						<p className="text-sm text-fg-secondary max-w-md">
-							{'The setup agent will analyze your circuit and generate Arduino firmware for the ATmega328P MCU.'}
-						</p>
+				<>
+					<ChatLog messages={messages} />
+					<div className="border-t border-border p-3">
+						<ChatInput
+							onSend={sendFeedback}
+							disabled={streaming}
+							placeholder="Give feedback on the firmware…"
+							streaming={streaming}
+							onStop={cancel}
+							tokenUsage={tokenUsage}
+						/>
 					</div>
-					<button
-						onClick={runSetup}
-						disabled={!currentSession || streaming}
-						className="rounded-xl bg-accent px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-accent-hover hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all"
-					>
-						{'▶ Generate Firmware'}
-					</button>
+				</>
+			) : (
+				<div className="flex flex-1 flex-col items-center p-2 overflow-hidden">
+					<div className="flex w-full max-w-5xl items-center justify-between mb-2">
+						<div className="flex items-center gap-3">
+							<h2 className="text-lg font-semibold text-fg-secondary">Firmware Outline</h2>
+							<button
+								onClick={() => setEditingOutline(!editingOutline)}
+								className="rounded px-2 py-0.5 text-xs text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"
+							>
+								{editingOutline ? 'Preview' : 'Edit'}
+							</button>
+						</div>
+						<button
+							onClick={handleGenerate}
+							disabled={!currentSession || !outline.trim()}
+							className="rounded-xl bg-accent px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-accent-hover hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all"
+						>
+							{'▶ Generate Firmware'}
+						</button>
+					</div>
+					<div className="flex-1 w-full max-w-5xl overflow-y-auto">
+						{editingOutline ? (
+							<textarea
+								value={outline}
+								onChange={e => setOutline(e.target.value)}
+								rows={18}
+								placeholder="Describe the firmware to generate…"
+								className="w-full rounded-xl border border-border bg-surface-card px-4 py-3 text-sm text-fg placeholder-fg-muted outline-none focus:border-accent transition-colors resize-y"
+							/>
+						) : (
+							<div className="w-full rounded-xl border border-border bg-surface-card px-5 py-4 text-sm text-fg markdown-body [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+								<Markdown remarkPlugins={[remarkGfm]}>{outline}</Markdown>
+							</div>
+						)}
+					</div>
 				</div>
 			)}
 		</div>
@@ -145,6 +234,11 @@ export default function SetupPanel (): ReactElement {
 							{'✓'}
 						</span>
 					)}
+					{!compiled && firmwareCode && (
+						<span className="ml-1.5 rounded bg-error/15 px-1 py-0.5 text-[9px] font-medium text-error">
+							{'✗'}
+						</span>
+					)}
 					{effectiveTab === 'code' && (
 						<span className="absolute inset-x-0 bottom-0 h-0.5 bg-accent" />
 					)}
@@ -153,11 +247,28 @@ export default function SetupPanel (): ReactElement {
 				{/* Right-aligned actions */}
 				<div className="ml-auto flex items-center gap-2 pr-3">
 					{streaming ? (
-						<LoadingSpinner size="sm" label="Generating…" />
+						<>
+							<LoadingSpinner size="sm" label="Generating…" />
+							<button
+								onClick={cancel}
+								className="rounded px-2 py-1 text-xs text-danger hover:bg-danger/10 transition-colors"
+							>
+								{'Stop'}
+							</button>
+						</>
 					) : firmwareCode ? (
 						<>
+							{!compiled && (
+								<button
+									onClick={recompile}
+									disabled={recompiling}
+									className="rounded-lg bg-warning px-3 py-1.5 text-xs font-medium text-white hover:bg-warning/80 disabled:opacity-40 transition-colors"
+								>
+									{recompiling ? 'Compiling…' : '↻ Compile'}
+								</button>
+							)}
 							<button
-								onClick={runSetup}
+								onClick={handleGenerate}
 								disabled={!currentSession}
 								className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-40 transition-colors"
 							>
@@ -174,17 +285,32 @@ export default function SetupPanel (): ReactElement {
 				</div>
 			</div>
 
+			{/* Compile error banner */}
+			{compileError && (
+				<div className="flex items-center gap-2 border-b border-error/20 bg-error/10 px-4 py-2 text-xs text-error">
+					<span className="flex-1">{compileError}</span>
+					<button
+						onClick={recompile}
+						disabled={recompiling}
+						className="shrink-0 rounded bg-error px-2.5 py-1 text-[11px] font-medium text-white hover:bg-error/80 disabled:opacity-40 transition-colors"
+					>
+						{recompiling ? 'Compiling…' : 'Retry Compile'}
+					</button>
+				</div>
+			)}
+
 			{/* Tab content */}
 			<div className="flex-1 overflow-hidden">
-				{effectiveTab === 'simulator' && hasSimulator && placement && simConfig ? (
+				{effectiveTab === 'simulator' && hasSimulator && placement && simConfig && currentSession ? (
 					<DeviceSimulator
 						placement={placement}
 						simConfig={simConfig}
+						sessionId={currentSession.id}
 						className="w-full h-full"
 					/>
 				) : effectiveTab === 'code' && firmwareCode ? (
 					<div className="h-full overflow-auto">
-						<pre className="p-4 text-xs leading-relaxed text-fg font-mono whitespace-pre-wrap break-words">
+						<pre className="p-4 text-xs leading-relaxed text-fg font-mono whitespace-pre-wrap wrap-break-word">
 							<code>{firmwareCode}</code>
 						</pre>
 					</div>

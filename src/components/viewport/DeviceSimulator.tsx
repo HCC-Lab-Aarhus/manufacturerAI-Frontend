@@ -1,14 +1,15 @@
 'use client'
 
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 
 import { normalizeOutline } from '@/lib/viewport'
 import { buildSceneContent } from '@/lib/scene3dBuilder'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useSimulation } from '@/hooks/useSimulation'
 import type { PlacementResult } from '@/types/models'
-import type { SimConfig, SimPeripheral } from '@/lib/api/setup'
+import type { SimConfig } from '@/lib/api/setup'
 
 /* ── colour helpers ──────────────────────────────────────────────── */
 
@@ -27,21 +28,19 @@ function cssColor (prop: string, fallback: string): THREE.Color {
 
 /* ── types ────────────────────────────────────────────────────────── */
 
-interface PeripheralState {
-	pressed: boolean   // buttons
-	on: boolean        // LEDs / ir_output
-}
-
 interface Props {
 	placement: PlacementResult
 	simConfig: SimConfig
+	sessionId: string
 	className?: string
 }
 
 /* ── component ────────────────────────────────────────────────────── */
 
-export default function DeviceSimulator ({ placement, simConfig, className }: Props) {
+export default function DeviceSimulator ({ placement, simConfig, sessionId, className }: Props) {
 	const { color: themeColor } = useTheme()
+	const { peripheralState, serialLog, status, error, press, release, start, stop, restart, clearLog } = useSimulation(sessionId, simConfig)
+	const serialEndRef = useRef<HTMLDivElement>(null)
 
 	// Refs for Three.js objects
 	const containerRef = useRef<HTMLDivElement>(null)
@@ -57,29 +56,14 @@ export default function DeviceSimulator ({ placement, simConfig, className }: Pr
 	const raycaster = useRef(new THREE.Raycaster())
 	const pointer = useRef(new THREE.Vector2())
 
-	// Peripheral state
-	const [peripheralState, setPeripheralState] = useState<Record<string, PeripheralState>>({})
-	const peripheralStateRef = useRef<Record<string, PeripheralState>>({})
+	// Keep a ref of peripheralState to avoid re-attaching pointer listeners on every pin change
+	const peripheralStateRef = useRef(peripheralState)
+	useEffect(() => { peripheralStateRef.current = peripheralState }, [peripheralState])
 
-	// Build button→output mapping from sim_config
-	const simMapping = useRef<{
-		buttons: SimPeripheral[]
-		outputs: SimPeripheral[]
-	}>({ buttons: [], outputs: [] })
-
-	// Initialise sim mapping and state from simConfig
+	// Auto-scroll serial log
 	useEffect(() => {
-		const buttons = simConfig.peripherals.filter(p => p.type === 'button')
-		const outputs = simConfig.peripherals.filter(p => p.type === 'led' || p.type === 'ir_output')
-		simMapping.current = { buttons, outputs }
-
-		const state: Record<string, PeripheralState> = {}
-		for (const p of simConfig.peripherals) {
-			state[p.instance_id] = { pressed: false, on: false }
-		}
-		setPeripheralState(state)
-		peripheralStateRef.current = state
-	}, [simConfig])
+		serialEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+	}, [serialLog])
 
 	// ── Three.js setup ──────────────────────────────────────────────
 	useEffect(() => {
@@ -307,34 +291,8 @@ export default function DeviceSimulator ({ placement, simConfig, className }: Pr
 		}
 	}, [peripheralState, simConfig])
 
-	// ── Client-side simulation: button press → output toggle ────────
-	const simulateButtonPress = useCallback((buttonId: string, pressed: boolean) => {
-		setPeripheralState(prev => {
-			const next = { ...prev }
-
-			// Update button state
-			if (next[buttonId]) {
-				next[buttonId] = { ...next[buttonId], pressed }
-			}
-
-			// When a button is pressed, turn on all outputs; when released, turn off
-			// This is a simplified sim — real simavr will do the actual firmware execution
-			const anyPressed = simMapping.current.buttons.some(b =>
-				b.instance_id === buttonId ? pressed : (prev[b.instance_id]?.pressed ?? false)
-			)
-
-			for (const out of simMapping.current.outputs) {
-				next[out.instance_id] = {
-					...next[out.instance_id],
-					on: anyPressed
-				}
-			}
-
-			peripheralStateRef.current = next
-			return next
-		})
-
-		// Visual feedback on button mesh
+	// ── Button press visual feedback ────────────────────────────────
+	const applyButtonVisual = useCallback((buttonId: string, pressed: boolean) => {
 		const mesh = buttonMeshes.current.get(buttonId)
 		if (mesh) {
 			const mat = mesh.material as THREE.MeshPhongMaterial
@@ -370,15 +328,18 @@ export default function DeviceSimulator ({ placement, simConfig, className }: Pr
 
 			if (hits.length > 0) {
 				const iid = hits[0].object.userData.instance_id as string
-				if (iid) simulateButtonPress(iid, true)
+				if (iid) {
+					press(iid)
+					applyButtonVisual(iid, true)
+				}
 			}
 		}
 
 		const onPointerUp = () => {
-			// Release all pressed buttons
 			for (const [iid, state] of Object.entries(peripheralStateRef.current)) {
 				if (state.pressed) {
-					simulateButtonPress(iid, false)
+					release(iid)
+					applyButtonVisual(iid, false)
 				}
 			}
 		}
@@ -392,24 +353,56 @@ export default function DeviceSimulator ({ placement, simConfig, className }: Pr
 			renderer.domElement.removeEventListener('pointerup', onPointerUp)
 			renderer.domElement.removeEventListener('pointerleave', onPointerUp)
 		}
-	}, [simulateButtonPress])
+	}, [press, release, applyButtonVisual])
 
 	// Build the status bar string
 	const buttons = simConfig.peripherals.filter(p => p.type === 'button')
 	const outputs = simConfig.peripherals.filter(p => p.type === 'led' || p.type === 'ir_output')
+
+	const statusLabel: Record<string, string> = {
+		disconnected: 'Disconnected',
+		connecting: 'Connecting…',
+		connected: 'Connected',
+		booted: 'Running',
+		stopped: 'Stopped',
+		error: error ?? 'Error',
+	}
+
+	const statusColor: Record<string, string> = {
+		disconnected: 'bg-fg-muted/30',
+		connecting: 'bg-yellow-400',
+		connected: 'bg-yellow-400',
+		booted: 'bg-green-400',
+		stopped: 'bg-red-400',
+		error: 'bg-red-400',
+	}
+
+	const isRunning = status === 'booted' || status === 'connecting' || status === 'connected'
 
 	return (
 		<div className={`flex flex-col ${className ?? 'w-full h-full'}`}>
 			{/* Status bar */}
 			<div className="flex items-center gap-3 border-b border-border px-3 py-1.5 bg-surface-alt text-xs">
 				<span className="text-fg-muted font-medium">Simulator</span>
+				<span className="flex items-center gap-1.5 text-fg-secondary">
+					<span className={`inline-block h-2 w-2 rounded-full ${statusColor[status]}`} />
+					{statusLabel[status]}
+				</span>
 				<span className="text-fg-secondary">
 					{buttons.length} button{buttons.length !== 1 ? 's' : ''} · {outputs.length} output{outputs.length !== 1 ? 's' : ''}
 				</span>
-				<span className="ml-auto text-fg-muted">{'Click buttons on the device to test'}</span>
+				<div className="ml-auto flex items-center gap-1">
+					{!isRunning && (
+						<button onClick={start} className="rounded px-2 py-0.5 text-[11px] font-medium bg-surface-chip text-fg hover:bg-accent/20 transition-colors" title="Start">▶</button>
+					)}
+					{isRunning && (
+						<button onClick={stop} className="rounded px-2 py-0.5 text-[11px] font-medium bg-surface-chip text-fg hover:bg-error/20 transition-colors" title="Stop">⏹</button>
+					)}
+					<button onClick={restart} className="rounded px-2 py-0.5 text-[11px] font-medium bg-surface-chip text-fg hover:bg-accent/20 transition-colors" title="Restart">↻</button>
+				</div>
 			</div>
 			{/* 3D viewport */}
-			<div ref={containerRef} className="flex-1" />
+			<div ref={containerRef} className="flex-1 min-h-0" />
 			{/* Peripheral state panel */}
 			<div className="flex flex-wrap gap-2 border-t border-border px-3 py-2 bg-surface-alt">
 				{simConfig.peripherals.map(p => {
@@ -434,6 +427,21 @@ export default function DeviceSimulator ({ placement, simConfig, className }: Pr
 						</div>
 					)
 				})}
+			</div>
+			{/* Serial log */}
+			<div className="border-t border-border bg-[#0a0e14] flex flex-col max-h-[30%] min-h-20">
+				<div className="flex items-center justify-between px-3 py-1 bg-surface-alt border-b border-border">
+					<span className="text-[11px] font-medium text-fg-muted">Serial Monitor</span>
+					<button onClick={clearLog} className="text-[10px] text-fg-muted hover:text-fg transition-colors" title="Clear log">🗑</button>
+				</div>
+				<div className="flex-1 overflow-y-auto px-2 py-1 font-mono text-[11px] text-[#8cc265] leading-relaxed">
+					{serialLog.length === 0 ? (
+						<span className="text-fg-muted/40 italic">No serial output yet</span>
+					) : (
+						serialLog.map((line, i) => <div key={i}>{line}</div>)
+					)}
+					<div ref={serialEndRef} />
+				</div>
 			</div>
 		</div>
 	)

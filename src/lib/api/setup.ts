@@ -6,12 +6,22 @@ import { type SSECallbacks, consumeSSEStream } from './sse'
 const baseUrl = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000').replace(/\/+$/, '')
 
 export async function startSetup (
-	sessionId: string
+	sessionId: string,
+	feedback?: string,
+	outline?: string
 ): Promise<{ status: string; message?: string }> {
+	const body: Record<string, string> = {}
+	if (feedback) body.feedback = feedback
+	if (outline) body.outline = outline
 	const { data } = await apiClient.post<{ status: string; message?: string }>(
-		`/api/v2/sessions/${encodeURIComponent(sessionId)}/setup`
+		`/api/v2/sessions/${encodeURIComponent(sessionId)}/setup`,
+		Object.keys(body).length ? body : undefined
 	)
 	return data
+}
+
+export async function stopSetup (sessionId: string): Promise<void> {
+	await apiClient.post(`/api/v2/sessions/${encodeURIComponent(sessionId)}/setup/stop`)
 }
 
 export function streamSetupEvents (
@@ -74,4 +84,23 @@ export async function getSimConfig (sessionId: string): Promise<SimConfig> {
 		`/api/v2/sessions/${encodeURIComponent(sessionId)}/setup/sim-config`
 	)
 	return data
+}
+
+export async function recompileFirmware (sessionId: string): Promise<{
+	status: string
+	stderr?: string
+	stdout?: string
+	hex_path?: string | null
+	elf_path?: string | null
+}> {
+	const { data } = await apiClient.post(
+		`/api/v2/sessions/${encodeURIComponent(sessionId)}/setup/recompile`
+	)
+	return data as {
+		status: string
+		stderr?: string
+		stdout?: string
+		hex_path?: string | null
+		elf_path?: string | null
+	}
 }
