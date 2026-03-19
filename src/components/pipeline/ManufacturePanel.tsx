@@ -132,7 +132,7 @@ const STEP_TO_TAB: Record<string, ViewTab> = {
 }
 
 export default function ManufacturePanel (): ReactElement {
-	const { currentSession, setActiveStage, filament } = useSession()
+	const { currentSession, setActiveStage, filament, flashDropdowns } = useSession()
 	const { setPendingFeedback } = usePipeline()
 	const { steps, running, allDone, placementResult, routingResult, bitmapResult, runPipeline, stop } = useManufacture()
 	const [silverinkOnly, setSilverinkOnly] = useState(false)
@@ -169,19 +169,28 @@ export default function ManufacturePanel (): ReactElement {
 
 	const canStart = !!selectedFilament
 
+	const requireFilament = useCallback((): boolean => {
+		if (canStart) { return true }
+		flashDropdowns()
+		return false
+	}, [canStart, flashDropdowns])
+
 	const handleRetry = useCallback((step: ManufactureStep) => {
+		if (!requireFilament()) { return }
 		runPipeline(step, { ...opts(), toStep: step })
-	}, [runPipeline, opts])
+	}, [runPipeline, opts, requireFilament])
 
 	const handleContinue = useCallback((step: ManufactureStep) => {
+		if (!requireFilament()) { return }
 		const idx = ALL_STEPS.indexOf(step)
 		const next = ALL_STEPS[idx + 1]
 		if (next) { runPipeline(next, opts()) }
-	}, [runPipeline, opts])
+	}, [runPipeline, opts, requireFilament])
 
 	const handleRunStep = useCallback((step: ManufactureStep) => {
+		if (!requireFilament()) { return }
 		runPipeline(step, { ...opts(), toStep: step })
-	}, [runPipeline, opts])
+	}, [runPipeline, opts, requireFilament])
 
 	const handleSelectStep = useCallback((step: ManufactureStep) => {
 		if (step in STEP_TO_TAB) { setViewTab(STEP_TO_TAB[step]) }
@@ -218,26 +227,23 @@ export default function ManufacturePanel (): ReactElement {
 								<>
 									<span className="text-[11px] font-medium text-success">{'Complete'}</span>
 									<button
-										disabled={!canStart}
-										onClick={() => runPipeline('placement', { filament: selectedFilament, silverink_only: silverinkOnly })}
-										className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
+										onClick={() => { if (!requireFilament()) return; runPipeline('placement', { filament: selectedFilament, silverink_only: silverinkOnly }) }}
+										className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
 									>
 										{'Re-run'}
 									</button>
 								</>
 							) : canResume ? (
 								<button
-									disabled={!canStart}
-									onClick={() => runPipeline(firstIncomplete!.step, { filament: selectedFilament, silverink_only: silverinkOnly })}
-									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
+									onClick={() => { if (!requireFilament()) return; runPipeline(firstIncomplete!.step, { filament: selectedFilament, silverink_only: silverinkOnly }) }}
+									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
 								>
 									{'Resume'}
 								</button>
 							) : (
 								<button
-									disabled={!canStart}
-									onClick={() => runPipeline(undefined, { filament: selectedFilament, silverink_only: silverinkOnly })}
-									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
+									onClick={() => { if (!requireFilament()) return; runPipeline(undefined, { filament: selectedFilament, silverink_only: silverinkOnly }) }}
+									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
 								>
 									{'Start'}
 								</button>

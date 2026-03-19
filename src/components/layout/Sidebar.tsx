@@ -25,8 +25,17 @@ export default function Sidebar (): ReactElement {
 		printer,
 		setPrinter,
 		filament,
-		setFilament
+		setFilament,
+		dropdownFlashKey
 	} = useSession()
+	const [flashClass, setFlashClass] = useState('')
+
+	useEffect(() => {
+		if (dropdownFlashKey === 0) { return }
+		setFlashClass('animate-flash-border')
+		const timer = setTimeout(() => { setFlashClass('') }, 800)
+		return () => { clearTimeout(timer) }
+	}, [dropdownFlashKey])
 	const { clearAll } = usePipeline()
 	const [printers, setPrinters] = useState<Printer[]>([])
 	const [filaments, setFilaments] = useState<Filament[]>([])
@@ -146,7 +155,7 @@ export default function Sidebar (): ReactElement {
 						title="Select filament"
 						value={filament?.id ?? ''}
 						onChange={e => { setFilament(filaments.find(f => f.id === e.target.value) ?? null) }}
-						className="mt-1 w-full rounded-lg border border-border bg-surface-card px-2 py-1.5 text-sm text-fg-secondary outline-none"
+						className={`mt-1 w-full rounded-lg border border-border bg-surface-card px-2 py-1.5 text-sm text-fg-secondary outline-none ${!filament ? flashClass : ''}`}
 					>
 						<option value="">{'Select filament…'}</option>
 						{filaments.map(f => (

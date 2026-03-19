@@ -48,6 +48,15 @@ body {
 	image-rendering: pixelated;
 }
 
+@keyframes flash-border {
+	0%, 100% { border-color: var(--color-border) !important; box-shadow: none !important; }
+	25%, 75% { border-color: var(--color-danger) !important; box-shadow: 0 0 0 2px var(--color-danger) !important; }
+}
+
+@utility animate-flash-border {
+	animation: flash-border 0.8s ease;
+}
+
 .markdown-body {
 	line-height: 1.65;
 	color: var(--color-fg);

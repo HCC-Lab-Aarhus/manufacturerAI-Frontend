@@ -49,6 +49,8 @@ interface SessionContextValue {
 	setPrinter: (p: Printer | null) => void
 	filament: Filament | null
 	setFilament: (f: Filament | null) => void
+	flashDropdowns: () => void
+	dropdownFlashKey: number
 }
 
 const SessionContext = createContext<SessionContextValue>({
@@ -69,7 +71,9 @@ const SessionContext = createContext<SessionContextValue>({
 	printer: null,
 	setPrinter: () => {},
 	filament: null,
-	setFilament: () => {}
+	setFilament: () => {},
+	flashDropdowns: () => {},
+	dropdownFlashKey: 0
 })
 
 export function useSession (): SessionContextValue {
@@ -133,6 +137,11 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 	const [printer, _setPrinter] = useState<Printer | null>(null)
 	const [filament, setFilament] = useState<Filament | null>(null)
 	const [pendingInvalidation, setPendingInvalidation] = useState<string[] | null>(null)
+	const [dropdownFlashKey, setDropdownFlashKey] = useState(0)
+
+	const flashDropdowns = useCallback(() => {
+		setDropdownFlashKey(k => k + 1)
+	}, [])
 
 	const setPrinter = useCallback((p: Printer | null) => {
 		_setPrinter(p)
@@ -239,8 +248,10 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 		printer,
 		setPrinter,
 		filament,
-		setFilament
-	}), [sessions, currentSession, activeStage, loading, pendingInvalidation, selectSession, clearSession, refreshSession, refreshSessions, patchSession, clearInvalidation, renameSession, deleteSessionCb, printer, filament, setFilament])
+		setFilament,
+		flashDropdowns,
+		dropdownFlashKey
+	}), [sessions, currentSession, activeStage, loading, pendingInvalidation, selectSession, clearSession, refreshSession, refreshSessions, patchSession, clearInvalidation, renameSession, deleteSessionCb, printer, filament, setFilament, flashDropdowns, dropdownFlashKey])
 
 	return (
 		<SessionContext.Provider value={value}>

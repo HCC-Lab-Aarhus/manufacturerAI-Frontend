@@ -160,7 +160,7 @@ export function useManufacture () {
 
 	const runPipeline = useCallback(async (fromStep?: ManufactureStep, options?: { filament?: string; silverink_only?: boolean; toStep?: ManufactureStep }) => {
 		if (!currentSession || running) { return }
-		if (!options?.filament) { throw new Error('Filament is required') }
+		if (!options?.filament) { return }
 
 		cancelRef.current = false
 		setRunning(true)
