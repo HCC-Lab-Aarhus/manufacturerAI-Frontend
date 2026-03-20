@@ -26,5 +26,5 @@ export async function getBitmap (sessionId: string): Promise<BitmapResult> {
 
 export function getBitmapDownloadUrl (sessionId: string): string {
 	const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
-	return `${base}/api/v2/sessions/${sid(sessionId)}/manufacture/bitmap`
+	return `${base}/api/v2/sessions/${sid(sessionId)}/manufacture/bitmap/download`
 }
