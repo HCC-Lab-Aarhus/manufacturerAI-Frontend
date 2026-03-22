@@ -161,6 +161,7 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 		if (!session) { return }
 		const updated = await getSession(session.id)
 		setCurrentSession(updated)
+		setSessions(prev => prev.map(s => s.id === updated.id ? { ...s, name: updated.name } : s))
 	}, [])
 
 	const selectSession = useCallback(async (id: string) => {
