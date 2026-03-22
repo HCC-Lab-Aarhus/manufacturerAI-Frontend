@@ -1,6 +1,6 @@
 'use client'
 
-import { type FormEvent, type ReactElement, useCallback, useEffect, useRef, useState } from 'react'
+import { type FormEvent, type KeyboardEvent, type ReactElement, useCallback, useEffect, useRef, useState } from 'react'
 
 import type { TokenUsage } from '@/types/models'
 
@@ -38,6 +38,21 @@ export default function ChatInput ({ onSend, disabled, placeholder, streaming, o
 	const [value, setValue] = useState('')
 	const [listening, setListening] = useState(false)
 	const recognitionRef = useRef<SpeechRecognition | null>(null)
+	const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+
+	const resizeTextarea = useCallback(() => {
+		const ta = textareaRef.current
+		if (!ta) { return }
+		ta.style.height = 'auto'
+		const maxH = 160
+		const scrollH = ta.scrollHeight
+		ta.style.height = `${Math.min(scrollH, maxH)}px`
+		ta.style.overflowY = scrollH > maxH ? 'auto' : 'hidden'
+	}, [])
+
+	useEffect(() => {
+		resizeTextarea()
+	}, [value, resizeTextarea])
 
 	useEffect(() => {
 		return () => { recognitionRef.current?.abort() }
@@ -70,30 +85,42 @@ export default function ChatInput ({ onSend, disabled, placeholder, streaming, o
 		setListening(true)
 	}, [listening])
 
+	const canSend = !disabled && !streaming
+
 	const handleSubmit = useCallback((e: FormEvent) => {
 		e.preventDefault()
 		const trimmed = value.trim()
-		if (!trimmed || disabled) { return }
+		if (!trimmed || !canSend) { return }
 		onSend(trimmed)
 		setValue('')
-	}, [value, disabled, onSend])
+	}, [value, canSend, onSend])
+
+	const handleKeyDown = useCallback((e: KeyboardEvent<HTMLTextAreaElement>) => {
+		if (e.key === 'Enter' && !e.shiftKey) {
+			e.preventDefault()
+			const trimmed = value.trim()
+			if (!trimmed || !canSend) { return }
+			onSend(trimmed)
+			setValue('')
+		}
+	}, [value, canSend, onSend])
 
 	return (
-		<form onSubmit={handleSubmit} className="flex items-center gap-2">
+		<form onSubmit={handleSubmit} className="flex items-end gap-2">
 			<div className="relative flex-1">
-				<input
-					type="text"
+				<textarea
+					ref={textareaRef}
 					value={value}
 					onChange={e => { setValue(e.target.value) }}
-					disabled={disabled}
+					onKeyDown={handleKeyDown}
+					rows={1}
 					placeholder={placeholder ?? 'Describe your device…'}
-					className="w-full rounded-xl border border-border bg-surface-card px-4 py-2.5 pr-10 text-sm text-fg placeholder-fg-muted outline-none focus:border-accent disabled:opacity-50 transition-colors"
+					className="w-full resize-none rounded-xl border border-border bg-surface-card px-4 py-2.5 pr-10 text-sm text-fg placeholder-fg-muted outline-none focus:border-accent transition-colors"
 				/>
 				<button
 					type="button"
 					onClick={toggleListening}
-					disabled={disabled}
-					className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors ${listening ? 'text-danger animate-pulse' : 'text-fg-muted hover:text-fg'} disabled:opacity-40`}
+					className={`absolute right-2 bottom-2 p-1 rounded-lg transition-colors ${listening ? 'text-danger animate-pulse' : 'text-fg-muted hover:text-fg'}`}
 					title={listening ? 'Stop listening' : 'Speech to text'}
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -117,7 +144,7 @@ export default function ChatInput ({ onSend, disabled, placeholder, streaming, o
 				: (
 					<button
 						type="submit"
-						disabled={disabled || !value.trim()}
+						disabled={!canSend || !value.trim()}
 						className="rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
 					>
 						{'Send'}
