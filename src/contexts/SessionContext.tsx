@@ -8,6 +8,7 @@ import {
 	useEffect,
 	useLayoutEffect,
 	useMemo,
+	useRef,
 	useState
 } from 'react'
 
@@ -116,6 +117,8 @@ export function isStageAccessible (
 export function SessionProvider ({ children }: { children: ReactNode }) {
 	const [sessions, setSessions] = useState<SessionMeta[]>([])
 	const [currentSession, setCurrentSession] = useState<SessionMeta | null>(null)
+	const currentSessionRef = useRef<SessionMeta | null>(null)
+	currentSessionRef.current = currentSession
 	const [activeStage, _setActiveStage] = useState<PipelineStage>('design')
 
 	useLayoutEffect(() => {
@@ -154,10 +157,11 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 	}, [])
 
 	const refreshSession = useCallback(async () => {
-		if (!currentSession) { return }
-		const updated = await getSession(currentSession.id)
+		const session = currentSessionRef.current
+		if (!session) { return }
+		const updated = await getSession(session.id)
 		setCurrentSession(updated)
-	}, [currentSession])
+	}, [])
 
 	const selectSession = useCallback(async (id: string) => {
 		setLoading(true)
