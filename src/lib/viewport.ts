@@ -10,6 +10,11 @@ export function normalizeOutline (raw: Outline | null | undefined): OutlineVerte
 	return []
 }
 
+export function normalizeHoles (raw: Outline | null | undefined): OutlineVertex[][] {
+	if (!raw || Array.isArray(raw)) { return [] }
+	return raw.holes ?? []
+}
+
 export interface NormalisedOutline {
 	verts: [number, number][]
 	corners: { ease_in: number; ease_out: number }[]
@@ -103,7 +108,7 @@ export function expandOutlineVertices (
 	return { pts, zs, zbots, cornerIndices }
 }
 
-export function buildOutlinePath (outline: { x: number; y: number; ease_in?: number; ease_out?: number }[]): string {
+export function buildOutlinePath (outline: { x: number; y: number; ease_in?: number; ease_out?: number }[], holes?: { x: number; y: number; ease_in?: number; ease_out?: number }[][]): string {
 	const norm = normaliseOutline(outline)
 	const { verts, corners } = norm
 	const n = verts.length
@@ -139,6 +144,44 @@ export function buildOutlinePath (outline: { x: number; y: number; ease_in?: num
 		parts.push(`Q${C[0] * SCALE},${C[1] * SCALE} ${bx},${by}`)
 	}
 	parts.push('Z')
+
+	if (holes) {
+		for (const hole of holes) {
+			const hn = normaliseOutline(hole)
+			const hv = hn.verts, hc = hn.corners
+			if (hv.length < 3) continue
+			for (let i = 0; i < hv.length; i++) {
+				const C = hv[i]
+				const prev = (i - 1 + hv.length) % hv.length
+				const next = (i + 1) % hv.length
+				const P = hv[prev], N = hv[next]
+				const eIn = hc[i].ease_in ?? 0
+				const eOut = hc[i].ease_out ?? 0
+
+				if (eIn === 0 && eOut === 0) {
+					parts.push(i === 0 ? `M${C[0] * SCALE},${C[1] * SCALE}` : `L${C[0] * SCALE},${C[1] * SCALE}`)
+					continue
+				}
+
+				const dPx = P[0] - C[0], dPy = P[1] - C[1]
+				const dNx = N[0] - C[0], dNy = N[1] - C[1]
+				const lenP = Math.hypot(dPx, dPy)
+				const lenN = Math.hypot(dNx, dNy)
+				const tIn = Math.min(eIn / lenP, 0.5)
+				const tOut = Math.min(eOut / lenN, 0.5)
+				const ax = (C[0] + dPx * tIn) * SCALE
+				const ay = (C[1] + dPy * tIn) * SCALE
+				const bx = (C[0] + dNx * tOut) * SCALE
+				const by = (C[1] + dNy * tOut) * SCALE
+
+				if (i === 0) parts.push(`M${ax},${ay}`)
+				else parts.push(`L${ax},${ay}`)
+				parts.push(`Q${C[0] * SCALE},${C[1] * SCALE} ${bx},${by}`)
+			}
+			parts.push('Z')
+		}
+	}
+
 	return parts.join(' ')
 }
 

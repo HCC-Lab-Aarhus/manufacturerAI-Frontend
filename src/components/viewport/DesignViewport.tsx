@@ -4,7 +4,7 @@ import { memo, type ReactElement, useEffect, useRef, useState } from 'react'
 
 import { useSession } from '@/contexts/SessionContext'
 import type { CatalogBody, CatalogPin, DesignSpec, UIPlacement } from '@/types/models'
-import { normalizeOutline, normaliseOutline, buildOutlinePath, outlineBBox, snapToEdge, nearestEdge, SCALE, PAD } from '@/lib/viewport'
+import { normalizeOutline, normalizeHoles, normaliseOutline, buildOutlinePath, outlineBBox, snapToEdge, nearestEdge, SCALE, PAD } from '@/lib/viewport'
 import { validateUIPlacement, putDesign, submitDesignToConversation } from '@/lib/api/design'
 
 import ComponentIcon from './ComponentIcon'
@@ -52,6 +52,7 @@ const DRAG_COLORS = {
 function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted, className }: Props): ReactElement {
 	const { patchSession } = useSession()
 	const outline = normalizeOutline(design.outline)
+	const holes = normalizeHoles(design.outline)
 	const placements = (design.ui_placements ?? []) as EnrichedPlacement[]
 	const norm = normaliseOutline(outline)
 	const { verts } = norm
@@ -382,7 +383,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 	bboxBaseRef.current = { x: baseVbX, y: baseVbY, w: baseVbW, h: baseVbH }
 
 	const vb = `${vbState.x} ${vbState.y} ${vbState.w} ${vbState.h}`
-	const path = buildOutlinePath(outline)
+	const path = buildOutlinePath(outline, holes.length > 0 ? holes : undefined)
 
 	const UI_COLORS = [
 		'#58a6ff', '#3fb950', '#d29922', '#f778ba', '#bc8cff',
@@ -414,7 +415,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 						height={baseVbH}
 						fill="url(#grid10)"
 					/>
-					<path d={path} fill="rgba(86,114,160,0.06)" stroke="#5672a0" strokeWidth={2} />
+					<path d={path} fill="rgba(86,114,160,0.06)" stroke="#5672a0" strokeWidth={2} fillRule="evenodd" />
 
 					{design.pcb_contour && design.pcb_contour.length > 2 && (
 						<>

@@ -5,7 +5,7 @@ import type { ReactElement } from 'react'
 import ComponentIcon from './ComponentIcon'
 import OutlineSVG from './OutlineSVG'
 import type { PlacementResult } from '@/types/models'
-import { normalizeOutline } from '@/lib/viewport'
+import { normalizeOutline, normalizeHoles } from '@/lib/viewport'
 
 interface Props {
 	placement: PlacementResult
@@ -14,10 +14,11 @@ interface Props {
 
 export default function PlacementViewport ({ placement, className }: Props): ReactElement {
 	const outline = normalizeOutline(placement.outline)
+	const holes = normalizeHoles(placement.outline)
 	const components = placement.components ?? []
 
 	return (
-		<OutlineSVG outline={outline} pcbContour={placement.pcb_contour} className={className}>
+		<OutlineSVG outline={outline} holes={holes} pcbContour={placement.pcb_contour} className={className}>
 			{components.map(c => {
 				if (!c.body) {
 					return (

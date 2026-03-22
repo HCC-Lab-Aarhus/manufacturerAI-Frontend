@@ -2,7 +2,7 @@
 
 import { type ReactElement, useEffect, useRef, useState } from 'react'
 
-import { SCALE, netColor, normalizeOutline, normaliseOutline } from '@/lib/viewport'
+import { SCALE, netColor, normalizeOutline, normalizeHoles, normaliseOutline } from '@/lib/viewport'
 import type { BitmapResult } from '@/types/models'
 
 interface Props {
@@ -16,6 +16,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 
 	const { bed_width, bed_depth, bed_offset_x, bed_offset_y, bitmap_cols, bitmap_rows, bitmap_b64 } = bitmap
 	const outline = normalizeOutline(bitmap.outline)
+	const holes = normalizeHoles(bitmap.outline)
 	const components = bitmap.components ?? []
 	const traces = bitmap.traces ?? []
 	const traceWidth = (bitmap.trace_width_mm ?? 0.3) * SCALE
@@ -100,6 +101,41 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 			parts.push(`Q${cx},${cy} ${bx},${by}`)
 		}
 		parts.push('Z')
+
+		for (const hole of holes) {
+			const hn = normaliseOutline(hole)
+			const hv = hn.verts, hc = hn.corners
+			if (hv.length < 3) continue
+			for (let j = 0; j < hv.length; j++) {
+				const C = hv[j]
+				const prev = (j - 1 + hv.length) % hv.length
+				const next = (j + 1) % hv.length
+				const P = hv[prev], N = hv[next]
+				const eIn = hc[j].ease_in ?? 0
+				const eOut = hc[j].ease_out ?? 0
+				const cx = padX + (C[0] + bed_offset_x) * bedScale
+				const cy = padY + (C[1] + bed_offset_y) * bedScale
+				if (eIn === 0 && eOut === 0) {
+					parts.push(j === 0 ? `M${cx},${cy}` : `L${cx},${cy}`)
+					continue
+				}
+				const dPx = P[0] - C[0], dPy = P[1] - C[1]
+				const dNx = N[0] - C[0], dNy = N[1] - C[1]
+				const lenP = Math.hypot(dPx, dPy)
+				const lenN = Math.hypot(dNx, dNy)
+				const tIn = Math.min(eIn / lenP, 0.5)
+				const tOut = Math.min(eOut / lenN, 0.5)
+				const ax = padX + (C[0] + dPx * tIn + bed_offset_x) * bedScale
+				const ay = padY + (C[1] + dPy * tIn + bed_offset_y) * bedScale
+				const bx = padX + (C[0] + dNx * tOut + bed_offset_x) * bedScale
+				const by = padY + (C[1] + dNy * tOut + bed_offset_y) * bedScale
+				if (j === 0) parts.push(`M${ax},${ay}`)
+				else parts.push(`L${ax},${ay}`)
+				parts.push(`Q${cx},${cy} ${bx},${by}`)
+			}
+			parts.push('Z')
+		}
+
 		return parts.join(' ')
 	})()
 
@@ -126,6 +162,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 					{outlinePathD && (
 						<path
 							d={outlinePathD}
+							fillRule="evenodd"
 							fill="rgba(86,114,160,0.08)" stroke="#5672a0" strokeWidth={1.5}
 						/>
 					)}

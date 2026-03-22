@@ -7,7 +7,7 @@ export interface OutlineVertex {
 	z_bottom?: number | null
 }
 
-export type Outline = OutlineVertex[] | { points: OutlineVertex[] }
+export type Outline = OutlineVertex[] | { points: OutlineVertex[]; holes?: OutlineVertex[][] }
 
 export interface TopSurface {
 	type: 'flat' | 'dome' | 'ridge'

@@ -1,6 +1,6 @@
 import * as THREE from 'three'
-import { normaliseOutline, expandOutlineVertices } from './viewport'
-import type { EdgeProfile, HeightGrid, UIPlacement } from '@/types/models'
+import { normalizeOutline, normalizeHoles, normaliseOutline, expandOutlineVertices } from './viewport'
+import type { EdgeProfile, HeightGrid, Outline, UIPlacement } from '@/types/models'
 
 const PALETTE = [
 	0x4ea8d8, 0x52d474, 0xeeb830, 0xee6e6e, 0xb890e8,
@@ -25,7 +25,7 @@ const MAT = {
 }
 
 interface SceneData {
-	outline?: { x: number; y: number; ease_in?: number; ease_out?: number; z_top?: number | null; z_bottom?: number | null }[]
+	outline?: Outline
 	enclosure?: {
 		height_mm?: number
 		edge_top?: EdgeProfile
@@ -57,7 +57,8 @@ export function buildSceneContent (data: SceneData): THREE.Group {
 	const group = new THREE.Group()
 	if (!data) return group
 
-	const outline = data.outline ?? []
+	const outline = normalizeOutline(data.outline)
+	const holes = normalizeHoles(data.outline)
 	const enclosure = data.enclosure ?? { height_mm: 25 }
 	const heightGrid = data.height_grid ?? null
 	const components = data.components ?? []
@@ -69,6 +70,14 @@ export function buildSceneContent (data: SceneData): THREE.Group {
 	const defaultZ = enclosure.height_mm ?? 25
 	const { pts: expanded, zs: expandedZ, zbots: expandedZBot, cornerIndices } =
 		expandOutlineVertices(verts, corners, zTops, defaultZ, zBottoms)
+
+	const expandedHoles: [number, number][][] = []
+	for (const hole of holes) {
+		const hn = normaliseOutline(hole)
+		if (hn.verts.length < 3) continue
+		const { pts: hPts } = expandOutlineVertices(hn.verts, hn.corners, hn.zTops, defaultZ, hn.zBottoms)
+		expandedHoles.push(hPts)
+	}
 
 	const uiPos: Record<string, { x_mm: number; y_mm: number; rotation_deg: number; body?: { shape?: string; width_mm?: number; length_mm?: number; height_mm?: number; diameter_mm?: number }; ui_placement?: boolean; cap_diameter_mm?: number; cap_clearance_mm?: number }> = {}
 	for (const up of (data.ui_placements ?? [])) {
@@ -112,10 +121,10 @@ export function buildSceneContent (data: SceneData): THREE.Group {
 		}
 	}
 
-	const shellGroup = buildEnclosureShell(expanded, expandedZ, expandedZBot, enclosure, heightGrid, bottomHeightGrid, mergedComponents, uiPos, cornerIndices)
+	const shellGroup = buildEnclosureShell(expanded, expandedZ, expandedZBot, enclosure, heightGrid, bottomHeightGrid, mergedComponents, uiPos, cornerIndices, expandedHoles)
 	group.add(shellGroup)
 
-	group.add(buildPCBFloor(expanded, expandedZBot, bottomHeightGrid))
+	group.add(buildPCBFloor(expanded, expandedZBot, bottomHeightGrid, expandedHoles))
 
 	const FLOOR_Z = 2
 
@@ -187,7 +196,8 @@ function buildEnclosureShell (
 	_bottomHeightGrid: HeightGrid | null,
 	compList: SceneData['components'],
 	uiPosMap: Record<string, { x_mm: number; y_mm: number; rotation_deg: number }>,
-	cornerIndices: number[]
+	cornerIndices: number[],
+	expandedHoles: [number, number][][] = []
 ): THREE.Group {
 	const group = new THREE.Group()
 	const eTop = enclosure?.edge_top
@@ -256,6 +266,11 @@ function buildEnclosureShell (
 		// Lid fill mesh
 		{
 			const lidShape = new THREE.Shape(lidPts.map(v => new THREE.Vector2(v[0], v[1])))
+			for (const hole of expandedHoles) {
+				if (hole.length >= 3) {
+					lidShape.holes.push(new THREE.Path(hole.map(v => new THREE.Vector2(v[0], v[1]))))
+				}
+			}
 			const lidGeo = new THREE.ShapeGeometry(lidShape)
 			lidGeo.applyMatrix4(new THREE.Matrix4().makeRotationX(Math.PI / 2))
 			const pos = lidGeo.attributes.position
@@ -275,22 +290,6 @@ function buildEnclosureShell (
 		)
 		lidLoopPts.push(lidLoopPts[0].clone())
 		group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(lidLoopPts), outlineMat))
-
-		// Spoke lines
-		if (cornerIndices.length >= 2) {
-			const ocx = lidPts.reduce((s, v) => s + v[0], 0) / lidPts.length
-			const ocy = lidPts.reduce((s, v) => s + v[1], 0) / lidPts.length
-			const ch = lidSampleHeight(ocx, ocy, lidPts, expandedZ, heightGrid, defH) + 0.15
-			const hub = new THREE.Vector3(ocx, ch, ocy)
-			for (const ci of cornerIndices) {
-				const v = lidPts[ci]
-				const vh = expandedZ[ci] + 0.15
-				group.add(new THREE.Line(
-					new THREE.BufferGeometry().setFromPoints([
-						hub, new THREE.Vector3(v[0], vh, v[1]),
-					]), outlineMat))
-			}
-		}
 
 		// Component cutout rings
 		const cutoutMat = new THREE.LineBasicMaterial({ color: 0xffdd66 })
@@ -418,8 +417,13 @@ function floorSampleHeight (x: number, y: number, boundaryPts: [number, number][
 	return sumW > 0 ? sumWZ / sumW : 0
 }
 
-function buildPCBFloor (pts: [number, number][], expandedZBot: number[], bottomHeightGrid: HeightGrid | null): THREE.Group {
+function buildPCBFloor (pts: [number, number][], expandedZBot: number[], bottomHeightGrid: HeightGrid | null, expandedHoles: [number, number][][] = []): THREE.Group {
 	const shape = new THREE.Shape(pts.map(v => new THREE.Vector2(v[0], v[1])))
+	for (const hole of expandedHoles) {
+		if (hole.length >= 3) {
+			shape.holes.push(new THREE.Path(hole.map(v => new THREE.Vector2(v[0], v[1]))))
+		}
+	}
 	const geo = new THREE.ShapeGeometry(shape)
 	geo.applyMatrix4(new THREE.Matrix4().makeRotationX(Math.PI / 2))
 

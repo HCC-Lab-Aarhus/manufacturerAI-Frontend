@@ -2,7 +2,7 @@
 
 import type { ReactElement } from 'react'
 
-import { SCALE, netColor, normalizeOutline } from '@/lib/viewport'
+import { SCALE, netColor, normalizeOutline, normalizeHoles } from '@/lib/viewport'
 import type { JumperEndpoint, RoutingResult } from '@/types/models'
 
 import ComponentIcon from './ComponentIcon'
@@ -20,6 +20,7 @@ interface Props {
 
 export default function RoutingViewport ({ routing, className }: Props): ReactElement {
 	const outline = normalizeOutline(routing.outline)
+	const holes = normalizeHoles(routing.outline)
 	const components = routing.components ?? []
 	const traces = routing.traces ?? []
 	const failedNets = routing.failed_nets ?? []
@@ -30,7 +31,7 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 
 	return (
 		<div className={`flex ${className ?? ''}`}>
-			<OutlineSVG outline={outline} pcbContour={routing.pcb_contour} className="flex-1 h-full">
+			<OutlineSVG outline={outline} holes={holes} pcbContour={routing.pcb_contour} className="flex-1 h-full">
 				{components.map(c => {
 					if (!c.body) { return null }
 					return (
