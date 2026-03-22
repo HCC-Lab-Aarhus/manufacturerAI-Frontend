@@ -45,10 +45,6 @@ export interface CubeTraceParams {
 	printer: string
 	filament: string
 	padding: number
-	plate_width: number
-	plate_height: number
-	cube_size: number
-	cube_width: number
 }
 
 export async function generateCubeTrace (params: CubeTraceParams): Promise<CalibrationResult> {

@@ -32,11 +32,7 @@ export default function DebugPage (): ReactElement {
 	const [rectHeight, setRectHeight] = useState(20)
 	const [layers, setLayers] = useState(4)
 
-	// Cube-trace params
-	const [plateWidth, setPlateWidth] = useState(15)
-	const [plateHeight, setPlateHeight] = useState(20)
-	const [cubeSize, setCubeSize] = useState(15)
-	const [cubeWidth, setCubeWidth] = useState(5)
+
 
 	// Parallel-lines params (landscape, 2x)
 	const [plRectWidth, setPlRectWidth] = useState(40)
@@ -115,8 +111,6 @@ export default function DebugPage (): ReactElement {
 					case 'cube-trace':
 						data = await generateCubeTrace({
 							printer, filament, padding,
-							plate_width: plateWidth, plate_height: plateHeight,
-							cube_size: cubeSize, cube_width: cubeWidth,
 						})
 						break
 					case 'parallel-lines':
@@ -173,8 +167,8 @@ export default function DebugPage (): ReactElement {
 			description: 'Generates ironed rectangles with silver traces to test ink adhesion and conductivity.'
 		},
 		'cube-trace': {
-			heading: 'Cube Trace Test',
-			description: 'Plate with an extruded cube, pinholes, and trace cutouts. Tests routed traces under enclosure walls.'
+			heading: 'Component Trace Test',
+			description: 'Loads real catalog components (resistor, button, battery) onto a shared plate with raised blocks, pinholes, and trace cutouts derived from actual catalog geometry.'
 		},
 		'progressive-trace': {
 			heading: 'Progressive Trace Test',
@@ -272,14 +266,7 @@ export default function DebugPage (): ReactElement {
 						</>
 					)}
 
-					{testMode === 'cube-trace' && (
-						<>
-							{field('Plate Width (mm)', plateWidth, setPlateWidth, 1)}
-							{field('Plate Height (mm)', plateHeight, setPlateHeight, 1)}
-							{field('Cube Size (mm)', cubeSize, setCubeSize, 1)}
-							{field('Cube Width (mm)', cubeWidth, setCubeWidth, 1)}
-						</>
-					)}
+
 
 					{testMode === 'parallel-lines' && (
 						<>
