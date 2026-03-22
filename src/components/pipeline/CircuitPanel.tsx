@@ -14,6 +14,13 @@ import { getDesignResult } from '@/lib/api'
 import { useCircuitAgent } from '@/hooks/useCircuitAgent'
 import type { DesignSpec } from '@/types/models'
 
+// Persists across component remounts so auto-revalidation does not
+// re-fire when the user is bounced to Design and comes back.
+// Keyed by session ID — once auto-revalidation has been attempted for a
+// session, it won't auto-fire again (the user can still manually click
+// the Re-validate button).
+const autoRevalidatedSessions = new Set<string>()
+
 function buildOutline (design: DesignSpec): string {
 	const desc = design.device_description ?? ''
 	const placements = design.ui_placements ?? []
@@ -59,7 +66,6 @@ export default function CircuitPanel (): ReactElement {
 	const [editingOutline, setEditingOutline] = useState(false)
 	const [revalidating, setRevalidating] = useState(false)
 	const feedbackSentRef = useRef(false)
-	const revalidateAttemptedRef = useRef<string | null>(null)
 
 	const defaultOutline = useMemo(() => design ? buildOutline(design) : '', [design])
 	const [outline, setOutline] = useState('')
@@ -104,9 +110,9 @@ export default function CircuitPanel (): ReactElement {
 			currentSession.artifacts?.circuit_pending &&
 			currentSession.pipeline_state.circuit !== 'complete' &&
 			currentSession.pipeline_state.circuit !== 'done' &&
-			revalidateAttemptedRef.current !== currentSession.id
+			!autoRevalidatedSessions.has(currentSession.id)
 		) {
-			revalidateAttemptedRef.current = currentSession.id
+			autoRevalidatedSessions.add(currentSession.id)
 			revalidate()
 		}
 	}, [currentSession?.id, currentSession?.pipeline_state.circuit, currentSession?.artifacts?.circuit_pending, streaming, conversationLoading]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -125,8 +131,13 @@ export default function CircuitPanel (): ReactElement {
 			await revalidate()
 		} finally {
 			setRevalidating(false)
+			// Re-add to guard so the auto-revalidation effect doesn't
+			// fire again after refreshSession updates currentSession.
+			if (currentSession) {
+				autoRevalidatedSessions.add(currentSession.id)
+			}
 		}
-	}, [revalidate])
+	}, [revalidate, currentSession])
 
 	if (loading || conversationLoading) {
 		return (

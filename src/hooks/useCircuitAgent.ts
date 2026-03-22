@@ -124,16 +124,15 @@ export function useCircuitAgent () {
 				break
 			case 'design_feedback':
 				designFeedbackRef.current = true
-				setPendingFeedback({
-					target: 'design',
-					message:
-						'The circuit agent submitted a valid circuit, but the enclosure ' +
-						'dimensions are incompatible:\n\n' +
+				appendMessage({
+					id: nextId('status'),
+					role: 'status',
+					content:
+						'Enclosure dimensions are incompatible with the circuit:\n\n' +
 						(d.message as string) +
-						'\n\nPlease adjust the enclosure to satisfy these constraints ' +
-						'and resubmit the design.'
+						'\n\nPlease go to the Design tab and adjust the enclosure.',
+					isError: true
 				})
-				setActiveStage('design')
 				break
 			case 'invalidated':
 				patchSession({
@@ -165,7 +164,7 @@ export function useCircuitAgent () {
 				break
 			}
 		}
-	}, [appendMessage, updateLastAssistant, updateLastThinking, setCircuit, patchSession, addError, nextId, setPendingFeedback, setActiveStage])
+	}, [appendMessage, updateLastAssistant, updateLastThinking, setCircuit, patchSession, addError, nextId])
 
 	const subscribeToStream = useCallback((sessionId: string, after: number = 0) => {
 		abortRef.current?.abort()
@@ -373,22 +372,16 @@ export function useCircuitAgent () {
 				})
 				return true
 			}
-			appendMessage({
-				id: nextId('status'),
-				role: 'status',
-				content: `Re-validation failed — design needs adjustment:\n${result.errors ?? 'Unknown error'}`,
-				isError: true
-			})
 			setPendingFeedback({
 				target: 'design',
 				message:
-					'The circuit was re-validated against the updated design, but the enclosure ' +
-					'dimensions are incompatible:\n\n' +
+					'The circuit was re-validated against the updated design, but there are ' +
+					'validation errors that need fixing:\n\n' +
 					(result.errors ?? 'Unknown error') +
-					'\n\nPlease adjust the enclosure to satisfy these constraints ' +
-					'and resubmit the design.'
+					'\n\nPlease adjust the design to fix these issues.'
 			})
 			setActiveStage('design')
+			await refreshSession()
 			return false
 		} catch {
 			return false
