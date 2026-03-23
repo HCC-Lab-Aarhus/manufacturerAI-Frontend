@@ -117,3 +117,17 @@ export async function generateWidth (params: WidthParams): Promise<CalibrationRe
 	)
 	return data
 }
+
+export interface GenerateAllParams {
+	printer: string
+	filaments: string
+}
+
+export async function generateAllTests (params: GenerateAllParams): Promise<Record<string, string>> {
+	const { data } = await apiClient.post<{ files: Record<string, string> }>(
+		'/api/v2/debug/generate-all',
+		null,
+		{ params: params as unknown as Record<string, string> }
+	)
+	return data.files
+}

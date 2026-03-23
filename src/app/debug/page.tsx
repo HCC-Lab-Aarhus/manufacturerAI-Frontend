@@ -7,7 +7,7 @@ import {
 	listPrinters, listFilaments,
 	generateCalibration, generateSilverinkTest,
 	generateComponents, generateLayers, generateSpacing,
-	generateWidth,
+	generateWidth, generateAllTests,
 } from '@/lib/api'
 import type { Printer, Filament } from '@/types/models'
 
@@ -50,6 +50,11 @@ export default function DebugPage (): ReactElement {
 	const [bitmapUrls, setBitmapUrls] = useState<{ url: string; filename: string }[]>([])
 	const [contractUrl, setContractUrl] = useState<string | null>(null)
 	const [gcodeFilename, setGcodeFilename] = useState('calibration.gcode')
+
+	const [bulkFilaments, setBulkFilaments] = useState<Set<string>>(new Set())
+	const [bulkGenerating, setBulkGenerating] = useState(false)
+	const [bulkError, setBulkError] = useState('')
+	const [bulkDone, setBulkDone] = useState(false)
 
 	const selectedPrinter = printers.find(p => p.id === printer)
 
@@ -341,6 +346,75 @@ export default function DebugPage (): ReactElement {
 						</ol>
 					</div>
 				)}
+
+				{/* Generate All Test Files */}
+				<div className="rounded-2xl bg-surface-card p-6 shadow-sm space-y-4">
+					<h2 className="text-sm font-medium text-fg">{'Generate All Test Files'}</h2>
+					<p className="text-sm text-fg-muted">{'Generate calibration + all test G-code and bitmaps for the selected filaments, saved to a folder you choose.'}</p>
+
+					<div className="space-y-2">
+						<label className="text-sm text-fg-secondary">{'Filaments'}</label>
+						<div className="grid grid-cols-2 gap-2">
+							{filaments.map(f => (
+								<label key={f.id} className="flex items-center gap-2 text-sm text-fg">
+									<input
+										type="checkbox"
+										checked={bulkFilaments.has(f.id)}
+										onChange={e => {
+											const next = new Set(bulkFilaments)
+											if (e.target.checked) { next.add(f.id) } else { next.delete(f.id) }
+											setBulkFilaments(next)
+										}}
+										className="rounded border-border"
+									/>
+									{f.label}
+								</label>
+							))}
+						</div>
+					</div>
+
+					<button
+						onClick={async () => {
+							setBulkGenerating(true)
+							setBulkError('')
+							setBulkDone(false)
+							try {
+								if (!('showDirectoryPicker' in window)) {
+									throw new Error('Your browser does not support folder picking. Use Chrome or Edge.')
+								}
+								const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' })
+								const files = await generateAllTests({
+									printer,
+									filaments: [...bulkFilaments].join(','),
+								})
+								for (const [path, content] of Object.entries(files)) {
+									const parts = path.split('/')
+									let folder = dirHandle
+									for (const part of parts.slice(0, -1)) {
+										folder = await folder.getDirectoryHandle(part, { create: true })
+									}
+									const fileHandle = await folder.getFileHandle(parts[parts.length - 1], { create: true })
+									const writable = await fileHandle.createWritable()
+									await writable.write(content)
+									await writable.close()
+								}
+								setBulkDone(true)
+							} catch (e) {
+								if (e instanceof DOMException && e.name === 'AbortError') return
+								setBulkError(e instanceof Error ? e.message : 'Generation failed')
+							} finally {
+								setBulkGenerating(false)
+							}
+						}}
+						disabled={bulkGenerating || bulkFilaments.size === 0}
+						className="w-full rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
+					>
+						{bulkGenerating ? 'Generating…' : 'Generate All Test Files'}
+					</button>
+
+					{bulkError && <p className="text-sm text-danger text-center">{bulkError}</p>}
+					{bulkDone && <p className="text-sm text-green-500 text-center">{'Files saved!'}</p>}
+				</div>
 
 			</div>
 		</div>
