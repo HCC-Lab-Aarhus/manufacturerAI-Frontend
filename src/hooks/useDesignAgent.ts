@@ -241,6 +241,7 @@ export function useDesignAgent () {
 			const entries: ChatEntry[] = []
 			for (const msg of convo) {
 				if (typeof msg.content === 'string') {
+					if (msg.content.startsWith('<!-- design-context -->')) continue
 					entries.push({
 						id: `l-${msg.role}-${entries.length}`,
 						role: msg.role,
@@ -249,6 +250,7 @@ export function useDesignAgent () {
 				} else if (Array.isArray(msg.content)) {
 					for (const block of msg.content) {
 						if (block.type === 'text' && block.text) {
+							if (block.text.startsWith('<!-- design-context -->')) continue
 							let isInteractiveDesigner = false
 							try {
 								const parsed = JSON.parse(block.text)
