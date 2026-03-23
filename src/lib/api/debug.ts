@@ -41,22 +41,22 @@ export async function generateSilverinkTest (params: SilverinkTestParams): Promi
 	return data
 }
 
-export interface CubeTraceParams {
+export interface ComponentsParams {
 	printer: string
 	filament: string
 	padding: number
 }
 
-export async function generateCubeTrace (params: CubeTraceParams): Promise<CalibrationResult> {
+export async function generateComponents (params: ComponentsParams): Promise<CalibrationResult> {
 	const { data } = await apiClient.post<CalibrationResult>(
-		'/api/v2/debug/cube-trace',
+		'/api/v2/debug/components',
 		null,
 		{ params: params as unknown as Record<string, string> }
 	)
 	return data
 }
 
-export interface ProgressiveTraceParams {
+export interface LayersParams {
 	printer: string
 	filament: string
 	padding: number
@@ -65,7 +65,7 @@ export interface ProgressiveTraceParams {
 	layers: number
 }
 
-export interface ProgressiveTraceResult {
+export interface LayersResult {
 	gcode: string
 	bitmap_1: string
 	bitmap_2: string
@@ -73,16 +73,16 @@ export interface ProgressiveTraceResult {
 	contract: Record<string, unknown>
 }
 
-export async function generateProgressiveTrace (params: ProgressiveTraceParams): Promise<ProgressiveTraceResult> {
-	const { data } = await apiClient.post<ProgressiveTraceResult>(
-		'/api/v2/debug/progressive-trace',
+export async function generateLayers (params: LayersParams): Promise<LayersResult> {
+	const { data } = await apiClient.post<LayersResult>(
+		'/api/v2/debug/layers',
 		null,
 		{ params: params as unknown as Record<string, string> }
 	)
 	return data
 }
 
-export interface ParallelLinesParams {
+export interface SpacingParams {
 	printer: string
 	filament: string
 	padding: number
@@ -91,16 +91,16 @@ export interface ParallelLinesParams {
 	layers: number
 }
 
-export async function generateParallelLines (params: ParallelLinesParams): Promise<CalibrationResult> {
+export async function generateSpacing (params: SpacingParams): Promise<CalibrationResult> {
 	const { data } = await apiClient.post<CalibrationResult>(
-		'/api/v2/debug/parallel-lines',
+		'/api/v2/debug/spacing',
 		null,
 		{ params: params as unknown as Record<string, string> }
 	)
 	return data
 }
 
-export interface TraceWidthParams {
+export interface WidthParams {
 	printer: string
 	filament: string
 	padding: number
@@ -109,9 +109,9 @@ export interface TraceWidthParams {
 	layers: number
 }
 
-export async function generateTraceWidth (params: TraceWidthParams): Promise<CalibrationResult> {
+export async function generateWidth (params: WidthParams): Promise<CalibrationResult> {
 	const { data } = await apiClient.post<CalibrationResult>(
-		'/api/v2/debug/trace-width',
+		'/api/v2/debug/width',
 		null,
 		{ params: params as unknown as Record<string, string> }
 	)

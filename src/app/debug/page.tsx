@@ -6,12 +6,12 @@ import { type ReactElement, useEffect, useState } from 'react'
 import {
 	listPrinters, listFilaments,
 	generateCalibration, generateSilverinkTest,
-	generateCubeTrace, generateProgressiveTrace, generateParallelLines,
-	generateTraceWidth,
+	generateComponents, generateLayers, generateSpacing,
+	generateWidth,
 } from '@/lib/api'
 import type { Printer, Filament } from '@/types/models'
 
-type TestMode = 'calibration' | 'silverink' | 'cube-trace' | 'progressive-trace' | 'parallel-lines' | 'trace-width'
+type TestMode = 'calibration' | 'silverink' | 'components' | 'layers' | 'spacing' | 'width'
 
 export default function DebugPage (): ReactElement {
 	const [printers, setPrinters] = useState<Printer[]>([])
@@ -27,19 +27,19 @@ export default function DebugPage (): ReactElement {
 	// Calibration-specific
 	const [squareSize, setSquareSize] = useState(5)
 
-	// Silverink / progressive / parallel-lines params
+	// Silverink / layers / spacing params
 	const [rectWidth, setRectWidth] = useState(10)
 	const [rectHeight, setRectHeight] = useState(20)
 	const [layers, setLayers] = useState(4)
 
 
 
-	// Parallel-lines params (landscape, 2x)
+	// Spacing params (landscape, 2x)
 	const [plRectWidth, setPlRectWidth] = useState(40)
 	const [plRectHeight, setPlRectHeight] = useState(20)
 	const [plLayers, setPlLayers] = useState(4)
 
-	// Trace-width params
+	// Width params
 	const [twRectWidth, setTwRectWidth] = useState(40)
 	const [twRectHeight, setTwRectHeight] = useState(20)
 	const [twLayers, setTwLayers] = useState(4)
@@ -80,17 +80,17 @@ export default function DebugPage (): ReactElement {
 		setError('')
 		clearDownloads()
 		try {
-			if (testMode === 'progressive-trace') {
-				const data = await generateProgressiveTrace({
+			if (testMode === 'layers') {
+				const data = await generateLayers({
 					printer, filament, padding,
 					rect_width: rectWidth, rect_height: rectHeight, layers,
 				})
-				setGcodeFilename(String(data.contract.gcode_file || 'progressive_trace.gcode'))
+				setGcodeFilename(String(data.contract.gcode_file || 'layers.gcode'))
 				setGcodeUrl(makeBlobUrl(data.gcode))
 				setBitmapUrls([
-					{ url: makeBlobUrl(data.bitmap_1), filename: 'progressive_trace_1.txt' },
-					{ url: makeBlobUrl(data.bitmap_2), filename: 'progressive_trace_2.txt' },
-					{ url: makeBlobUrl(data.bitmap_3), filename: 'progressive_trace_3.txt' },
+					{ url: makeBlobUrl(data.bitmap_1), filename: 'layers_1.txt' },
+					{ url: makeBlobUrl(data.bitmap_2), filename: 'layers_2.txt' },
+					{ url: makeBlobUrl(data.bitmap_3), filename: 'layers_3.txt' },
 				])
 				setContractUrl(makeBlobUrl(JSON.stringify(data.contract, null, 2), 'application/json'))
 			} else {
@@ -108,20 +108,20 @@ export default function DebugPage (): ReactElement {
 							rect_width: rectWidth, rect_height: rectHeight, layers,
 						})
 						break
-					case 'cube-trace':
-						data = await generateCubeTrace({
+					case 'components':
+						data = await generateComponents({
 							printer, filament, padding,
 						})
 						break
-					case 'parallel-lines':
-						data = await generateParallelLines({
+					case 'spacing':
+						data = await generateSpacing({
 							printer, filament, padding,
 							rect_width: plRectWidth, rect_height: plRectHeight,
 							layers: plLayers,
 						})
 						break
-					case 'trace-width':
-						data = await generateTraceWidth({
+					case 'width':
+						data = await generateWidth({
 							printer, filament, padding,
 							rect_width: twRectWidth, rect_height: twRectHeight,
 							layers: twLayers,
@@ -166,19 +166,19 @@ export default function DebugPage (): ReactElement {
 			heading: 'Silverink Test Generator',
 			description: 'Generates ironed rectangles with silver traces to test ink adhesion and conductivity.'
 		},
-		'cube-trace': {
+		components: {
 			heading: 'Component Trace Test',
 			description: 'Loads real catalog components (resistor, button, battery) onto a shared plate with raised blocks, pinholes, and trace cutouts derived from actual catalog geometry.'
 		},
-		'progressive-trace': {
+		layers: {
 			heading: 'Progressive Trace Test',
 			description: 'Three rectangles with an increasing number of centred traces across three bitmaps.'
 		},
-		'parallel-lines': {
+		spacing: {
 			heading: 'Parallel Lines Test',
 			description: 'Three landscape rectangles with parallel lines at increasing spacing (1–20 px). Tests minimum separation.'
 		},
-		'trace-width': {
+		width: {
 			heading: 'Trace Width Test',
 			description: 'Single rectangle with lines of increasing thickness (1–10 px) at 10 px spacing. Tests printable trace widths.'
 		}
@@ -187,10 +187,10 @@ export default function DebugPage (): ReactElement {
 	const modeLabels: Record<TestMode, string> = {
 		calibration: 'Calibration',
 		silverink: 'Silverink',
-		'cube-trace': 'Cube Trace',
-		'progressive-trace': 'Progressive',
-		'parallel-lines': 'Parallel Lines',
-		'trace-width': 'Trace Width'
+		components: 'Components',
+		layers: 'Layers',
+		spacing: 'Spacing',
+		width: 'Width'
 	}
 
 	return (
@@ -204,7 +204,7 @@ export default function DebugPage (): ReactElement {
 
 				{/* Test mode selector */}
 				<div className="grid grid-cols-3 gap-1 rounded-xl bg-surface-card p-1 shadow-sm">
-					{(['calibration', 'silverink', 'cube-trace', 'progressive-trace', 'parallel-lines', 'trace-width'] as const).map(mode => (
+					{(['calibration', 'silverink', 'components', 'layers', 'spacing', 'width'] as const).map(mode => (
 						<button
 							key={mode}
 							onClick={() => { setTestMode(mode); clearDownloads() }}
@@ -258,7 +258,7 @@ export default function DebugPage (): ReactElement {
 						</>
 					)}
 
-					{(testMode === 'silverink' || testMode === 'progressive-trace') && (
+					{(testMode === 'silverink' || testMode === 'layers') && (
 						<>
 							{field('Rectangle Width (mm)', rectWidth, setRectWidth, 1)}
 							{field('Rectangle Height (mm)', rectHeight, setRectHeight, 1)}
@@ -268,7 +268,7 @@ export default function DebugPage (): ReactElement {
 
 
 
-					{testMode === 'parallel-lines' && (
+					{testMode === 'spacing' && (
 						<>
 							{field('Rectangle Width (mm)', plRectWidth, setPlRectWidth, 1)}
 							{field('Rectangle Height (mm)', plRectHeight, setPlRectHeight, 1)}
@@ -276,7 +276,7 @@ export default function DebugPage (): ReactElement {
 						</>
 					)}
 
-					{testMode === 'trace-width' && (
+					{testMode === 'width' && (
 						<>
 							{field('Rectangle Width (mm)', twRectWidth, setTwRectWidth, 1)}
 							{field('Rectangle Height (mm)', twRectHeight, setTwRectHeight, 1)}
