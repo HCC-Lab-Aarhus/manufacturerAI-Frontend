@@ -67,7 +67,7 @@ export function useSimulation (
 			setStatus('connecting')
 			setError(null)
 
-			const url = `${WS_BASE}/api/v2/sessions/${encodeURIComponent(sessionId!)}/setup/simulate`
+			const url = `${WS_BASE}/api/sessions/${encodeURIComponent(sessionId!)}/setup/simulate`
 			const ws = new WebSocket(url)
 			wsRef.current = ws
 

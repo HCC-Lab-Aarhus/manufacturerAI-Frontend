@@ -14,7 +14,7 @@ export async function startCircuit (
 	if (feedback) body.feedback = feedback
 	if (outline) body.outline = outline
 	const { data } = await apiClient.post<{ status: string }>(
-		`/api/v2/sessions/${encodeURIComponent(sessionId)}/circuit`,
+		`/api/sessions/${encodeURIComponent(sessionId)}/circuit`,
 		Object.keys(body).length ? body : undefined
 	)
 	return data
@@ -26,7 +26,7 @@ export function streamCircuitEvents (
 	after: number = 0
 ): AbortController {
 	return consumeSSEStream(
-		`${baseUrl}/api/v2/sessions/${encodeURIComponent(sessionId)}/circuit/stream?after=${after}`,
+		`${baseUrl}/api/sessions/${encodeURIComponent(sessionId)}/circuit/stream?after=${after}`,
 		{ method: 'GET' },
 		callbacks
 	)
@@ -34,13 +34,13 @@ export function streamCircuitEvents (
 
 export async function getCircuitStatus (sessionId: string): Promise<{ status: string; event_count: number; last_save_cursor: number; error?: string }> {
 	const { data } = await apiClient.get(
-		`/api/v2/sessions/${encodeURIComponent(sessionId)}/circuit/status`
+		`/api/sessions/${encodeURIComponent(sessionId)}/circuit/status`
 	)
 	return data as { status: string; event_count: number; last_save_cursor: number; error?: string }
 }
 
 export async function stopCircuit (sessionId: string): Promise<void> {
-	await apiClient.post(`/api/v2/sessions/${encodeURIComponent(sessionId)}/circuit/stop`)
+	await apiClient.post(`/api/sessions/${encodeURIComponent(sessionId)}/circuit/stop`)
 }
 
 export function streamCircuit (
@@ -58,7 +58,7 @@ export function streamCircuit (
 		})
 	}
 	return consumeSSEStream(
-		`${baseUrl}/api/v2/sessions/${encodeURIComponent(sessionId)}/circuit`,
+		`${baseUrl}/api/sessions/${encodeURIComponent(sessionId)}/circuit`,
 		init,
 		callbacks
 	)
@@ -66,21 +66,21 @@ export function streamCircuit (
 
 export async function getCircuitConversation (sessionId: string): Promise<ConversationMessage[]> {
 	const { data } = await apiClient.get<ConversationMessage[]>(
-		`/api/v2/sessions/${encodeURIComponent(sessionId)}/circuit/conversation`
+		`/api/sessions/${encodeURIComponent(sessionId)}/circuit/conversation`
 	)
 	return data
 }
 
 export async function getCircuitResult (sessionId: string): Promise<CircuitSpec> {
 	const { data } = await apiClient.get<CircuitSpec>(
-		`/api/v2/sessions/${encodeURIComponent(sessionId)}/circuit`
+		`/api/sessions/${encodeURIComponent(sessionId)}/circuit`
 	)
 	return data
 }
 
 export async function getCircuitTokenUsage (sessionId: string): Promise<TokenUsage> {
 	const { data } = await apiClient.get<TokenUsage>(
-		`/api/v2/sessions/${encodeURIComponent(sessionId)}/circuit/tokens`
+		`/api/sessions/${encodeURIComponent(sessionId)}/circuit/tokens`
 	)
 	return data
 }
@@ -96,7 +96,7 @@ export interface RevalidateResult {
 
 export async function revalidateCircuit (sessionId: string): Promise<RevalidateResult> {
 	const { data } = await apiClient.post<RevalidateResult>(
-		`/api/v2/sessions/${encodeURIComponent(sessionId)}/circuit/revalidate`
+		`/api/sessions/${encodeURIComponent(sessionId)}/circuit/revalidate`
 	)
 	return data
 }

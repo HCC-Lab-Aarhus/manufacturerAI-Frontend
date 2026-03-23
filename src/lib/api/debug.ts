@@ -25,7 +25,7 @@ export interface CalibrationResult {
 
 export async function generateCalibration (params: CalibrationParams): Promise<CalibrationResult> {
 	const { data } = await apiClient.post<CalibrationResult>(
-		'/api/v2/debug/calibrate',
+		'/api/debug/calibrate',
 		null,
 		{ params: params as unknown as Record<string, string> }
 	)
@@ -34,7 +34,7 @@ export async function generateCalibration (params: CalibrationParams): Promise<C
 
 export async function generateSilverinkTest (params: SilverinkTestParams): Promise<CalibrationResult> {
 	const { data } = await apiClient.post<CalibrationResult>(
-		'/api/v2/debug/silverink-test',
+		'/api/debug/silverink-test',
 		null,
 		{ params: params as unknown as Record<string, string> }
 	)
@@ -49,7 +49,7 @@ export interface ComponentsParams {
 
 export async function generateComponents (params: ComponentsParams): Promise<CalibrationResult> {
 	const { data } = await apiClient.post<CalibrationResult>(
-		'/api/v2/debug/components',
+		'/api/debug/components',
 		null,
 		{ params: params as unknown as Record<string, string> }
 	)
@@ -75,7 +75,7 @@ export interface LayersResult {
 
 export async function generateLayers (params: LayersParams): Promise<LayersResult> {
 	const { data } = await apiClient.post<LayersResult>(
-		'/api/v2/debug/layers',
+		'/api/debug/layers',
 		null,
 		{ params: params as unknown as Record<string, string> }
 	)
@@ -93,7 +93,7 @@ export interface SpacingParams {
 
 export async function generateSpacing (params: SpacingParams): Promise<CalibrationResult> {
 	const { data } = await apiClient.post<CalibrationResult>(
-		'/api/v2/debug/spacing',
+		'/api/debug/spacing',
 		null,
 		{ params: params as unknown as Record<string, string> }
 	)
@@ -111,7 +111,7 @@ export interface WidthParams {
 
 export async function generateWidth (params: WidthParams): Promise<CalibrationResult> {
 	const { data } = await apiClient.post<CalibrationResult>(
-		'/api/v2/debug/width',
+		'/api/debug/width',
 		null,
 		{ params: params as unknown as Record<string, string> }
 	)
@@ -125,7 +125,7 @@ export interface GenerateAllParams {
 
 export async function generateAllTests (params: GenerateAllParams): Promise<Record<string, string>> {
 	const { data } = await apiClient.post<{ files: Record<string, string> }>(
-		'/api/v2/debug/generate-all',
+		'/api/debug/generate-all',
 		null,
 		{ params: params as unknown as Record<string, string> }
 	)

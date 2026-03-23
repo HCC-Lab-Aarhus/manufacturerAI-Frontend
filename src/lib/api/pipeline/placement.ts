@@ -5,21 +5,21 @@ const sid = (id: string) => encodeURIComponent(id)
 
 export async function runPlacement (sessionId: string): Promise<{ status: string }> {
 	const { data } = await apiClient.post<{ status: string }>(
-		`/api/v2/sessions/${sid(sessionId)}/manufacture/placement`
+		`/api/sessions/${sid(sessionId)}/manufacture/placement`
 	)
 	return data
 }
 
 export async function pollPlacement (sessionId: string): Promise<{ status: string; message?: string; detail?: Record<string, unknown> }> {
 	const { data } = await apiClient.get(
-		`/api/v2/sessions/${sid(sessionId)}/manufacture/placement/status`
+		`/api/sessions/${sid(sessionId)}/manufacture/placement/status`
 	)
 	return data as { status: string; message?: string; detail?: Record<string, unknown> }
 }
 
 export async function getPlacementResult (sessionId: string): Promise<PlacementResult> {
 	const { data } = await apiClient.get<PlacementResult>(
-		`/api/v2/sessions/${sid(sessionId)}/manufacture/placement`
+		`/api/sessions/${sid(sessionId)}/manufacture/placement`
 	)
 	return data
 }

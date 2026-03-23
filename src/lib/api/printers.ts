@@ -3,7 +3,7 @@ import type { Filament, PipelineError, Printer } from '@/types/models'
 import apiClient from './client'
 
 export async function listPrinters (): Promise<Printer[]> {
-	const { data } = await apiClient.get<{ printers: Printer[] }>('/api/v2/printers')
+	const { data } = await apiClient.get<{ printers: Printer[] }>('/api/printers')
 	return data.printers
 }
 
@@ -19,13 +19,13 @@ export async function setSessionPrinter (
 	sessionId: string,
 	printerId: string
 ): Promise<SetPrinterResponse> {
-	const { data } = await apiClient.put<SetPrinterResponse>(`/api/v2/sessions/${encodeURIComponent(sessionId)}/printer`, null, {
+	const { data } = await apiClient.put<SetPrinterResponse>(`/api/sessions/${encodeURIComponent(sessionId)}/printer`, null, {
 		params: { printer_id: printerId }
 	})
 	return data
 }
 
 export async function listFilaments (): Promise<Filament[]> {
-	const { data } = await apiClient.get<{ filaments: Filament[] }>('/api/v2/filaments')
+	const { data } = await apiClient.get<{ filaments: Filament[] }>('/api/filaments')
 	return data.filaments
 }

@@ -16,7 +16,7 @@ export async function startDesign (
 	sessionId: string
 ): Promise<{ status: string }> {
 	const { data } = await apiClient.post<{ status: string }>(
-		`/api/v2/sessions/${encodeURIComponent(sessionId)}/design`,
+		`/api/sessions/${encodeURIComponent(sessionId)}/design`,
 		{ prompt }
 	)
 	return data
@@ -28,7 +28,7 @@ export function streamDesignEvents (
 	after: number = 0
 ): AbortController {
 	return consumeSSEStream(
-		`${baseUrl}/api/v2/sessions/${encodeURIComponent(sessionId)}/design/stream?after=${after}`,
+		`${baseUrl}/api/sessions/${encodeURIComponent(sessionId)}/design/stream?after=${after}`,
 		{ method: 'GET' },
 		callbacks
 	)
@@ -36,13 +36,13 @@ export function streamDesignEvents (
 
 export async function getDesignStatus (sessionId: string): Promise<{ status: string; event_count: number; last_save_cursor: number; error?: string }> {
 	const { data } = await apiClient.get(
-		`/api/v2/sessions/${encodeURIComponent(sessionId)}/design/status`
+		`/api/sessions/${encodeURIComponent(sessionId)}/design/status`
 	)
 	return data as { status: string; event_count: number; last_save_cursor: number; error?: string }
 }
 
 export async function stopDesign (sessionId: string): Promise<void> {
-	await apiClient.post(`/api/v2/sessions/${encodeURIComponent(sessionId)}/design/stop`)
+	await apiClient.post(`/api/sessions/${encodeURIComponent(sessionId)}/design/stop`)
 }
 
 export function streamDesign (
@@ -51,7 +51,7 @@ export function streamDesign (
 	sessionId: string
 ): AbortController {
 	return consumeSSEStream(
-		`${baseUrl}/api/v2/sessions/${encodeURIComponent(sessionId)}/design`,
+		`${baseUrl}/api/sessions/${encodeURIComponent(sessionId)}/design`,
 		{
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
@@ -63,14 +63,14 @@ export function streamDesign (
 
 export async function getDesignConversation (sessionId: string): Promise<ConversationMessage[]> {
 	const { data } = await apiClient.get<ConversationMessage[]>(
-		`/api/v2/sessions/${encodeURIComponent(sessionId)}/design/conversation`
+		`/api/sessions/${encodeURIComponent(sessionId)}/design/conversation`
 	)
 	return data
 }
 
 export async function getDesignResult (sessionId: string): Promise<DesignSpec> {
 	const { data } = await apiClient.get<DesignSpec>(
-		`/api/v2/sessions/${encodeURIComponent(sessionId)}/design`
+		`/api/sessions/${encodeURIComponent(sessionId)}/design`
 	)
 	return data
 }
@@ -83,7 +83,7 @@ type PutDesignResponse = DesignSpec & {
 
 export async function putDesign (sessionId: string, design: DesignSpec): Promise<PutDesignResponse> {
 	const { data } = await apiClient.put<PutDesignResponse>(
-		`/api/v2/sessions/${encodeURIComponent(sessionId)}/design`,
+		`/api/sessions/${encodeURIComponent(sessionId)}/design`,
 		design
 	)
 	return data
@@ -94,7 +94,7 @@ export async function patchEnclosure (
 	enclosure: Partial<DesignSpec['enclosure']>
 ): Promise<DesignSpec> {
 	const { data } = await apiClient.patch<DesignSpec>(
-		`/api/v2/sessions/${encodeURIComponent(sessionId)}/design/enclosure`,
+		`/api/sessions/${encodeURIComponent(sessionId)}/design/enclosure`,
 		enclosure
 	)
 	return data
@@ -105,7 +105,7 @@ export async function validateUIPlacement (
 	placement: { instance_id: string; x_mm: number; y_mm: number; edge_index?: number }
 ): Promise<PlacementValidation> {
 	const { data } = await apiClient.post<PlacementValidation>(
-		`/api/v2/sessions/${encodeURIComponent(sessionId)}/design/validate-ui-placement`,
+		`/api/sessions/${encodeURIComponent(sessionId)}/design/validate-ui-placement`,
 		placement
 	)
 	return data
@@ -116,14 +116,14 @@ export async function submitDesignToConversation (
 	design: DesignSpec
 ): Promise<void> {
 	await apiClient.patch(
-		`/api/v2/sessions/${encodeURIComponent(sessionId)}/design/conversation/submit`,
+		`/api/sessions/${encodeURIComponent(sessionId)}/design/conversation/submit`,
 		{ design }
 	)
 }
 
 export async function getTokenUsage (sessionId: string): Promise<TokenUsage> {
 	const { data } = await apiClient.get<TokenUsage>(
-		`/api/v2/sessions/${encodeURIComponent(sessionId)}/design/tokens`
+		`/api/sessions/${encodeURIComponent(sessionId)}/design/tokens`
 	)
 	return data
 }

@@ -5,7 +5,7 @@ const sid = (id: string) => encodeURIComponent(id)
 
 export async function startCompile (sessionId: string, force = false): Promise<CompileStatus> {
 	const { data } = await apiClient.post<CompileStatus>(
-		`/api/v2/sessions/${sid(sessionId)}/manufacture/compile`,
+		`/api/sessions/${sid(sessionId)}/manufacture/compile`,
 		null,
 		{ params: force ? { force: 'true' } : undefined }
 	)
@@ -14,12 +14,12 @@ export async function startCompile (sessionId: string, force = false): Promise<C
 
 export async function pollCompile (sessionId: string): Promise<CompileStatus> {
 	const { data } = await apiClient.get<CompileStatus>(
-		`/api/v2/sessions/${sid(sessionId)}/manufacture/compile`
+		`/api/sessions/${sid(sessionId)}/manufacture/compile`
 	)
 	return data
 }
 
 export function getStlDownloadUrl (sessionId: string): string {
 	const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
-	return `${base}/api/v2/sessions/${sid(sessionId)}/manufacture/stl`
+	return `${base}/api/sessions/${sid(sessionId)}/manufacture/stl`
 }
