@@ -118,7 +118,7 @@ export async function generateWidth (params: WidthParams): Promise<CalibrationRe
 	return data
 }
 
-export interface SquaresParams {
+export interface SolidSquaresParams {
 	printer: string
 	filament: string
 	padding: number
@@ -127,9 +127,9 @@ export interface SquaresParams {
 	layers: number
 }
 
-export async function generateSquares (params: SquaresParams): Promise<CalibrationResult> {
+export async function generateSolidSquares (params: SolidSquaresParams): Promise<CalibrationResult> {
 	const { data } = await apiClient.post<CalibrationResult>(
-		'/api/debug/squares',
+		'/api/debug/solid-squares',
 		null,
 		{ params: params as unknown as Record<string, string> }
 	)

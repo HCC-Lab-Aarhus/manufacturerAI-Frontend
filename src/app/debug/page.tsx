@@ -7,11 +7,11 @@ import {
 	listPrinters, listFilaments,
 	generateCalibration, generateSilverinkTest,
 	generateComponents, generateLayers, generateSpacing,
-	generateWidth, generateSquares, generateAllTests,
+	generateWidth, generateSolidSquares, generateAllTests,
 } from '@/lib/api'
 import type { Printer, Filament } from '@/types/models'
 
-type TestMode = 'calibration' | 'silverink' | 'components' | 'layers' | 'spacing' | 'width' | 'squares'
+type TestMode = 'calibration' | 'silverink' | 'components' | 'layers' | 'spacing' | 'width' | 'solid_squares'
 
 export default function DebugPage (): ReactElement {
 	const [printers, setPrinters] = useState<Printer[]>([])
@@ -44,7 +44,7 @@ export default function DebugPage (): ReactElement {
 	const [twRectHeight, setTwRectHeight] = useState(20)
 	const [twLayers, setTwLayers] = useState(4)
 
-	// Squares params
+	// Solid Squares params
 	const [sqRectWidth, setSqRectWidth] = useState(10)
 	const [sqRectHeight, setSqRectHeight] = useState(20)
 	const [sqLayers, setSqLayers] = useState(10)
@@ -137,8 +137,8 @@ export default function DebugPage (): ReactElement {
 							layers: twLayers,
 						})
 						break
-					case 'squares':
-						data = await generateSquares({
+					case 'solid_squares':
+						data = await generateSolidSquares({
 							printer, filament, padding,
 							rect_width: sqRectWidth, rect_height: sqRectHeight,
 							layers: sqLayers,
@@ -199,9 +199,9 @@ export default function DebugPage (): ReactElement {
 			heading: 'Trace Width Test',
 			description: 'Single rectangle with lines of increasing thickness (1–10 px) at 10 px spacing. Tests printable trace widths.'
 		},
-		squares: {
-			heading: 'Squares Coverage Test',
-			description: 'Three 10×20 mm rectangles printed 2 mm tall, with their entire surface covered in silver-ink trace. Tests full-area ink deposition.'
+		solid_squares: {
+			heading: 'Solid Squares Coverage Test',
+			description: 'Nine 10×20 mm rectangles in a 3×3 grid, printed 2 mm tall, with their entire surface covered in silver-ink trace. Tests full-area ink deposition.'
 		}
 	}
 
@@ -212,7 +212,7 @@ export default function DebugPage (): ReactElement {
 		layers: 'Layers',
 		spacing: 'Spacing',
 		width: 'Width',
-		squares: 'Squares'
+		solid_squares: 'Solid Squares'
 	}
 
 	return (
@@ -226,7 +226,7 @@ export default function DebugPage (): ReactElement {
 
 				{/* Test mode selector */}
 				<div className="grid grid-cols-4 gap-1 rounded-xl bg-surface-card p-1 shadow-sm">
-					{(['calibration', 'silverink', 'components', 'layers', 'spacing', 'width', 'squares'] as const).map(mode => (
+					{(['calibration', 'silverink', 'components', 'layers', 'spacing', 'width', 'solid_squares'] as const).map(mode => (
 						<button
 							key={mode}
 							onClick={() => { setTestMode(mode); clearDownloads() }}
@@ -306,7 +306,7 @@ export default function DebugPage (): ReactElement {
 						</>
 					)}
 
-					{testMode === 'squares' && (
+					{testMode === 'solid_squares' && (
 						<>
 							{field('Rectangle Width (mm)', sqRectWidth, setSqRectWidth, 1)}
 							{field('Rectangle Height (mm)', sqRectHeight, setSqRectHeight, 1)}
@@ -372,9 +372,9 @@ export default function DebugPage (): ReactElement {
 					</div>
 				)}
 
-				{testMode === 'squares' && (
+				{testMode === 'solid_squares' && (
 					<div className="rounded-2xl bg-surface-card p-4 shadow-sm space-y-3">
-						<h2 className="text-sm font-medium text-fg">{'Squares Test Procedure'}</h2>
+						<h2 className="text-sm font-medium text-fg">{'Solid Squares Test Procedure'}</h2>
 						<ol className="list-decimal list-inside text-sm text-fg-secondary space-y-1.5">
 							<li>{'Print the G-code — three ironed PLA rectangles (10×20 mm, 2 mm tall).'}</li>
 							<li>{'Run the sweep with the bitmap — the entire surface of each rectangle is covered in ink.'}</li>
