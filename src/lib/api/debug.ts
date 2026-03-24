@@ -100,6 +100,17 @@ export async function generateSpacing (params: SpacingParams): Promise<Calibrati
 	return data
 }
 
+export type ChannelParams = SpacingParams
+
+export async function generateChannel (params: ChannelParams): Promise<CalibrationResult> {
+	const { data } = await apiClient.post<CalibrationResult>(
+		'/api/debug/channel',
+		null,
+		{ params: params as unknown as Record<string, string> }
+	)
+	return data
+}
+
 export interface WidthParams {
 	printer: string
 	filament: string

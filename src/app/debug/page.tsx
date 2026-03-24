@@ -7,11 +7,11 @@ import {
 	listPrinters, listFilaments,
 	generateCalibration, generateSilverinkTest,
 	generateComponents, generateLayers, generateSpacing,
-	generateWidth, generateSolidSquares, generateAllTests,
+	generateChannel, generateWidth, generateSolidSquares, generateAllTests,
 } from '@/lib/api'
 import type { Printer, Filament } from '@/types/models'
 
-type TestMode = 'calibration' | 'silverink' | 'components' | 'layers' | 'spacing' | 'width' | 'solid_squares'
+type TestMode = 'calibration' | 'silverink' | 'components' | 'layers' | 'spacing' | 'channel' | 'width' | 'solid_squares'
 
 export default function DebugPage (): ReactElement {
 	const [printers, setPrinters] = useState<Printer[]>([])
@@ -38,6 +38,11 @@ export default function DebugPage (): ReactElement {
 	const [plRectWidth, setPlRectWidth] = useState(40)
 	const [plRectHeight, setPlRectHeight] = useState(20)
 	const [plLayers, setPlLayers] = useState(4)
+
+	// Channel params
+	const [chRectWidth, setChRectWidth] = useState(40)
+	const [chRectHeight, setChRectHeight] = useState(20)
+	const [chLayers, setChLayers] = useState(4)
 
 	// Width params
 	const [twRectWidth, setTwRectWidth] = useState(40)
@@ -130,6 +135,13 @@ export default function DebugPage (): ReactElement {
 							layers: plLayers,
 						})
 						break
+					case 'channel':
+						data = await generateChannel({
+							printer, filament, padding,
+							rect_width: chRectWidth, rect_height: chRectHeight,
+							layers: chLayers,
+						})
+						break
 					case 'width':
 						data = await generateWidth({
 							printer, filament, padding,
@@ -195,6 +207,10 @@ export default function DebugPage (): ReactElement {
 			heading: 'Parallel Lines Test',
 			description: 'Three landscape rectangles with parallel lines at increasing spacing (1–20 px). Tests minimum separation.'
 		},
+		channel: {
+			heading: 'Channel Test',
+			description: 'Three landscape rectangles with parallel traces separated by a fixed-width PLA wall (equal to trace clearance). Tests channel isolation between traces.'
+		},
 		width: {
 			heading: 'Trace Width Test',
 			description: 'Single rectangle with lines of increasing thickness (1–10 px) at 10 px spacing. Tests printable trace widths.'
@@ -211,6 +227,7 @@ export default function DebugPage (): ReactElement {
 		components: 'Components',
 		layers: 'Layers',
 		spacing: 'Spacing',
+		channel: 'Channel',
 		width: 'Width',
 		solid_squares: 'Solid Squares'
 	}
@@ -226,7 +243,7 @@ export default function DebugPage (): ReactElement {
 
 				{/* Test mode selector */}
 				<div className="grid grid-cols-4 gap-1 rounded-xl bg-surface-card p-1 shadow-sm">
-					{(['calibration', 'silverink', 'components', 'layers', 'spacing', 'width', 'solid_squares'] as const).map(mode => (
+					{(['calibration', 'silverink', 'components', 'layers', 'spacing', 'channel', 'width', 'solid_squares'] as const).map(mode => (
 						<button
 							key={mode}
 							onClick={() => { setTestMode(mode); clearDownloads() }}
@@ -295,6 +312,14 @@ export default function DebugPage (): ReactElement {
 							{field('Rectangle Width (mm)', plRectWidth, setPlRectWidth, 1)}
 							{field('Rectangle Height (mm)', plRectHeight, setPlRectHeight, 1)}
 							{field('Layers', plLayers, setPlLayers)}
+						</>
+					)}
+
+					{testMode === 'channel' && (
+						<>
+							{field('Rectangle Width (mm)', chRectWidth, setChRectWidth, 1)}
+							{field('Rectangle Height (mm)', chRectHeight, setChRectHeight, 1)}
+							{field('Layers', chLayers, setChLayers)}
 						</>
 					)}
 
