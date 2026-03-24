@@ -7,11 +7,11 @@ import {
 	listPrinters, listFilaments,
 	generateCalibration, generateSilverinkTest,
 	generateComponents, generateLayers, generateSpacing,
-	generateWidth, generateAllTests,
+	generateWidth, generateSquares, generateAllTests,
 } from '@/lib/api'
 import type { Printer, Filament } from '@/types/models'
 
-type TestMode = 'calibration' | 'silverink' | 'components' | 'layers' | 'spacing' | 'width'
+type TestMode = 'calibration' | 'silverink' | 'components' | 'layers' | 'spacing' | 'width' | 'squares'
 
 export default function DebugPage (): ReactElement {
 	const [printers, setPrinters] = useState<Printer[]>([])
@@ -43,6 +43,11 @@ export default function DebugPage (): ReactElement {
 	const [twRectWidth, setTwRectWidth] = useState(40)
 	const [twRectHeight, setTwRectHeight] = useState(20)
 	const [twLayers, setTwLayers] = useState(4)
+
+	// Squares params
+	const [sqRectWidth, setSqRectWidth] = useState(10)
+	const [sqRectHeight, setSqRectHeight] = useState(20)
+	const [sqLayers, setSqLayers] = useState(10)
 
 	const [generating, setGenerating] = useState(false)
 	const [error, setError] = useState('')
@@ -132,6 +137,13 @@ export default function DebugPage (): ReactElement {
 							layers: twLayers,
 						})
 						break
+					case 'squares':
+						data = await generateSquares({
+							printer, filament, padding,
+							rect_width: sqRectWidth, rect_height: sqRectHeight,
+							layers: sqLayers,
+						})
+						break
 				}
 				setGcodeFilename(String(data.contract.gcode_file || `${testMode}.gcode`))
 				setGcodeUrl(makeBlobUrl(data.gcode))
@@ -186,6 +198,10 @@ export default function DebugPage (): ReactElement {
 		width: {
 			heading: 'Trace Width Test',
 			description: 'Single rectangle with lines of increasing thickness (1–10 px) at 10 px spacing. Tests printable trace widths.'
+		},
+		squares: {
+			heading: 'Squares Coverage Test',
+			description: 'Three 10×20 mm rectangles printed 2 mm tall, with their entire surface covered in silver-ink trace. Tests full-area ink deposition.'
 		}
 	}
 
@@ -195,7 +211,8 @@ export default function DebugPage (): ReactElement {
 		components: 'Components',
 		layers: 'Layers',
 		spacing: 'Spacing',
-		width: 'Width'
+		width: 'Width',
+		squares: 'Squares'
 	}
 
 	return (
@@ -208,8 +225,8 @@ export default function DebugPage (): ReactElement {
 				</div>
 
 				{/* Test mode selector */}
-				<div className="grid grid-cols-3 gap-1 rounded-xl bg-surface-card p-1 shadow-sm">
-					{(['calibration', 'silverink', 'components', 'layers', 'spacing', 'width'] as const).map(mode => (
+				<div className="grid grid-cols-4 gap-1 rounded-xl bg-surface-card p-1 shadow-sm">
+					{(['calibration', 'silverink', 'components', 'layers', 'spacing', 'width', 'squares'] as const).map(mode => (
 						<button
 							key={mode}
 							onClick={() => { setTestMode(mode); clearDownloads() }}
@@ -289,6 +306,14 @@ export default function DebugPage (): ReactElement {
 						</>
 					)}
 
+					{testMode === 'squares' && (
+						<>
+							{field('Rectangle Width (mm)', sqRectWidth, setSqRectWidth, 1)}
+							{field('Rectangle Height (mm)', sqRectHeight, setSqRectHeight, 1)}
+							{field('Layers', sqLayers, setSqLayers)}
+						</>
+					)}
+
 					<button
 						onClick={handleGenerate}
 						disabled={generating || !filament}
@@ -343,6 +368,18 @@ export default function DebugPage (): ReactElement {
 							<li>{'Run the sweep with the bitmap — a single trace is deposited through each rectangle.'}</li>
 							<li>{'Visually inspect that traces are centred and continuous on the ironed surface.'}</li>
 							<li>{'Test conductivity of each trace with a multimeter.'}</li>
+						</ol>
+					</div>
+				)}
+
+				{testMode === 'squares' && (
+					<div className="rounded-2xl bg-surface-card p-4 shadow-sm space-y-3">
+						<h2 className="text-sm font-medium text-fg">{'Squares Test Procedure'}</h2>
+						<ol className="list-decimal list-inside text-sm text-fg-secondary space-y-1.5">
+							<li>{'Print the G-code — three ironed PLA rectangles (10×20 mm, 2 mm tall).'}</li>
+							<li>{'Run the sweep with the bitmap — the entire surface of each rectangle is covered in ink.'}</li>
+							<li>{'Inspect that ink covers each rectangle uniformly without gaps or bleeding.'}</li>
+							<li>{'Test conductivity across the full surface with a multimeter.'}</li>
 						</ol>
 					</div>
 				)}
