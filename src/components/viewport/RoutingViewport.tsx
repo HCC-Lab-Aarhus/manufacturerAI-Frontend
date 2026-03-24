@@ -31,7 +31,7 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 
 	return (
 		<div className={`flex ${className ?? ''}`}>
-			<OutlineSVG outline={outline} holes={holes} pcbContour={routing.pcb_contour} className="flex-1 h-full">
+			<OutlineSVG outline={outline} holes={holes} className="flex-1 h-full">
 				{components.map(c => {
 					if (!c.body) { return null }
 					return (

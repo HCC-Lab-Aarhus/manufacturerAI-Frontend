@@ -18,7 +18,7 @@ export default function PlacementViewport ({ placement, className }: Props): Rea
 	const components = placement.components ?? []
 
 	return (
-		<OutlineSVG outline={outline} holes={holes} pcbContour={placement.pcb_contour} className={className}>
+		<OutlineSVG outline={outline} holes={holes} className={className}>
 			{components.map(c => {
 				if (!c.body) {
 					return (

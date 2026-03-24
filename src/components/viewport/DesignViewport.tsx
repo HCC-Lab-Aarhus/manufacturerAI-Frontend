@@ -143,7 +143,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 			let visualX = up.x_mm
 			let visualY = up.y_mm
 			if (up.edge_index != null) {
-				const snapInfo = snapToEdge(up, v, n.zTops, d.enclosure?.height_mm ?? 25)
+				const snapInfo = snapToEdge(up, v, d.enclosure?.height_mm ?? 25)
 				visualX = snapInfo.x
 				visualY = snapInfo.y
 			}
@@ -445,7 +445,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 						const isSide = p.edge_index != null
 
 						if (isSide) {
-							const snapInfo = snapToEdge(p, verts, norm.zTops, design.enclosure?.height_mm ?? 25)
+							const snapInfo = snapToEdge(p, verts, design.enclosure?.height_mm ?? 25)
 							return (
 								<g
 									key={p.instance_id}

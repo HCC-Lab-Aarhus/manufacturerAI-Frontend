@@ -193,7 +193,6 @@ export default function Scene3D ({ stlUrl, design, placement, routing, className
 			outline: outlineRaw,
 			enclosure: data.enclosure,
 			height_grid: 'height_grid' in data ? (data as PlacementResult).height_grid : null,
-			bottom_height_grid: 'bottom_height_grid' in data ? (data as PlacementResult).bottom_height_grid : null,
 			components: 'components' in data ? data.components : [],
 			ui_placements: 'ui_placements' in data ? (data as DesignSpec).ui_placements : [],
 			traces: 'traces' in data ? (data as RoutingResult).traces : [],

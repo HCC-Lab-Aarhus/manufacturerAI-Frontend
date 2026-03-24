@@ -18,16 +18,12 @@ export function normalizeHoles (raw: Outline | null | undefined): OutlineVertex[
 export interface NormalisedOutline {
 	verts: [number, number][]
 	corners: { ease_in: number; ease_out: number }[]
-	zTops: (number | null)[]
-	zBottoms: (number | null)[]
 }
 
-export function normaliseOutline (outline: { x: number; y: number; ease_in?: number; ease_out?: number; z_top?: number | null; z_bottom?: number | null }[]): NormalisedOutline {
-	if (!outline || !Array.isArray(outline)) return { verts: [], corners: [], zTops: [], zBottoms: [] }
+export function normaliseOutline (outline: { x: number; y: number; ease_in?: number; ease_out?: number }[]): NormalisedOutline {
+	if (!outline || !Array.isArray(outline)) return { verts: [], corners: [] }
 
 	const verts = outline.map(p => [p.x, p.y] as [number, number])
-	const zTops = outline.map(p => p.z_top ?? null)
-	const zBottoms = outline.map(p => p.z_bottom ?? null)
 	const corners = outline.map(p => {
 		let ein = p.ease_in ?? null
 		let eout = p.ease_out ?? null
@@ -35,15 +31,13 @@ export function normaliseOutline (outline: { x: number; y: number; ease_in?: num
 		if (eout != null && ein == null) ein = eout
 		return { ease_in: ein ?? 0, ease_out: eout ?? 0 }
 	})
-	return { verts, corners, zTops, zBottoms }
+	return { verts, corners }
 }
 
 export function expandOutlineVertices (
 	verts: [number, number][],
 	corners: { ease_in: number; ease_out: number }[],
-	zTopRaw: (number | null)[],
 	defaultZ: number,
-	zBotRaw: (number | null)[] | null = null,
 	segs = 6
 ): { pts: [number, number][]; zs: number[]; zbots: number[]; cornerIndices: number[] } {
 	const n = verts.length
@@ -56,18 +50,12 @@ export function expandOutlineVertices (
 		const prev = (i - 1 + n) % n
 		const next = (i + 1) % n
 		const C = verts[i], P = verts[prev], N = verts[next]
-		const zC = zTopRaw[i] ?? defaultZ
-		const zP = zTopRaw[prev] ?? defaultZ
-		const zN = zTopRaw[next] ?? defaultZ
-		const bC = zBotRaw?.[i] ?? 0
-		const bP = zBotRaw?.[prev] ?? 0
-		const bN = zBotRaw?.[next] ?? 0
 		const eIn = corners[i].ease_in ?? 0
 		const eOut = corners[i].ease_out ?? 0
 
 		if (eIn === 0 && eOut === 0) {
 			cornerIndices.push(pts.length)
-			pts.push(C); zs.push(zC); zbots.push(bC)
+			pts.push(C); zs.push(defaultZ); zbots.push(0)
 			continue
 		}
 
@@ -77,7 +65,7 @@ export function expandOutlineVertices (
 		const lenN = Math.hypot(dNx, dNy)
 		if (lenP === 0 || lenN === 0) {
 			cornerIndices.push(pts.length)
-			pts.push(C); zs.push(zC); zbots.push(bC)
+			pts.push(C); zs.push(defaultZ); zbots.push(0)
 			continue
 		}
 
@@ -87,10 +75,6 @@ export function expandOutlineVertices (
 		const tOut = safeOut / lenN
 		const A: [number, number] = [C[0] + dPx * tIn, C[1] + dPy * tIn]
 		const B: [number, number] = [C[0] + dNx * tOut, C[1] + dNy * tOut]
-		const zA = zC + (zP - zC) * tIn
-		const zB = zC + (zN - zC) * tOut
-		const bA = bC + (bP - bC) * tIn
-		const bB = bC + (bN - bC) * tOut
 
 		cornerIndices.push(pts.length + Math.floor(segs / 2))
 
@@ -99,9 +83,7 @@ export function expandOutlineVertices (
 			const u = 1 - t
 			const x = u * u * A[0] + 2 * u * t * C[0] + t * t * B[0]
 			const y = u * u * A[1] + 2 * u * t * C[1] + t * t * B[1]
-			const z = u * u * zA + 2 * u * t * zC + t * t * zB
-			const b = u * u * bA + 2 * u * t * bC + t * t * bB
-			pts.push([x, y]); zs.push(z); zbots.push(b)
+			pts.push([x, y]); zs.push(defaultZ); zbots.push(0)
 		}
 	}
 
@@ -210,7 +192,6 @@ export { SCALE, PAD }
 export function snapToEdge (
 	up: { x_mm: number; y_mm: number; edge_index?: number | null },
 	verts: [number, number][],
-	zTops: (number | null)[] = [],
 	defaultZ = 25
 ): { x: number; y: number; z: number; rot: number } {
 	const n = verts.length
@@ -232,9 +213,7 @@ export function snapToEdge (
 
 	const x = v0[0] + t * ex
 	const y = v0[1] + t * ey
-	const z0 = zTops[i] ?? defaultZ
-	const z1 = zTops[(i + 1) % n] ?? defaultZ
-	const z = z0 + t * (z1 - z0)
+	const z = defaultZ
 	const angle = Math.atan2(ey, ex) * 180 / Math.PI
 	const normalAngle = angle - 90
 	const rot = ((Math.round(normalAngle / 90) * 90) % 360 + 360) % 360

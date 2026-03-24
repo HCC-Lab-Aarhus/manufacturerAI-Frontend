@@ -8,12 +8,11 @@ import type { OutlineVertex } from '@/types/models'
 interface Props {
 	outline: OutlineVertex[]
 	holes?: OutlineVertex[][]
-	pcbContour?: [number, number][] | null
 	children?: React.ReactNode
 	className?: string
 }
 
-export default function OutlineSVG ({ outline, holes, pcbContour, children, className }: Props): ReactElement {
+export default function OutlineSVG ({ outline, holes, children, className }: Props): ReactElement {
 	if (!outline || outline.length < 3) {
 		return <div className="flex items-center justify-center text-fg-secondary text-sm p-8">{'No outline data'}</div>
 	}
@@ -46,17 +45,6 @@ export default function OutlineSVG ({ outline, holes, pcbContour, children, clas
 			/>
 
 			<path d={path} fill="rgba(86,114,160,0.06)" stroke="#5672a0" strokeWidth={2} fillRule="evenodd" />
-
-			{pcbContour && pcbContour.length > 2 && (
-				<polyline
-					points={pcbContour.map(([x, y]) => `${x * SCALE},${y * SCALE}`).join(' ')}
-					fill="none"
-					stroke="#358045"
-					strokeWidth={1.5}
-					strokeDasharray="6,3"
-					opacity={0.7}
-				/>
-			)}
 
 			<text x={minX * SCALE + width * SCALE / 2} y={minY * SCALE - PAD / 2} textAnchor="middle" fontSize={10} fill="#6b6560">
 				{width.toFixed(1)}{' mm'}

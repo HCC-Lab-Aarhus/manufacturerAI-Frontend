@@ -32,7 +32,6 @@ interface SceneData {
 		edge_bottom?: EdgeProfile
 	}
 	height_grid?: HeightGrid | null
-	bottom_height_grid?: HeightGrid | null
 	components?: {
 		instance_id: string
 		x_mm?: number | null
@@ -50,7 +49,6 @@ interface SceneData {
 		cap_clearance_mm?: number
 	})[]
 	traces?: { net_id: string; path: [number, number][] }[]
-	pcb_contour?: [number, number][]
 }
 
 export function buildSceneContent (data: SceneData): THREE.Group {
@@ -64,18 +62,18 @@ export function buildSceneContent (data: SceneData): THREE.Group {
 	const components = data.components ?? []
 	const traces = data.traces ?? []
 
-	const { verts, corners, zTops, zBottoms } = normaliseOutline(outline)
+	const { verts, corners } = normaliseOutline(outline)
 	if (verts.length < 3) return group
 
 	const defaultZ = enclosure.height_mm ?? 25
 	const { pts: expanded, zs: expandedZ, zbots: expandedZBot, cornerIndices } =
-		expandOutlineVertices(verts, corners, zTops, defaultZ, zBottoms)
+		expandOutlineVertices(verts, corners, defaultZ)
 
 	const expandedHoles: [number, number][][] = []
 	for (const hole of holes) {
 		const hn = normaliseOutline(hole)
 		if (hn.verts.length < 3) continue
-		const { pts: hPts } = expandOutlineVertices(hn.verts, hn.corners, hn.zTops, defaultZ, hn.zBottoms)
+		const { pts: hPts } = expandOutlineVertices(hn.verts, hn.corners, defaultZ)
 		expandedHoles.push(hPts)
 	}
 
@@ -91,8 +89,6 @@ export function buildSceneContent (data: SceneData): THREE.Group {
 			cap_clearance_mm: (up as Record<string, unknown>).cap_clearance_mm as number | undefined,
 		}
 	}
-
-	const bottomHeightGrid = data.bottom_height_grid ?? null
 
 	// Build merged component list: start with explicit components, then add
 	// ui_placement entries that aren't already present (design-stage scenario
@@ -121,10 +117,10 @@ export function buildSceneContent (data: SceneData): THREE.Group {
 		}
 	}
 
-	const shellGroup = buildEnclosureShell(expanded, expandedZ, expandedZBot, enclosure, heightGrid, bottomHeightGrid, mergedComponents, uiPos, cornerIndices, expandedHoles)
+	const shellGroup = buildEnclosureShell(expanded, expandedZ, expandedZBot, enclosure, heightGrid, mergedComponents, uiPos, cornerIndices, expandedHoles)
 	group.add(shellGroup)
 
-	group.add(buildPCBFloor(expanded, expandedZBot, bottomHeightGrid, expandedHoles))
+	group.add(buildPCBFloor(expanded, expandedHoles))
 
 	const FLOOR_Z = 2
 
@@ -193,7 +189,6 @@ function buildEnclosureShell (
 	expandedZBot: number[],
 	enclosure: SceneData['enclosure'],
 	heightGrid: HeightGrid | null,
-	_bottomHeightGrid: HeightGrid | null,
 	compList: SceneData['components'],
 	uiPosMap: Record<string, { x_mm: number; y_mm: number; rotation_deg: number }>,
 	cornerIndices: number[],
@@ -401,23 +396,7 @@ function gridSampleHeight (x: number, y: number, hg: HeightGrid): number | null 
 	return best
 }
 
-function floorSampleHeight (x: number, y: number, boundaryPts: [number, number][], boundaryZBot: number[], bottomHeightGrid: HeightGrid | null): number {
-	const gridZ = bottomHeightGrid ? gridSampleHeight(x, y, bottomHeightGrid) : null
-	if (gridZ !== null) return gridZ
-
-	if (!boundaryZBot) return 0
-	let sumW = 0, sumWZ = 0
-	for (let i = 0; i < boundaryPts.length; i++) {
-		const d2 = (x - boundaryPts[i][0]) ** 2 + (y - boundaryPts[i][1]) ** 2
-		if (d2 < 1e-6) return boundaryZBot[i]
-		const w = 1.0 / d2
-		sumW += w
-		sumWZ += w * boundaryZBot[i]
-	}
-	return sumW > 0 ? sumWZ / sumW : 0
-}
-
-function buildPCBFloor (pts: [number, number][], expandedZBot: number[], bottomHeightGrid: HeightGrid | null, expandedHoles: [number, number][][] = []): THREE.Group {
+function buildPCBFloor (pts: [number, number][], expandedHoles: [number, number][][] = []): THREE.Group {
 	const shape = new THREE.Shape(pts.map(v => new THREE.Vector2(v[0], v[1])))
 	for (const hole of expandedHoles) {
 		if (hole.length >= 3) {
@@ -427,46 +406,13 @@ function buildPCBFloor (pts: [number, number][], expandedZBot: number[], bottomH
 	const geo = new THREE.ShapeGeometry(shape)
 	geo.applyMatrix4(new THREE.Matrix4().makeRotationX(Math.PI / 2))
 
-	const FLOOR_THRESHOLD = 1.9
 	const PCB_OFFSET = 0.5
+	geo.applyMatrix4(new THREE.Matrix4().makeTranslation(0, PCB_OFFSET, 0))
 
-	const hasVariableBot = expandedZBot && expandedZBot.some(z => z > 0.01)
-	let useVertexColors = false
-
-	if (hasVariableBot) {
-		const pos = geo.attributes.position
-		const colors = new Float32Array(pos.count * 3)
-		const greenCol = new THREE.Color(0x1c3824)
-		const greyCol = new THREE.Color(0x4a5868)
-
-		for (let i = 0; i < pos.count; i++) {
-			const x = pos.getX(i)
-			const z = pos.getZ(i)
-			const h = floorSampleHeight(x, z, pts, expandedZBot, bottomHeightGrid)
-			pos.setY(i, h + PCB_OFFSET)
-
-			const col = h < FLOOR_THRESHOLD ? greenCol : greyCol
-			colors[i * 3] = col.r
-			colors[i * 3 + 1] = col.g
-			colors[i * 3 + 2] = col.b
-		}
-		pos.needsUpdate = true
-		geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
-		geo.computeVertexNormals()
-		useVertexColors = true
-	} else {
-		geo.applyMatrix4(new THREE.Matrix4().makeTranslation(0, PCB_OFFSET, 0))
-	}
-
-	const mat = useVertexColors
-		? new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 10, side: THREE.DoubleSide })
-		: MAT.pcb()
+	const mat = MAT.pcb()
 	const mesh = new THREE.Mesh(geo, mat)
 
-	const rimPts = pts.map((v, i) => {
-		const bh = expandedZBot?.[i] ?? 0
-		return new THREE.Vector3(v[0], bh + 0.6, v[1])
-	})
+	const rimPts = pts.map(v => new THREE.Vector3(v[0], 0.6, v[1]))
 	rimPts.push(rimPts[0].clone())
 	const rimLine = new THREE.Line(
 		new THREE.BufferGeometry().setFromPoints(rimPts),

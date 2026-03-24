@@ -181,7 +181,6 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 			outline: outlineRaw,
 			enclosure: placement.enclosure,
 			height_grid: placement.height_grid,
-			bottom_height_grid: placement.bottom_height_grid,
 			components: placement.components,
 			ui_placements: [],
 			traces: [],

@@ -3,39 +3,9 @@ export interface OutlineVertex {
 	y: number
 	ease_in?: number
 	ease_out?: number
-	z_top?: number | null
-	z_bottom?: number | null
 }
 
 export type Outline = OutlineVertex[] | { points: OutlineVertex[]; holes?: OutlineVertex[][] }
-
-export interface TopSurface {
-	type: 'flat' | 'dome' | 'ridge'
-	peak_x_mm?: number | null
-	peak_y_mm?: number | null
-	peak_height_mm?: number | null
-	base_height_mm?: number | null
-	x1?: number | null
-	y1?: number | null
-	x2?: number | null
-	y2?: number | null
-	crest_height_mm?: number | null
-	falloff_mm?: number | null
-}
-
-export interface BottomSurface {
-	type: 'flat' | 'dome' | 'ridge'
-	peak_x_mm?: number | null
-	peak_y_mm?: number | null
-	peak_height_mm?: number | null
-	base_height_mm?: number | null
-	x1?: number | null
-	y1?: number | null
-	x2?: number | null
-	y2?: number | null
-	crest_height_mm?: number | null
-	falloff_mm?: number | null
-}
 
 export interface EdgeProfile {
 	type: 'none' | 'chamfer' | 'fillet'
@@ -44,8 +14,6 @@ export interface EdgeProfile {
 
 export interface Enclosure {
 	height_mm: number
-	top_surface?: TopSurface | null
-	bottom_surface?: BottomSurface | null
 	edge_top?: EdgeProfile
 	edge_bottom?: EdgeProfile
 }
@@ -119,8 +87,6 @@ export interface PlacementResult {
 	components: PlacedComponent[]
 	nets: Net[]
 	height_grid?: HeightGrid | null
-	bottom_height_grid?: HeightGrid | null
-	pcb_contour?: [number, number][]
 }
 
 export interface Trace {
@@ -151,7 +117,6 @@ export interface RoutingResult {
 	nets: Net[]
 	failed_nets?: string[]
 	jumpers?: JumperWire[]
-	pcb_contour?: [number, number][]
 }
 
 export interface BitmapResult {
