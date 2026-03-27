@@ -20,40 +20,6 @@ export default function DebugPage (): ReactElement {
 	const [filament, setFilament] = useState('')
 	const [testMode, setTestMode] = useState<TestMode>('calibration')
 
-	// Shared params
-	const [boxSize, setBoxSize] = useState(100)
-	const [padding, setPadding] = useState(5)
-
-	// Calibration-specific
-	const [squareSize, setSquareSize] = useState(5)
-
-	// Silverink / layers / spacing params
-	const [rectWidth, setRectWidth] = useState(10)
-	const [rectHeight, setRectHeight] = useState(20)
-	const [layers, setLayers] = useState(4)
-
-
-
-	// Spacing params (landscape, 2x)
-	const [plRectWidth, setPlRectWidth] = useState(40)
-	const [plRectHeight, setPlRectHeight] = useState(20)
-	const [plLayers, setPlLayers] = useState(4)
-
-	// Channel params
-	const [chRectWidth, setChRectWidth] = useState(40)
-	const [chRectHeight, setChRectHeight] = useState(20)
-	const [chLayers, setChLayers] = useState(4)
-
-	// Width params
-	const [twRectWidth, setTwRectWidth] = useState(40)
-	const [twRectHeight, setTwRectHeight] = useState(20)
-	const [twLayers, setTwLayers] = useState(4)
-
-	// Solid Squares params
-	const [sqRectWidth, setSqRectWidth] = useState(10)
-	const [sqRectHeight, setSqRectHeight] = useState(20)
-	const [sqLayers, setSqLayers] = useState(10)
-
 	const [generating, setGenerating] = useState(false)
 	const [error, setError] = useState('')
 	const [gcodeUrl, setGcodeUrl] = useState<string | null>(null)
@@ -77,10 +43,6 @@ export default function DebugPage (): ReactElement {
 		listFilaments().then(f => { setFilaments(f) }).catch(() => {})
 	}, [])
 
-	const handlePrinterChange = (id: string) => {
-		setPrinter(id)
-	}
-
 	const clearDownloads = () => {
 		setGcodeUrl(null)
 		setBitmapUrls([])
@@ -95,11 +57,9 @@ export default function DebugPage (): ReactElement {
 		setError('')
 		clearDownloads()
 		try {
+			const params = { printer, filament }
 			if (testMode === 'layers') {
-				const data = await generateLayers({
-					printer, filament, padding,
-					rect_width: rectWidth, rect_height: rectHeight, layers,
-				})
+				const data = await generateLayers(params)
 				setGcodeFilename(String(data.contract.gcode_file || 'layers.gcode'))
 				setGcodeUrl(makeBlobUrl(data.gcode))
 				setBitmapUrls([
@@ -112,49 +72,25 @@ export default function DebugPage (): ReactElement {
 				let data
 				switch (testMode) {
 					case 'calibration':
-						data = await generateCalibration({
-							printer, filament,
-							box_size: boxSize, padding, square_size: squareSize,
-						})
+						data = await generateCalibration(params)
 						break
 					case 'silverink':
-						data = await generateSilverinkTest({
-							printer, filament, padding,
-							rect_width: rectWidth, rect_height: rectHeight, layers,
-						})
+						data = await generateSilverinkTest(params)
 						break
 					case 'components':
-						data = await generateComponents({
-							printer, filament, padding,
-						})
+						data = await generateComponents(params)
 						break
 					case 'spacing':
-						data = await generateSpacing({
-							printer, filament, padding,
-							rect_width: plRectWidth, rect_height: plRectHeight,
-							layers: plLayers,
-						})
+						data = await generateSpacing(params)
 						break
 					case 'channel':
-						data = await generateChannel({
-							printer, filament, padding,
-							rect_width: chRectWidth, rect_height: chRectHeight,
-							layers: chLayers,
-						})
+						data = await generateChannel(params)
 						break
 					case 'width':
-						data = await generateWidth({
-							printer, filament, padding,
-							rect_width: twRectWidth, rect_height: twRectHeight,
-							layers: twLayers,
-						})
+						data = await generateWidth(params)
 						break
 					case 'solid_squares':
-						data = await generateSolidSquares({
-							printer, filament, padding,
-							rect_width: sqRectWidth, rect_height: sqRectHeight,
-							layers: sqLayers,
-						})
+						data = await generateSolidSquares(params)
 						break
 				}
 				setGcodeFilename(String(data.contract.gcode_file || `${testMode}.gcode`))
@@ -171,20 +107,6 @@ export default function DebugPage (): ReactElement {
 			setGenerating(false)
 		}
 	}
-
-	const field = (label: string, value: number, onChange: (v: number) => void, step = 1) => (
-		<div className="flex items-center justify-between gap-4">
-			<label className="text-sm text-fg-secondary">{label}</label>
-			<input
-				type="number"
-				value={value}
-				step={step}
-				title={label}
-				onChange={e => onChange(Number(e.target.value))}
-				className="w-24 rounded-lg border border-border bg-surface-card px-2.5 py-1.5 text-sm text-fg"
-			/>
-		</div>
-	)
 
 	const titles: Record<TestMode, { heading: string; description: string }> = {
 		calibration: {
@@ -217,7 +139,7 @@ export default function DebugPage (): ReactElement {
 		},
 		solid_squares: {
 			heading: 'Solid Squares Coverage Test',
-			description: 'Nine 10×20 mm rectangles in a 3×3 grid, printed 2 mm tall, with their entire surface covered in silver-ink trace. Tests full-area ink deposition.'
+			description: 'Nine 10×20 mm rectangles in a 3×3 grid with their entire surface covered in silver-ink trace. Tests full-area ink deposition.'
 		}
 	}
 
@@ -277,7 +199,7 @@ export default function DebugPage (): ReactElement {
 				<div className="rounded-2xl bg-surface-card p-6 shadow-sm space-y-4">
 					<div className="flex items-center justify-between gap-4">
 						<label className="text-sm text-fg-secondary">{'Printer'}</label>
-						<select value={printer} onChange={e => handlePrinterChange(e.target.value)} title="Printer" className="rounded-lg border border-border bg-surface-card px-2.5 py-1.5 text-sm text-fg">
+						<select value={printer} onChange={e => setPrinter(e.target.value)} title="Printer" className="rounded-lg border border-border bg-surface-card px-2.5 py-1.5 text-sm text-fg">
 							{printers.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
 						</select>
 					</div>
@@ -288,56 +210,6 @@ export default function DebugPage (): ReactElement {
 							{filaments.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
 						</select>
 					</div>
-					{field('Padding (mm)', padding, setPadding, 0.5)}
-
-					{testMode === 'calibration' && (
-						<>
-							{field('Bounding Box (mm)', boxSize, setBoxSize)}
-							{field('Square Size (mm)', squareSize, setSquareSize, 0.5)}
-						</>
-					)}
-
-					{(testMode === 'silverink' || testMode === 'layers') && (
-						<>
-							{field('Rectangle Width (mm)', rectWidth, setRectWidth, 1)}
-							{field('Rectangle Height (mm)', rectHeight, setRectHeight, 1)}
-							{field('Layers', layers, setLayers)}
-						</>
-					)}
-
-
-
-					{testMode === 'spacing' && (
-						<>
-							{field('Rectangle Width (mm)', plRectWidth, setPlRectWidth, 1)}
-							{field('Rectangle Height (mm)', plRectHeight, setPlRectHeight, 1)}
-							{field('Layers', plLayers, setPlLayers)}
-						</>
-					)}
-
-					{testMode === 'channel' && (
-						<>
-							{field('Rectangle Width (mm)', chRectWidth, setChRectWidth, 1)}
-							{field('Rectangle Height (mm)', chRectHeight, setChRectHeight, 1)}
-							{field('Layers', chLayers, setChLayers)}
-						</>
-					)}
-
-					{testMode === 'width' && (
-						<>
-							{field('Rectangle Width (mm)', twRectWidth, setTwRectWidth, 1)}
-							{field('Rectangle Height (mm)', twRectHeight, setTwRectHeight, 1)}
-							{field('Layers', twLayers, setTwLayers)}
-						</>
-					)}
-
-					{testMode === 'solid_squares' && (
-						<>
-							{field('Rectangle Width (mm)', sqRectWidth, setSqRectWidth, 1)}
-							{field('Rectangle Height (mm)', sqRectHeight, setSqRectHeight, 1)}
-							{field('Layers', sqLayers, setSqLayers)}
-						</>
-					)}
 
 					<button
 						onClick={handleGenerate}
@@ -401,7 +273,7 @@ export default function DebugPage (): ReactElement {
 					<div className="rounded-2xl bg-surface-card p-4 shadow-sm space-y-3">
 						<h2 className="text-sm font-medium text-fg">{'Solid Squares Test Procedure'}</h2>
 						<ol className="list-decimal list-inside text-sm text-fg-secondary space-y-1.5">
-							<li>{'Print the G-code — three ironed PLA rectangles (10×20 mm, 2 mm tall).'}</li>
+							<li>{'Print the G-code — nine ironed PLA rectangles (10×20 mm) in a 3×3 grid.'}</li>
 							<li>{'Run the sweep with the bitmap — the entire surface of each rectangle is covered in ink.'}</li>
 							<li>{'Inspect that ink covers each rectangle uniformly without gaps or bleeding.'}</li>
 							<li>{'Test conductivity across the full surface with a multimeter.'}</li>
