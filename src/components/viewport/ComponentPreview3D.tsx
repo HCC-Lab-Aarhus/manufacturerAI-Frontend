@@ -11,6 +11,9 @@ const PIN_COLORS: Record<string, number> = { in: 0x3b82f6, out: 0xef4444, bidire
 const BODY_COLOR = 0x555555
 const CAP_COLOR = 0x888888
 const BLOCKER_COLOR = 0xe74c3c
+const FEATURE_COLOR = 0xf59e0b
+const FEATURE_THRU_COLOR = 0x22d3ee
+const HIGHLIGHT_COLOR = 0x00ff88
 
 function cssColor (prop: string, fallback: string): THREE.Color {
 	if (typeof document === 'undefined') { return new THREE.Color(fallback) }
@@ -71,10 +74,11 @@ function buildComponent (comp: CatalogComponent): THREE.Group {
 		group.add(pinMesh)
 	}
 
-	const scadMat = new THREE.MeshPhongMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.45, side: THREE.DoubleSide })
-	const scadThruMat = new THREE.MeshPhongMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.5, side: THREE.DoubleSide })
+	const scadMat = new THREE.MeshPhongMaterial({ color: FEATURE_COLOR, transparent: true, opacity: 0.45, side: THREE.DoubleSide })
+	const scadThruMat = new THREE.MeshPhongMaterial({ color: FEATURE_THRU_COLOR, transparent: true, opacity: 0.5, side: THREE.DoubleSide })
 	if (comp.scad?.features) {
-		for (const feat of comp.scad.features) {
+		for (let fi = 0; fi < comp.scad.features.length; fi++) {
+			const feat = comp.scad.features[fi]
 			const [fx, fz] = feat.position_mm
 			const isThru = feat.through_surface ?? false
 			const depth = isThru ? 2.0 : (feat.depth_mm ?? 0.5)
@@ -99,6 +103,7 @@ function buildComponent (comp: CatalogComponent): THREE.Group {
 				yBase = body.height_mm - depth
 			}
 			mesh.position.set(fx, yBase + depth / 2, fz)
+			mesh.userData.featureIndex = fi
 			group.add(mesh)
 		}
 	}
@@ -150,9 +155,10 @@ function buildComponent (comp: CatalogComponent): THREE.Group {
 interface Props {
 	component: CatalogComponent
 	className?: string
+	highlightedFeature?: number | null
 }
 
-export default function ComponentPreview3D ({ component, className }: Props) {
+export default function ComponentPreview3D ({ component, className, highlightedFeature }: Props) {
 	const { color: themeColor } = useTheme()
 	const containerRef = useRef<HTMLDivElement>(null)
 	const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
@@ -299,6 +305,30 @@ export default function ComponentPreview3D ({ component, className }: Props) {
 		controlsRef.current?.target.copy(center)
 		controlsRef.current?.update()
 	}, [component])
+
+	useEffect(() => {
+		const scene = sceneRef.current
+		if (!scene) return
+		const highlightMat = new THREE.MeshPhongMaterial({ color: HIGHLIGHT_COLOR, emissive: HIGHLIGHT_COLOR, emissiveIntensity: 0.4, transparent: true, opacity: 0.85, side: THREE.DoubleSide })
+		const scadMat = new THREE.MeshPhongMaterial({ color: FEATURE_COLOR, transparent: true, opacity: 0.45, side: THREE.DoubleSide })
+		const scadThruMat = new THREE.MeshPhongMaterial({ color: FEATURE_THRU_COLOR, transparent: true, opacity: 0.5, side: THREE.DoubleSide })
+
+		scene.traverse(obj => {
+			if (!(obj instanceof THREE.Mesh) || obj.userData.featureIndex === undefined) return
+			const fi = obj.userData.featureIndex as number
+			if (highlightedFeature != null && fi === highlightedFeature) {
+				obj.material = highlightMat
+			} else {
+				const feat = component.scad?.features?.[fi]
+				obj.material = (feat?.through_surface) ? scadThruMat : scadMat
+			}
+		})
+		return () => {
+			highlightMat.dispose()
+			scadMat.dispose()
+			scadThruMat.dispose()
+		}
+	}, [highlightedFeature, component])
 
 	return <div ref={containerRef} className={className ?? 'h-64 w-full rounded-xl overflow-hidden'} />
 }

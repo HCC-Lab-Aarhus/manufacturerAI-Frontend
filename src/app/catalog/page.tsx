@@ -81,7 +81,9 @@ function ComponentCard ({ component, onSelect }: { component: CatalogComponent; 
 
 function ComponentDetail ({ component, onClose }: { component: CatalogComponent; onClose: () => void }): ReactElement {
 	const [view3D, setView3D] = useState(false)
+	const [hoveredFeature, setHoveredFeature] = useState<number | null>(null)
 	const m = component.mounting
+	const features = component.scad?.features ?? []
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
 			<div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-surface-card p-6 shadow-xl" onClick={e => e.stopPropagation()}>
@@ -113,7 +115,22 @@ function ComponentDetail ({ component, onClose }: { component: CatalogComponent;
 						</div>
 					</div>
 					{view3D ? (
-						<ComponentPreview3D component={component} className="h-72 w-full rounded-xl overflow-hidden" />
+						<div className="flex gap-3">
+							<ComponentPreview3D component={component} highlightedFeature={hoveredFeature} className="h-72 flex-1 min-w-0 rounded-xl overflow-hidden" />
+							{features.length > 0 && (
+								<ul className="h-72 w-48 shrink-0 overflow-y-auto rounded-xl bg-surface-chip p-2 text-xs space-y-0.5" onMouseLeave={() => setHoveredFeature(null)}>
+									{features.map((f, i) => (
+										<li
+											key={i}
+											className={`rounded px-2 py-1 cursor-default transition-colors ${hoveredFeature === i ? 'bg-accent/20 text-accent-text' : 'text-fg-secondary hover:bg-surface-card'}`}
+											onMouseEnter={() => setHoveredFeature(i)}
+										>
+											{f.label || `Feature ${i + 1}`}
+										</li>
+									))}
+								</ul>
+							)}
+						</div>
 					) : (
 						<div className="flex justify-center">
 							<PinDiagram pins={component.pins} body={component.body} />
