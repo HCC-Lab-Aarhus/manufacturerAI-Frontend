@@ -174,7 +174,6 @@ export function useManufacture () {
 
 		setSteps(prev => prev.map((s, i) => {
 			if (i < startIdx || i > endIdx) { return s }
-			if (s.status === 'done' && !fromStep) { return s }
 			if (s.status === 'error') { return { ...s, status: 'pending' as StepStatus, message: undefined, responsibleAgent: undefined } }
 			return { ...s, status: 'pending', message: undefined, responsibleAgent: undefined }
 		}))
@@ -182,10 +181,7 @@ export function useManufacture () {
 		const shouldRun = (step: ManufactureStep): boolean => {
 			const idx = allSteps.indexOf(step)
 			if (idx < startIdx || idx > endIdx) { return false }
-			if (fromStep) { return true }
-			// Re-run steps that errored in a previous attempt
-			if (currentSession.pipeline_errors?.[step]) { return true }
-			return !artifacts[step]
+			return true
 		}
 
 		try {

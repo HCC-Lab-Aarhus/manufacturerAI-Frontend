@@ -177,7 +177,7 @@ export default function ManufacturePanel (): ReactElement {
 
 	const handleRetry = useCallback((step: ManufactureStep) => {
 		if (!requireFilament()) { return }
-		runPipeline(step, { ...opts(), toStep: step })
+		runPipeline(step, opts())
 	}, [runPipeline, opts, requireFilament])
 
 	const handleContinue = useCallback((step: ManufactureStep) => {
@@ -189,7 +189,7 @@ export default function ManufacturePanel (): ReactElement {
 
 	const handleRunStep = useCallback((step: ManufactureStep) => {
 		if (!requireFilament()) { return }
-		runPipeline(step, { ...opts(), toStep: step })
+		runPipeline(step, opts())
 	}, [runPipeline, opts, requireFilament])
 
 	const handleSelectStep = useCallback((step: ManufactureStep) => {
