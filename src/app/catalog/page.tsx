@@ -282,6 +282,39 @@ function ComponentDetail ({ component, onClose }: { component: CatalogComponent;
 							</table>
 						</section>
 					)}
+
+					{/* Support Blockers */}
+					{component.support_blockers && component.support_blockers.length > 0 && (
+						<section>
+							<h4 className="text-xs font-semibold uppercase text-fg-muted">{'Support Blockers'}</h4>
+							<table className="mt-1 w-full text-xs">
+								<thead>
+									<tr className="border-b border-border text-left text-fg-muted">
+										<th className="py-1 pr-2">{'Shape'}</th>
+										<th className="py-1 pr-2">{'Position'}</th>
+										<th className="py-1 pr-2">{'Size'}</th>
+										<th className="py-1 pr-2">{'Height'}</th>
+										<th className="py-1">{'Z Anchor'}</th>
+									</tr>
+								</thead>
+								<tbody>
+									{component.support_blockers.map((b, i) => (
+										<tr key={i} className="border-b border-border/50">
+											<td className="py-1 pr-2 text-fg-secondary">{b.shape}</td>
+											<td className="py-1 pr-2 font-mono text-fg-secondary">{b.position_mm.map(v => v.toFixed(1)).join(', ')}</td>
+											<td className="py-1 pr-2 font-mono text-fg-secondary">
+												{b.shape === 'circle'
+													? `ø${b.diameter_mm?.toFixed(1)}`
+													: `${b.width_mm?.toFixed(1)} × ${b.length_mm?.toFixed(1)}`}
+											</td>
+											<td className="py-1 pr-2 font-mono text-fg-secondary">{b.height_mm.toFixed(1)}</td>
+											<td className="py-1 font-mono text-fg-secondary">{b.z_anchor ?? 'cavity_start'}</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</section>
+					)}
 				</div>
 			</div>
 		</div>

@@ -10,6 +10,7 @@ import type { CatalogComponent } from '@/types/models'
 const PIN_COLORS: Record<string, number> = { in: 0x3b82f6, out: 0xef4444, bidirectional: 0xeab308 }
 const BODY_COLOR = 0x555555
 const CAP_COLOR = 0x888888
+const BLOCKER_COLOR = 0xe74c3c
 
 function cssColor (prop: string, fallback: string): THREE.Color {
 	if (typeof document === 'undefined') { return new THREE.Color(fallback) }
@@ -99,6 +100,47 @@ function buildComponent (comp: CatalogComponent): THREE.Group {
 			}
 			mesh.position.set(fx, yBase + depth / 2, fz)
 			group.add(mesh)
+		}
+	}
+
+	const blockerMat = new THREE.MeshPhongMaterial({ color: BLOCKER_COLOR, transparent: true, opacity: 0.25, side: THREE.DoubleSide, depthWrite: false })
+	const blockerEdgeMat = new THREE.LineBasicMaterial({ color: BLOCKER_COLOR, transparent: true, opacity: 0.6 })
+	if (comp.support_blockers) {
+		for (const blk of comp.support_blockers) {
+			const [bx, bz] = blk.position_mm
+			const h = blk.height_mm
+			let blkMesh: THREE.Mesh
+
+			if (blk.shape === 'circle') {
+				const r = (blk.diameter_mm ?? 1) / 2
+				const geo = new THREE.CylinderGeometry(r, r, h, 24)
+				blkMesh = new THREE.Mesh(geo, blockerMat)
+				const edges = new THREE.EdgesGeometry(geo)
+				const wire = new THREE.LineSegments(edges, blockerEdgeMat)
+				blkMesh.add(wire)
+			} else {
+				const w = blk.width_mm ?? 1
+				const l = blk.length_mm ?? 1
+				const geo = new THREE.BoxGeometry(w, h, l)
+				blkMesh = new THREE.Mesh(geo, blockerMat)
+				const edges = new THREE.EdgesGeometry(geo)
+				const wire = new THREE.LineSegments(edges, blockerEdgeMat)
+				blkMesh.add(wire)
+			}
+
+			const anchor = blk.z_anchor ?? 'cavity_start'
+			let yBase: number
+			if (anchor === 'ground') {
+				yBase = 0
+			} else if (anchor === 'floor') {
+				yBase = 0
+			} else if (anchor === 'ceil_start') {
+				yBase = body.height_mm - h
+			} else {
+				yBase = body.height_mm - h
+			}
+			blkMesh.position.set(bx, yBase + h / 2, bz)
+			group.add(blkMesh)
 		}
 	}
 

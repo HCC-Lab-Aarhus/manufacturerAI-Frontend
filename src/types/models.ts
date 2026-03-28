@@ -286,6 +286,16 @@ export interface ScadFeature {
 	pattern?: ScadPattern | null
 }
 
+export interface SupportBlocker {
+	shape: 'rect' | 'circle'
+	position_mm: [number, number]
+	width_mm?: number
+	length_mm?: number
+	diameter_mm?: number
+	height_mm: number
+	z_anchor?: string
+}
+
 export interface CatalogComponent {
 	id: string
 	name: string
@@ -298,6 +308,7 @@ export interface CatalogComponent {
 	pin_groups?: PinGroup[] | null
 	configurable?: Record<string, unknown> | null
 	scad?: { features: ScadFeature[] } | null
+	support_blockers?: SupportBlocker[] | null
 	source_file?: string
 }
 
