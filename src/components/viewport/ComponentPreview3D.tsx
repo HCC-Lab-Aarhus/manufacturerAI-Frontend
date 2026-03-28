@@ -97,8 +97,12 @@ function buildComponent (comp: CatalogComponent): THREE.Group {
 
 			const anchor = feat.z_anchor ?? 'cavity_start'
 			let yBase: number
-			if (anchor === 'floor') {
+			if (anchor === 'ground') {
+				yBase = 0
+			} else if (anchor === 'floor') {
 				yBase = isThru ? -depth : 0
+			} else if (anchor === 'cavity_start') {
+				yBase = 0
 			} else {
 				yBase = body.height_mm - depth
 			}
