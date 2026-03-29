@@ -5,13 +5,13 @@ import { type ReactElement, useEffect, useState } from 'react'
 
 import {
 	listPrinters, listFilaments,
-	generateCalibration, generateSilverinkTest,
-	generateComponents, generateLayers, generateSpacing,
-	generateChannel, generateWidth, generateSolidSquares, generateAllTests,
+	generateCalibration, generateCombined,
+	generateComponents, generateSpacing,
+	generateWidth, generateSurfaceTest, generateAllTests,
 } from '@/lib/api'
 import type { Printer, Filament } from '@/types/models'
 
-type TestMode = 'calibration' | 'silverink' | 'components' | 'layers' | 'spacing' | 'channel' | 'width' | 'solid_squares'
+type TestMode = 'calibration' | 'combined' | 'components' | 'spacing' | 'width' | 'surface_test'
 
 export default function DebugPage (): ReactElement {
 	const [printers, setPrinters] = useState<Printer[]>([])
@@ -40,7 +40,10 @@ export default function DebugPage (): ReactElement {
 			const mk3s = p.find(pr => pr.id === 'mk3s')
 			if (mk3s) { setPrinter(mk3s.id) } else if (p.length) { setPrinter(p[0].id) }
 		}).catch(() => {})
-		listFilaments().then(f => { setFilaments(f) }).catch(() => {})
+		listFilaments().then(f => {
+			setFilaments(f)
+			setBulkFilaments(new Set(f.map(fl => fl.id)))
+		}).catch(() => {})
 	}, [])
 
 	const clearDownloads = () => {
@@ -52,30 +55,29 @@ export default function DebugPage (): ReactElement {
 	const makeBlobUrl = (text: string, type = 'text/plain') =>
 		URL.createObjectURL(new Blob([text], { type }))
 
+	const needsFilament = testMode !== 'surface_test'
+
 	const handleGenerate = async () => {
 		setGenerating(true)
 		setError('')
 		clearDownloads()
 		try {
-			const params = { printer, filament }
-			if (testMode === 'layers') {
-				const data = await generateLayers(params)
-				setGcodeFilename(String(data.contract.gcode_file || 'layers.gcode'))
-				setGcodeUrl(makeBlobUrl(data.gcode))
-				setBitmapUrls([
-					{ url: makeBlobUrl(data.bitmap_1), filename: 'layers_1.txt' },
-					{ url: makeBlobUrl(data.bitmap_2), filename: 'layers_2.txt' },
-					{ url: makeBlobUrl(data.bitmap_3), filename: 'layers_3.txt' },
-				])
+			if (testMode === 'surface_test') {
+				const data = await generateSurfaceTest({ printer })
+				setBitmapUrls([{
+					url: makeBlobUrl(data.bitmap),
+					filename: String(data.contract.bitmap_file || 'surface_test.txt'),
+				}])
 				setContractUrl(makeBlobUrl(JSON.stringify(data.contract, null, 2), 'application/json'))
 			} else {
+				const params = { printer, filament }
 				let data
 				switch (testMode) {
 					case 'calibration':
 						data = await generateCalibration(params)
 						break
-					case 'silverink':
-						data = await generateSilverinkTest(params)
+					case 'combined':
+						data = await generateCombined(params)
 						break
 					case 'components':
 						data = await generateComponents(params)
@@ -83,14 +85,8 @@ export default function DebugPage (): ReactElement {
 					case 'spacing':
 						data = await generateSpacing(params)
 						break
-					case 'channel':
-						data = await generateChannel(params)
-						break
 					case 'width':
 						data = await generateWidth(params)
-						break
-					case 'solid_squares':
-						data = await generateSolidSquares(params)
 						break
 				}
 				setGcodeFilename(String(data.contract.gcode_file || `${testMode}.gcode`))
@@ -113,45 +109,35 @@ export default function DebugPage (): ReactElement {
 			heading: 'Calibration Generator',
 			description: 'Generates alignment squares to calibrate inkjet-to-PLA offset.'
 		},
-		silverink: {
-			heading: 'Silverink Test Generator',
-			description: 'Generates ironed rectangles with silver traces to test ink adhesion and conductivity.'
+		combined: {
+			heading: 'Combined Test',
+			description: 'Generates combined spacing + width + component test on one plate.'
 		},
 		components: {
 			heading: 'Component Trace Test',
 			description: 'Loads real catalog components (resistor, button, battery) onto a shared plate with raised blocks, pinholes, and trace cutouts derived from actual catalog geometry.'
 		},
-		layers: {
-			heading: 'Progressive Trace Test',
-			description: 'Three rectangles with an increasing number of centred traces across three bitmaps.'
-		},
 		spacing: {
 			heading: 'Parallel Lines Test',
 			description: 'Three landscape rectangles with parallel lines at increasing spacing (1–20 px). Tests minimum separation.'
-		},
-		channel: {
-			heading: 'Channel Test',
-			description: 'Three landscape rectangles with parallel traces separated by a fixed-width PLA wall (equal to trace clearance). Tests channel isolation between traces.'
 		},
 		width: {
 			heading: 'Trace Width Test',
 			description: 'Single rectangle with lines of increasing thickness (1–10 px) at 10 px spacing. Tests printable trace widths.'
 		},
-		solid_squares: {
-			heading: 'Solid Squares Coverage Test',
-			description: 'Nine 10×20 mm rectangles in a 3×3 grid with their entire surface covered in silver-ink trace. Tests full-area ink deposition.'
+		surface_test: {
+			heading: 'Surface Conductivity Test',
+			description: 'Generates a bitmap for the surface conductivity test strip. No G-code — supply your own with ;silverink marker.'
 		}
 	}
 
 	const modeLabels: Record<TestMode, string> = {
 		calibration: 'Calibration',
-		silverink: 'Silverink',
+		combined: 'Combined',
 		components: 'Components',
-		layers: 'Layers',
 		spacing: 'Spacing',
-		channel: 'Channel',
 		width: 'Width',
-		solid_squares: 'Solid Squares'
+		surface_test: 'Surface'
 	}
 
 	return (
@@ -164,8 +150,8 @@ export default function DebugPage (): ReactElement {
 				</div>
 
 				{/* Test mode selector */}
-				<div className="grid grid-cols-4 gap-1 rounded-xl bg-surface-card p-1 shadow-sm">
-					{(['calibration', 'silverink', 'components', 'layers', 'spacing', 'channel', 'width', 'solid_squares'] as const).map(mode => (
+				<div className="grid grid-cols-3 gap-1 rounded-xl bg-surface-card p-1 shadow-sm">
+					{(['calibration', 'combined', 'components', 'spacing', 'width', 'surface_test'] as const).map(mode => (
 						<button
 							key={mode}
 							onClick={() => { setTestMode(mode); clearDownloads() }}
@@ -213,7 +199,7 @@ export default function DebugPage (): ReactElement {
 
 					<button
 						onClick={handleGenerate}
-						disabled={generating || !filament}
+						disabled={generating || (needsFilament && !filament)}
 						className="w-full rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
 					>
 						{generating ? 'Generating…' : 'Generate Files'}
@@ -257,26 +243,13 @@ export default function DebugPage (): ReactElement {
 					</div>
 				)}
 
-				{testMode === 'silverink' && (
+				{testMode === 'surface_test' && (
 					<div className="rounded-2xl bg-surface-card p-4 shadow-sm space-y-3">
-						<h2 className="text-sm font-medium text-fg">{'Silverink Test Procedure'}</h2>
+						<h2 className="text-sm font-medium text-fg">{'Surface Test Procedure'}</h2>
 						<ol className="list-decimal list-inside text-sm text-fg-secondary space-y-1.5">
-							<li>{'Print the G-code — three ironed PLA rectangles in an L-pattern.'}</li>
-							<li>{'Run the sweep with the bitmap — a single trace is deposited through each rectangle.'}</li>
-							<li>{'Visually inspect that traces are centred and continuous on the ironed surface.'}</li>
-							<li>{'Test conductivity of each trace with a multimeter.'}</li>
-						</ol>
-					</div>
-				)}
-
-				{testMode === 'solid_squares' && (
-					<div className="rounded-2xl bg-surface-card p-4 shadow-sm space-y-3">
-						<h2 className="text-sm font-medium text-fg">{'Solid Squares Test Procedure'}</h2>
-						<ol className="list-decimal list-inside text-sm text-fg-secondary space-y-1.5">
-							<li>{'Print the G-code — nine ironed PLA rectangles (10×20 mm) in a 3×3 grid.'}</li>
-							<li>{'Run the sweep with the bitmap — the entire surface of each rectangle is covered in ink.'}</li>
-							<li>{'Inspect that ink covers each rectangle uniformly without gaps or bleeding.'}</li>
-							<li>{'Test conductivity across the full surface with a multimeter.'}</li>
+							<li>{'Print your own G-code with the ;silverink marker injected.'}</li>
+							<li>{'Download the generated bitmap and run the sweep.'}</li>
+							<li>{'Test conductivity of the deposited pads with a multimeter.'}</li>
 						</ol>
 					</div>
 				)}
@@ -287,7 +260,22 @@ export default function DebugPage (): ReactElement {
 					<p className="text-sm text-fg-muted">{'Generate calibration + all test G-code and bitmaps for the selected filaments, saved to a folder you choose.'}</p>
 
 					<div className="space-y-2">
-						<label className="text-sm text-fg-secondary">{'Filaments'}</label>
+						<div className="flex items-center justify-between">
+							<label className="text-sm text-fg-secondary">{'Filaments'}</label>
+							<button
+								type="button"
+								onClick={() => {
+									if (bulkFilaments.size === filaments.length) {
+										setBulkFilaments(new Set())
+									} else {
+										setBulkFilaments(new Set(filaments.map(f => f.id)))
+									}
+								}}
+								className="text-xs text-accent hover:underline"
+							>
+								{bulkFilaments.size === filaments.length ? 'Deselect All' : 'Select All'}
+							</button>
+						</div>
 						<div className="grid grid-cols-2 gap-2">
 							{filaments.map(f => (
 								<label key={f.id} className="flex items-center gap-2 text-sm text-fg">
@@ -317,9 +305,10 @@ export default function DebugPage (): ReactElement {
 									throw new Error('Your browser does not support folder picking. Use Chrome or Edge.')
 								}
 								const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' })
+								const selected = [...bulkFilaments].join(',')
 								const files = await generateAllTests({
 									printer,
-									filaments: [...bulkFilaments].join(','),
+									...(selected ? { filaments: selected } : {}),
 								})
 								for (const [path, content] of Object.entries(files)) {
 									const parts = path.split('/')

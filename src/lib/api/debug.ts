@@ -5,17 +5,18 @@ export interface DebugParams {
 	filament: string
 }
 
+export interface SurfaceTestParams {
+	printer: string
+}
+
 export interface CalibrationResult {
 	gcode: string
 	bitmap: string
 	contract: Record<string, unknown>
 }
 
-export interface LayersResult {
-	gcode: string
-	bitmap_1: string
-	bitmap_2: string
-	bitmap_3: string
+export interface SurfaceTestResult {
+	bitmap: string
 	contract: Record<string, unknown>
 }
 
@@ -28,9 +29,9 @@ export async function generateCalibration (params: DebugParams): Promise<Calibra
 	return data
 }
 
-export async function generateSilverinkTest (params: DebugParams): Promise<CalibrationResult> {
+export async function generateCombined (params: DebugParams): Promise<CalibrationResult> {
 	const { data } = await apiClient.post<CalibrationResult>(
-		'/api/debug/silverink-test',
+		'/api/debug/combined',
 		null,
 		{ params: params as unknown as Record<string, string> }
 	)
@@ -46,27 +47,9 @@ export async function generateComponents (params: DebugParams): Promise<Calibrat
 	return data
 }
 
-export async function generateLayers (params: DebugParams): Promise<LayersResult> {
-	const { data } = await apiClient.post<LayersResult>(
-		'/api/debug/layers',
-		null,
-		{ params: params as unknown as Record<string, string> }
-	)
-	return data
-}
-
 export async function generateSpacing (params: DebugParams): Promise<CalibrationResult> {
 	const { data } = await apiClient.post<CalibrationResult>(
 		'/api/debug/spacing',
-		null,
-		{ params: params as unknown as Record<string, string> }
-	)
-	return data
-}
-
-export async function generateChannel (params: DebugParams): Promise<CalibrationResult> {
-	const { data } = await apiClient.post<CalibrationResult>(
-		'/api/debug/channel',
 		null,
 		{ params: params as unknown as Record<string, string> }
 	)
@@ -82,9 +65,9 @@ export async function generateWidth (params: DebugParams): Promise<CalibrationRe
 	return data
 }
 
-export async function generateSolidSquares (params: DebugParams): Promise<CalibrationResult> {
-	const { data } = await apiClient.post<CalibrationResult>(
-		'/api/debug/solid-squares',
+export async function generateSurfaceTest (params: SurfaceTestParams): Promise<SurfaceTestResult> {
+	const { data } = await apiClient.post<SurfaceTestResult>(
+		'/api/debug/surface-test',
 		null,
 		{ params: params as unknown as Record<string, string> }
 	)
@@ -93,7 +76,7 @@ export async function generateSolidSquares (params: DebugParams): Promise<Calibr
 
 export interface GenerateAllParams {
 	printer: string
-	filaments: string
+	filaments?: string
 }
 
 export async function generateAllTests (params: GenerateAllParams): Promise<Record<string, string>> {
