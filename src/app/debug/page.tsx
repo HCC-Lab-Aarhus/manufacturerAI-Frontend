@@ -111,7 +111,7 @@ export default function DebugPage (): ReactElement {
 		},
 		combined: {
 			heading: 'Combined Test',
-			description: 'Generates combined spacing + width + component test on one plate.'
+			description: 'Generates trace width and trace clearance tests on one plate.'
 		},
 		components: {
 			heading: 'Component Trace Test',
