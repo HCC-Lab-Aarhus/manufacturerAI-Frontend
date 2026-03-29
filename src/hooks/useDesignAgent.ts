@@ -221,22 +221,16 @@ export function useDesignAgent () {
 		sentFirstRef.current = false
 		setMessages([])
 		setConversationLoading(true)
+
+		getTokenUsage(sessionId).then(t => { if (t) setTokenUsage(t) }).catch(() => {})
+
 		try {
-			const status = await getDesignStatus(sessionId).catch(() => null)
-			const isRunning = status?.status === 'running'
-
-			if (isRunning) {
-				await new Promise(resolve => setTimeout(resolve, 150))
-			}
-
-			const [convo, design, freshStatus, tokens] = await Promise.all([
+			const [status, convo, design] = await Promise.all([
+				getDesignStatus(sessionId).catch(() => null),
 				getDesignConversation(sessionId),
 				getDesignResult(sessionId).catch(() => null),
-				isRunning ? getDesignStatus(sessionId).catch(() => null) : Promise.resolve(null),
-				getTokenUsage(sessionId).catch(() => null)
 			])
-
-			if (tokens) setTokenUsage(tokens)
+			const isRunning = status?.status === 'running'
 
 			const entries: ChatEntry[] = []
 			for (const msg of convo) {
@@ -315,7 +309,7 @@ export function useDesignAgent () {
 			}
 
 			if (isRunning) {
-				const cursor = freshStatus?.last_save_cursor ?? status?.last_save_cursor ?? 0
+				const cursor = status?.last_save_cursor ?? 0
 				setStreaming(true)
 				streamingRef.current = true
 				subscribeToStream(sessionId, cursor)

@@ -74,10 +74,17 @@ export default function SetupPanel (): ReactElement {
 	const [outline, setOutline] = useState('')
 
 	useEffect(() => {
+		setOutline('')
+		setCircuitData(null)
+		setPlacement(null)
+		setSimConfig(null)
+	}, [currentSession?.id])
+
+	useEffect(() => {
 		if (defaultOutline && !outline) {
 			setOutline(defaultOutline)
 		}
-	}, [defaultOutline]) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [defaultOutline, outline])
 
 	useEffect(() => {
 		if (currentSession) {
@@ -85,20 +92,19 @@ export default function SetupPanel (): ReactElement {
 		} else {
 			resetConversation()
 		}
-	}, [currentSession?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [currentSession?.id, loadConversation, resetConversation])
 
 	useEffect(() => {
 		if (currentSession && !effectiveCircuit) {
 			getCircuitResult(currentSession.id).then(setCircuitData).catch(() => {})
 		}
-	}, [currentSession?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [currentSession?.id, effectiveCircuit])
 
-	// Load placement + sim config when firmware is ready
 	useEffect(() => {
 		if (!currentSession) return
 		getPlacementResult(currentSession.id).then(setPlacement).catch(() => {})
 		getSimConfig(currentSession.id).then(setSimConfig).catch(() => {})
-	}, [currentSession?.id, firmwareCode, compiled]) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [currentSession?.id, firmwareCode, compiled])
 
 	const hasManufacture = currentSession?.pipeline_state.gcode === 'complete' ||
 		currentSession?.pipeline_state.gcode === 'done'
@@ -120,7 +126,7 @@ export default function SetupPanel (): ReactElement {
 		runSetup(outline || undefined)
 	}, [runSetup, outline])
 
-	if (loading || conversationLoading) {
+	if (loading) {
 		return (
 			<div className="flex h-full items-center justify-center">
 				<LoadingSpinner size="md" />
@@ -139,7 +145,11 @@ export default function SetupPanel (): ReactElement {
 	/* ── Left column: Chat / Generate ────────────────────────────── */
 	const chatColumn = (
 		<div className="flex h-full flex-col">
-			{hasConversation ? (
+			{conversationLoading ? (
+				<div className="flex flex-1 items-center justify-center">
+					<LoadingSpinner size="md" />
+				</div>
+			) : hasConversation ? (
 				<>
 					<ChatLog messages={messages} />
 					<div className="border-t border-border p-3">

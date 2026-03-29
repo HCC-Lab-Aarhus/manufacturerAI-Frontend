@@ -235,20 +235,17 @@ export function useCircuitAgent () {
 			loadedSessionRef.current = sessionId
 			return
 		}
+		setConversationLoading(true)
+
+		getCircuitTokenUsage(sessionId).then(t => { if (t) setTokenUsage(t) }).catch(() => {})
+
 		try {
-			const status = await getCircuitStatus(sessionId).catch(() => null)
-			const isRunning = status?.status === 'running'
-
-			if (isRunning) {
-				await new Promise(resolve => setTimeout(resolve, 150))
-			}
-
-			const [convo, circuit, freshStatus, tokens] = await Promise.all([
+			const [status, convo, circuit] = await Promise.all([
+				getCircuitStatus(sessionId).catch(() => null),
 				getCircuitConversation(sessionId),
 				getCircuitResult(sessionId).catch(() => null),
-				isRunning ? getCircuitStatus(sessionId).catch(() => null) : Promise.resolve(null),
-				getCircuitTokenUsage(sessionId).catch(() => null)
 			])
+			const isRunning = status?.status === 'running'
 
 			const entries: ChatEntry[] = []
 			for (const msg of convo) {
@@ -308,12 +305,8 @@ export function useCircuitAgent () {
 				setMessages([...entries])
 			}
 
-			if (tokens) {
-				setTokenUsage(tokens)
-			}
-
 			if (isRunning) {
-				const cursor = freshStatus?.last_save_cursor ?? status?.last_save_cursor ?? 0
+				const cursor = status?.last_save_cursor ?? 0
 				setStreaming(true)
 				streamingRef.current = true
 				subscribeToStream(sessionId, cursor)

@@ -53,9 +53,11 @@ export default function DesignPanel (): ReactElement {
 
 	useEffect(() => {
 		scene3dDesignRef.current = design
-		if (!scene3dTimerRef.current) {
-			setScene3dDesign(design)
+		if (scene3dTimerRef.current) {
+			clearTimeout(scene3dTimerRef.current)
+			scene3dTimerRef.current = null
 		}
+		setScene3dDesign(design)
 	}, [design])
 
 	useEffect(() => {
@@ -64,7 +66,7 @@ export default function DesignPanel (): ReactElement {
 		} else {
 			resetConversation()
 		}
-	}, [currentSession?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [currentSession?.id, loadConversation, resetConversation])
 
 	useEffect(() => {
 		if (pendingFeedback?.target === 'design' && !streaming && currentSession && !feedbackSentRef.current) {
@@ -76,7 +78,7 @@ export default function DesignPanel (): ReactElement {
 		if (!pendingFeedback) {
 			feedbackSentRef.current = false
 		}
-	}, [pendingFeedback, streaming, currentSession]) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [pendingFeedback, streaming, currentSession, sendMessage, setPendingFeedback])
 
 	const hasMessages = messages.length > 0
 

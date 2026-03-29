@@ -75,14 +75,15 @@ async function waitForStep (
 	sessionId: string,
 	step: ManufactureStep,
 	cancelRef: React.RefObject<boolean>,
-	interval: number = 2000
+	interval: number = 500,
+	maxAttempts: number = 1200
 ): Promise<{ status: string; message?: string; detail?: Record<string, unknown> }> {
 	const poll = POLL_MAP[step]
 	if (!poll) {
 		return { status: 'done' }
 	}
 
-	for (;;) {
+	for (let attempt = 0; attempt < maxAttempts; attempt++) {
 		if (cancelRef.current) {
 			throw new CancelError()
 		}
@@ -95,6 +96,7 @@ async function waitForStep (
 		}
 		await new Promise(resolve => setTimeout(resolve, interval))
 	}
+	throw new StepError(`${step} timed out after ${maxAttempts} polls`)
 }
 
 export function useManufacture () {
@@ -115,21 +117,28 @@ export function useManufacture () {
 
 	useEffect(() => {
 		setSteps(initSteps(currentSession?.artifacts ?? {}, currentSession?.pipeline_errors))
+		setPlacementResult(null)
+		setRoutingResult(null)
+		setBitmapResult(null)
+		setScadResult(null)
+		setGcodeStatus(null)
 		if (currentSession?.id) {
 			const a = currentSession.artifacts ?? {}
 			const errors = currentSession.pipeline_errors ?? {}
+			const fetches: Promise<void>[] = []
 			if (a.placement) {
-				getPlacementResult(currentSession.id).then(setPlacementResult).catch(() => {})
+				fetches.push(getPlacementResult(currentSession.id).then(setPlacementResult).catch(() => {}))
 			}
 			if (a.routing || errors.routing) {
-				getRoutingResult(currentSession.id).then(setRoutingResult).catch(() => {})
+				fetches.push(getRoutingResult(currentSession.id).then(setRoutingResult).catch(() => {}))
 			}
 			if (a.routing && !errors.routing) {
-				getBitmap(currentSession.id).then(setBitmapResult).catch(() => {})
+				fetches.push(getBitmap(currentSession.id).then(setBitmapResult).catch(() => {}))
 			}
 			if (a.scad) {
-				getScadResult(currentSession.id).then(setScadResult).catch(() => {})
+				fetches.push(getScadResult(currentSession.id).then(setScadResult).catch(() => {}))
 			}
+			Promise.all(fetches)
 		}
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [currentSession?.id])
@@ -252,7 +261,7 @@ export function useManufacture () {
 				setCurrentStep('compile')
 				updateStep('compile', { status: 'running' })
 				await startCompile(sessionId, true)
-				await waitForStep(sessionId, 'compile', cancelRef, 3000)
+				await waitForStep(sessionId, 'compile', cancelRef)
 				updateStep('compile', { status: 'done' })
 			} else {
 				updateStep('compile', { status: 'done', message: 'Using existing' })
@@ -269,7 +278,7 @@ export function useManufacture () {
 					filament: options!.filament!,
 					silverink_only: options?.silverink_only
 				})
-				await waitForStep(sessionId, 'gcode', cancelRef, 3000)
+				await waitForStep(sessionId, 'gcode', cancelRef)
 				const gs = await pollGCode(sessionId)
 				setGcodeStatus(gs)
 				updateStep('gcode', { status: 'done' })

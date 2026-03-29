@@ -71,16 +71,21 @@ export default function CircuitPanel (): ReactElement {
 	const [outline, setOutline] = useState('')
 
 	useEffect(() => {
+		setOutline('')
+		setEditingOutline(false)
+	}, [currentSession?.id])
+
+	useEffect(() => {
 		if (currentSession && !design) {
 			getDesignResult(currentSession.id).then(setDesign).catch(() => {})
 		}
-	}, [currentSession?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [currentSession?.id, design, setDesign])
 
 	useEffect(() => {
 		if (defaultOutline && !outline) {
 			setOutline(defaultOutline)
 		}
-	}, [defaultOutline]) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [defaultOutline, outline])
 
 	useEffect(() => {
 		if (currentSession) {
@@ -88,7 +93,7 @@ export default function CircuitPanel (): ReactElement {
 		} else {
 			resetConversation()
 		}
-	}, [currentSession?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [currentSession?.id, loadConversation, resetConversation])
 
 	useEffect(() => {
 		if (pendingFeedback?.target === 'circuit' && !streaming && currentSession && !feedbackSentRef.current) {
@@ -100,7 +105,7 @@ export default function CircuitPanel (): ReactElement {
 		if (!pendingFeedback) {
 			feedbackSentRef.current = false
 		}
-	}, [pendingFeedback, streaming, currentSession]) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [pendingFeedback, streaming, currentSession, sendFeedback, setPendingFeedback])
 
 	useEffect(() => {
 		if (
@@ -115,7 +120,7 @@ export default function CircuitPanel (): ReactElement {
 			autoRevalidatedSessions.add(currentSession.id)
 			revalidate()
 		}
-	}, [currentSession?.id, currentSession?.pipeline_state.circuit, currentSession?.artifacts?.circuit_pending, streaming, conversationLoading]) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [currentSession?.id, currentSession?.pipeline_state.circuit, currentSession?.artifacts?.circuit_pending, streaming, conversationLoading, revalidate])
 
 	const hasDesign = !!design || currentSession?.pipeline_state.design === 'complete'
 	const hasConversation = messages.length > 0 || streaming
@@ -139,7 +144,7 @@ export default function CircuitPanel (): ReactElement {
 		}
 	}, [revalidate, currentSession])
 
-	if (loading || conversationLoading) {
+	if (loading) {
 		return (
 			<div className="flex h-full items-center justify-center">
 				<LoadingSpinner size="md" />
@@ -157,7 +162,11 @@ export default function CircuitPanel (): ReactElement {
 
 	const chatColumn = (
 		<div className="flex h-full flex-col">
-			{hasConversation ? (
+			{conversationLoading ? (
+				<div className="flex flex-1 items-center justify-center">
+					<LoadingSpinner size="md" />
+				</div>
+			) : hasConversation ? (
 				<>
 					{hasPendingCircuit && !streaming && (
 						<div className="flex items-center justify-between border-b border-border px-4 py-2 bg-surface-card">

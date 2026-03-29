@@ -227,17 +227,35 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 	}, [])
 
 	useEffect(() => {
-		const init = async () => {
-			await refreshSessions()
+		const params = new URLSearchParams(window.location.search)
+		const sessionParam = params.get('session')
+		if (sessionParam) {
+			Promise.all([refreshSessions(), selectSession(sessionParam)])
+		} else {
+			refreshSessions()
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [])
+
+	useEffect(() => {
+		const onPopState = () => {
 			const params = new URLSearchParams(window.location.search)
 			const sessionParam = params.get('session')
 			if (sessionParam) {
-				await selectSession(sessionParam)
+				selectSession(sessionParam)
+			} else {
+				setCurrentSession(null)
+			}
+			const tab = params.get('tab')
+			if (tab && VALID_STAGES.has(tab)) {
+				_setActiveStage(tab as PipelineStage)
+			} else {
+				_setActiveStage('design')
 			}
 		}
-		init()
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [])
+		window.addEventListener('popstate', onPopState)
+		return () => window.removeEventListener('popstate', onPopState)
+	}, [selectSession])
 
 	const value = useMemo(() => ({
 		sessions,

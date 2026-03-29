@@ -140,6 +140,11 @@ export default function ManufacturePanel (): ReactElement {
 	const prevDoneRef = useRef<Set<string>>(new Set(steps.filter(s => s.status === 'done').map(s => s.step)))
 
 	useEffect(() => {
+		setViewTab('placement')
+		prevDoneRef.current = new Set()
+	}, [currentSession?.id])
+
+	useEffect(() => {
 		const nowDone = new Set(steps.filter(s => s.status === 'done').map(s => s.step))
 		for (const step of nowDone) {
 			if (!prevDoneRef.current.has(step) && step in STEP_TO_TAB) {

@@ -233,18 +233,12 @@ export function useSetupAgent () {
 		}
 		setConversationLoading(true)
 		try {
-			const status = await getSetupStatus(sessionId).catch(() => null)
-			const isRunning = status?.status === 'running'
-
-			if (isRunning) {
-				await new Promise(resolve => setTimeout(resolve, 150))
-			}
-
-			const [convo, firmware, freshStatus] = await Promise.all([
+			const [status, convo, firmware] = await Promise.all([
+				getSetupStatus(sessionId).catch(() => null),
 				getSetupConversation(sessionId),
 				getSetupFirmware(sessionId).catch(() => null),
-				isRunning ? getSetupStatus(sessionId).catch(() => null) : Promise.resolve(null)
 			])
+			const isRunning = status?.status === 'running'
 
 			const entries: ChatEntry[] = []
 			for (const msg of convo) {
@@ -316,7 +310,7 @@ export function useSetupAgent () {
 			}
 
 			if (isRunning) {
-				const cursor = freshStatus?.last_save_cursor ?? status?.last_save_cursor ?? 0
+				const cursor = status?.last_save_cursor ?? 0
 				setStreaming(true)
 				streamingRef.current = true
 				subscribeToStream(sessionId, cursor)

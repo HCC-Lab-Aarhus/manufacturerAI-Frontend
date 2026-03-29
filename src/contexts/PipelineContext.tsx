@@ -5,10 +5,13 @@ import {
 	createContext,
 	useCallback,
 	useContext,
+	useEffect,
 	useMemo,
+	useRef,
 	useState
 } from 'react'
 
+import { useSession } from '@/contexts/SessionContext'
 import type { DesignSpec, CircuitSpec } from '@/types/models'
 
 export interface PipelineFeedback {
@@ -41,9 +44,21 @@ export function usePipeline (): PipelineContextValue {
 }
 
 export function PipelineProvider ({ children }: { children: ReactNode }) {
+	const { currentSession } = useSession()
 	const [design, setDesign] = useState<DesignSpec | null>(null)
 	const [circuit, setCircuit] = useState<CircuitSpec | null>(null)
 	const [pendingFeedback, setPendingFeedback] = useState<PipelineFeedback | null>(null)
+	const prevSessionId = useRef<string | null>(null)
+
+	useEffect(() => {
+		const sid = currentSession?.id ?? null
+		if (sid !== prevSessionId.current) {
+			prevSessionId.current = sid
+			setDesign(null)
+			setCircuit(null)
+			setPendingFeedback(null)
+		}
+	}, [currentSession?.id])
 
 	const clearAll = useCallback(() => {
 		setDesign(null)
