@@ -189,7 +189,7 @@ export function useCircuitAgent () {
 	}, [handleEvent, addError, refreshSession])
 
 	const runCircuit = useCallback(async (outline?: string) => {
-		if (!currentSession || streaming) { return }
+		if (!currentSession || streamingRef.current) { return }
 		setMessages([])
 		setCircuit(null)
 		setStreaming(true)
@@ -207,10 +207,10 @@ export function useCircuitAgent () {
 			streamingRef.current = false
 			setStreaming(false)
 		}
-	}, [streaming, currentSession, setCircuit, appendMessage, nextId, subscribeToStream, addError])
+	}, [currentSession, setCircuit, appendMessage, nextId, subscribeToStream, addError])
 
 	const sendFeedback = useCallback(async (feedback: string) => {
-		if (!currentSession || streaming) { return }
+		if (!currentSession || streamingRef.current) { return }
 		appendMessage({
 			id: nextId('user'),
 			role: 'user',
@@ -228,7 +228,7 @@ export function useCircuitAgent () {
 			streamingRef.current = false
 			setStreaming(false)
 		}
-	}, [streaming, currentSession, appendMessage, nextId, subscribeToStream, addError])
+	}, [currentSession, appendMessage, nextId, subscribeToStream, addError])
 
 	const loadConversation = useCallback(async (sessionId: string) => {
 		if (streamingRef.current) {
@@ -342,7 +342,7 @@ export function useCircuitAgent () {
 	}, [])
 
 	const revalidate = useCallback(async () => {
-		if (!currentSession || streaming) { return false }
+		if (!currentSession || streamingRef.current) { return false }
 		try {
 			const result = await revalidateCircuit(currentSession.id)
 			if (result.valid) {
@@ -379,7 +379,7 @@ export function useCircuitAgent () {
 		} catch {
 			return false
 		}
-	}, [currentSession, streaming, setCircuit, patchSession, refreshSession, appendMessage, nextId])
+	}, [currentSession, setCircuit, patchSession, refreshSession, appendMessage, nextId])
 
 	return {
 		messages,
