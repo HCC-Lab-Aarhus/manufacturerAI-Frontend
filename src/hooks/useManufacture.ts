@@ -138,6 +138,9 @@ export function useManufacture () {
 			if (a.scad) {
 				fetches.push(getScadResult(currentSession.id).then(setScadResult).catch(() => {}))
 			}
+			if (a.gcode) {
+				fetches.push(pollGCode(currentSession.id).then(setGcodeStatus).catch(() => {}))
+			}
 			Promise.all(fetches)
 		}
 	// eslint-disable-next-line react-hooks/exhaustive-deps

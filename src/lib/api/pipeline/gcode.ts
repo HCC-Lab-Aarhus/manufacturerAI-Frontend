@@ -31,3 +31,8 @@ export function getGCodeDownloadUrl (sessionId: string): string {
 	const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
 	return `${base}/api/sessions/${sid(sessionId)}/manufacture/gcode/download`
 }
+
+export function getExtrasGCodeDownloadUrl (sessionId: string): string {
+	const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+	return `${base}/api/sessions/${sid(sessionId)}/manufacture/gcode/extras/download`
+}

@@ -352,6 +352,8 @@ export interface GCodeStatus {
 	message?: string
 	stages?: GCodeStageInfo[]
 	gcode_bytes?: number
+	has_extras?: boolean
+	extras_gcode_bytes?: number
 }
 
 export interface GCodeStageInfo {

@@ -7,7 +7,7 @@ import { usePipeline } from '@/contexts/PipelineContext'
 import { useSession } from '@/contexts/SessionContext'
 import type { StepStatus, ManufactureStepState } from '@/hooks/useManufacture'
 import { useManufacture } from '@/hooks/useManufacture'
-import { getBundleDownloadUrl, getGCodeDownloadUrl, getBitmapDownloadUrl, getPrintJobDownloadUrl, getStlDownloadUrl } from '@/lib/api'
+import { getBundleDownloadUrl, getGCodeDownloadUrl, getExtrasGCodeDownloadUrl, getBitmapDownloadUrl, getPrintJobDownloadUrl, getStlDownloadUrl } from '@/lib/api'
 import type { ManufactureStep } from '@/types/models'
 
 const PlacementViewport = dynamic(() => import('@/components/viewport/PlacementViewport'), { ssr: false })
@@ -134,7 +134,7 @@ const STEP_TO_TAB: Record<string, ViewTab> = {
 export default function ManufacturePanel (): ReactElement {
 	const { currentSession, setActiveStage, filament, flashDropdowns } = useSession()
 	const { setPendingFeedback } = usePipeline()
-	const { steps, running, allDone, placementResult, routingResult, bitmapResult, runPipeline, stop } = useManufacture()
+	const { steps, running, allDone, placementResult, routingResult, bitmapResult, gcodeStatus, runPipeline, stop } = useManufacture()
 	const [silverinkOnly, setSilverinkOnly] = useState(false)
 	const [viewTab, setViewTab] = useState<ViewTab>('placement')
 	const prevDoneRef = useRef<Set<string>>(new Set(steps.filter(s => s.status === 'done').map(s => s.step)))
@@ -279,6 +279,12 @@ export default function ManufacturePanel (): ReactElement {
 								<span className="flex-1 font-medium">{'enclosure.gcode'}</span>
 								<span className="text-[10px] text-fg-secondary">{'G-code'}</span>
 							</a>
+							{gcodeStatus?.has_extras && (
+								<a href={getExtrasGCodeDownloadUrl(sessionId)} download className="flex items-center gap-2 rounded-lg bg-surface-card px-3 py-2 text-xs text-fg hover:bg-surface-hover transition-colors">
+									<span className="flex-1 font-medium">{'extras.gcode'}</span>
+									<span className="text-[10px] text-fg-secondary">{'Extras print'}</span>
+								</a>
+							)}
 							<a href={getStlDownloadUrl(sessionId)} download className="flex items-center gap-2 rounded-lg bg-surface-card px-3 py-2 text-xs text-fg hover:bg-surface-hover transition-colors">
 								<span className="flex-1 font-medium">{'enclosure.stl'}</span>
 								<span className="text-[10px] text-fg-secondary">{'3D model'}</span>
