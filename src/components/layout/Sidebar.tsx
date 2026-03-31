@@ -7,8 +7,8 @@ import ColorPicker from '@/components/ui/ColorPicker'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { usePipeline } from '@/contexts/PipelineContext'
 import { getStoredPrinterId, getStoredFilamentId, useSession } from '@/contexts/SessionContext'
-import { listPrinters, listFilaments, setSessionPrinter, setSessionFilament } from '@/lib/api'
-import type { Filament, Printer } from '@/types/models'
+import { listPrinters, listFilaments, listModels, setSessionPrinter, setSessionFilament, setSessionModel } from '@/lib/api'
+import type { Filament, ModelOption, Printer } from '@/types/models'
 
 export default function Sidebar (): ReactElement {
 	const {
@@ -26,6 +26,8 @@ export default function Sidebar (): ReactElement {
 		setPrinter,
 		filament,
 		setFilament,
+		model,
+		setModel,
 		dropdownFlashKey
 	} = useSession()
 	const [flashClass, setFlashClass] = useState('')
@@ -39,6 +41,7 @@ export default function Sidebar (): ReactElement {
 	const { clearAll } = usePipeline()
 	const [printers, setPrinters] = useState<Printer[]>([])
 	const [filaments, setFilaments] = useState<Filament[]>([])
+	const [models, setModels] = useState<ModelOption[]>([])
 	const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
 	const [renamingId, setRenamingId] = useState<string | null>(null)
 	const [renameValue, setRenameValue] = useState('')
@@ -47,6 +50,7 @@ export default function Sidebar (): ReactElement {
 	useEffect(() => {
 		listPrinters().then(setPrinters).catch(() => {})
 		listFilaments().then(setFilaments).catch(() => {})
+		listModels().then(setModels).catch(() => {})
 	}, [])
 
 	useEffect(() => {
@@ -66,6 +70,15 @@ export default function Sidebar (): ReactElement {
 			: storedId ? filaments.find(f => f.id === storedId) : null
 		if (match) { setFilament(match) }
 	}, [filaments, filament, currentSession?.filament_id, setFilament])
+
+	useEffect(() => {
+		if (models.length === 0 || model) { return }
+		const sessionModelId = currentSession?.model_id
+		const match = sessionModelId
+			? models.find(m => m.id === sessionModelId)
+			: models.find(m => m.id === 'medium')
+		if (match) { setModel(match) }
+	}, [models, model, currentSession?.model_id, setModel])
 
 	const handleNewSession = useCallback(() => {
 		clearAll()
@@ -103,6 +116,14 @@ export default function Sidebar (): ReactElement {
 			})
 		}
 	}, [currentSession, filaments, setFilament, patchSession])
+
+	const handleModelChange = useCallback(async (modelId: string) => {
+		const found = models.find(m => m.id === modelId) ?? null
+		setModel(found)
+		if (currentSession) {
+			await setSessionModel(currentSession.id, modelId)
+		}
+	}, [currentSession, models, setModel])
 
 	useEffect(() => {
 		if (!menuOpenId) { return }
@@ -185,6 +206,28 @@ export default function Sidebar (): ReactElement {
 							<option key={f.id} value={f.id}>{f.label}</option>
 						))}
 					</select>
+				</div>
+			)}
+
+			{models.length > 0 && (
+				<div className="px-3 pb-3">
+					<label className="text-xs text-fg-secondary">{'Model'}</label>
+					<div className="mt-1 flex gap-1">
+						{models.map(m => (
+							<button
+								key={m.id}
+								onClick={() => { handleModelChange(m.id) }}
+								className={`flex-1 rounded-lg border px-1.5 py-1.5 text-center transition-colors ${
+									(model?.id ?? currentSession?.model_id) === m.id
+										? 'border-accent bg-accent/10 text-accent-text'
+										: 'border-border bg-surface-card text-fg-secondary hover:bg-surface-hover'
+								}`}
+							>
+								<span className="block text-xs font-medium">{m.label}</span>
+								<span className="block text-[9px] leading-tight text-fg-muted">{m.api_model.replace(/^claude-/, '').replace(/-\d+$/, '')}</span>
+							</button>
+						))}
+					</div>
 				</div>
 			)}
 

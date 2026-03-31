@@ -1,4 +1,4 @@
-import type { Filament, PipelineError, Printer } from '@/types/models'
+import type { Filament, ModelOption, PipelineError, Printer } from '@/types/models'
 
 import apiClient from './client'
 
@@ -46,4 +46,24 @@ export async function setSessionFilament (
 export async function listFilaments (): Promise<Filament[]> {
 	const { data } = await apiClient.get<{ filaments: Filament[] }>('/api/filaments')
 	return data.filaments
+}
+
+export async function listModels (): Promise<ModelOption[]> {
+	const { data } = await apiClient.get<{ models: ModelOption[] }>('/api/models')
+	return data.models
+}
+
+interface SetModelResponse {
+	model_id: string
+	label: string
+}
+
+export async function setSessionModel (
+	sessionId: string,
+	modelId: string
+): Promise<SetModelResponse> {
+	const { data } = await apiClient.put<SetModelResponse>(`/api/sessions/${encodeURIComponent(sessionId)}/model`, null, {
+		params: { model_id: modelId }
+	})
+	return data
 }

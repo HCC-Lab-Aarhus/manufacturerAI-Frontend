@@ -190,6 +190,7 @@ export interface SessionMeta {
 	name?: string
 	printer_id?: string
 	filament_id?: string
+	model_id?: string
 	pipeline_state: PipelineState
 	pipeline_errors?: Record<string, PipelineError>
 	artifacts: Record<string, boolean>
@@ -210,6 +211,12 @@ export interface Printer {
 export interface Filament {
 	id: string
 	label: string
+}
+
+export interface ModelOption {
+	id: string
+	label: string
+	api_model: string
 }
 
 export interface CatalogBody {
