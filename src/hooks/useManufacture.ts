@@ -167,9 +167,8 @@ export function useManufacture () {
 		cancelRef.current = true
 	}, [])
 
-	const runPipeline = useCallback(async (fromStep?: ManufactureStep, options?: { filament?: string; silverink_only?: boolean; toStep?: ManufactureStep }) => {
+	const runPipeline = useCallback(async (fromStep?: ManufactureStep, options?: { silverink_only?: boolean; toStep?: ManufactureStep }) => {
 		if (!currentSession || running) { return }
-		if (!options?.filament) { return }
 
 		cancelRef.current = false
 		setRunning(true)
@@ -275,7 +274,6 @@ export function useManufacture () {
 				updateStep('gcode', { status: 'running' })
 				await startGCode(sessionId, {
 					force: true,
-					filament: options!.filament!,
 					silverink_only: options?.silverink_only
 				})
 				await waitForStep(sessionId, 'gcode', cancelRef)

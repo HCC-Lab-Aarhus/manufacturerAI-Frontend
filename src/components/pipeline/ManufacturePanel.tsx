@@ -168,9 +168,9 @@ export default function ManufacturePanel (): ReactElement {
 		setActiveStage(agent === 'design' ? 'design' : 'circuit')
 	}, [steps, setPendingFeedback, setActiveStage])
 
-	const selectedFilament = filament?.id ?? ''
+	const selectedFilament = filament?.id ?? currentSession?.filament_id ?? ''
 
-	const opts = useCallback(() => ({ filament: selectedFilament, silverink_only: silverinkOnly }), [selectedFilament, silverinkOnly])
+	const opts = useCallback(() => ({ silverink_only: silverinkOnly }), [silverinkOnly])
 
 	const canStart = !!selectedFilament
 
@@ -232,7 +232,7 @@ export default function ManufacturePanel (): ReactElement {
 								<>
 									<span className="text-[11px] font-medium text-success">{'Complete'}</span>
 									<button
-										onClick={() => { if (!requireFilament()) return; runPipeline('placement', { filament: selectedFilament, silverink_only: silverinkOnly }) }}
+										onClick={() => { if (!requireFilament()) return; runPipeline('placement', { silverink_only: silverinkOnly }) }}
 										className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
 									>
 										{'Re-run'}
@@ -240,14 +240,14 @@ export default function ManufacturePanel (): ReactElement {
 								</>
 							) : canResume ? (
 								<button
-									onClick={() => { if (!requireFilament()) return; runPipeline(firstIncomplete!.step, { filament: selectedFilament, silverink_only: silverinkOnly }) }}
+									onClick={() => { if (!requireFilament()) return; runPipeline(firstIncomplete!.step, { silverink_only: silverinkOnly }) }}
 									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
 								>
 									{'Resume'}
 								</button>
 							) : (
 								<button
-									onClick={() => { if (!requireFilament()) return; runPipeline(undefined, { filament: selectedFilament, silverink_only: silverinkOnly }) }}
+									onClick={() => { if (!requireFilament()) return; runPipeline(undefined, { silverink_only: silverinkOnly }) }}
 									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
 								>
 									{'Start'}

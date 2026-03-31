@@ -189,6 +189,7 @@ export interface SessionMeta {
 	description?: string
 	name?: string
 	printer_id?: string
+	filament_id?: string
 	pipeline_state: PipelineState
 	pipeline_errors?: Record<string, PipelineError>
 	artifacts: Record<string, boolean>

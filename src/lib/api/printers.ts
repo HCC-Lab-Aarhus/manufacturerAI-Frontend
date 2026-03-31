@@ -25,6 +25,24 @@ export async function setSessionPrinter (
 	return data
 }
 
+interface SetFilamentResponse {
+	filament_id: string
+	label: string
+	invalidated_steps: string[]
+	artifacts: Record<string, boolean>
+	pipeline_errors: Record<string, PipelineError>
+}
+
+export async function setSessionFilament (
+	sessionId: string,
+	filamentId: string
+): Promise<SetFilamentResponse> {
+	const { data } = await apiClient.put<SetFilamentResponse>(`/api/sessions/${encodeURIComponent(sessionId)}/filament`, null, {
+		params: { filament_id: filamentId }
+	})
+	return data
+}
+
 export async function listFilaments (): Promise<Filament[]> {
 	const { data } = await apiClient.get<{ filaments: Filament[] }>('/api/filaments')
 	return data.filaments

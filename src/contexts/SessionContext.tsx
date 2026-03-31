@@ -16,10 +16,17 @@ import { deleteSession as apiDeleteSession, getSession, listSessions, renameSess
 import type { Filament, PipelineError, PipelineStage, Printer, SessionMeta } from '@/types/models'
 
 const PRINTER_COOKIE = 'printer-id'
+const FILAMENT_COOKIE = 'filament-id'
 
 export function getStoredPrinterId (): string {
 	if (typeof document === 'undefined') { return '' }
 	const match = document.cookie.match(/(?:^|; )printer-id=([^;]*)/)
+	return match ? decodeURIComponent(match[1]) : ''
+}
+
+export function getStoredFilamentId (): string {
+	if (typeof document === 'undefined') { return '' }
+	const match = document.cookie.match(/(?:^|; )filament-id=([^;]*)/)
 	return match ? decodeURIComponent(match[1]) : ''
 }
 
@@ -29,6 +36,14 @@ function storePrinterId (id: string): void {
 		return
 	}
 	document.cookie = `${PRINTER_COOKIE}=${encodeURIComponent(id)};path=/;max-age=31536000;SameSite=Lax`
+}
+
+function storeFilamentId (id: string): void {
+	if (!id) {
+		document.cookie = `${FILAMENT_COOKIE}=;path=/;max-age=0;SameSite=Lax`
+		return
+	}
+	document.cookie = `${FILAMENT_COOKIE}=${encodeURIComponent(id)};path=/;max-age=31536000;SameSite=Lax`
 }
 
 interface SessionContextValue {
@@ -155,6 +170,11 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 		storePrinterId(p?.id ?? '')
 	}, [])
 
+	const _setFilament = useCallback((f: Filament | null) => {
+		setFilament(f)
+		storeFilamentId(f?.id ?? '')
+	}, [])
+
 	const refreshSessions = useCallback(async () => {
 		const list = await listSessions()
 		setSessions(list)
@@ -275,10 +295,10 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 		printer,
 		setPrinter,
 		filament,
-		setFilament,
+		setFilament: _setFilament,
 		flashDropdowns,
 		dropdownFlashKey
-	}), [sessions, currentSession, activeStage, loading, pendingInvalidation, selectSession, clearSession, refreshSession, refreshSessions, patchSession, clearInvalidation, renameSession, deleteSessionCb, printer, filament, setFilament, flashDropdowns, dropdownFlashKey])
+	}), [sessions, currentSession, activeStage, loading, pendingInvalidation, selectSession, clearSession, refreshSession, refreshSessions, patchSession, clearInvalidation, renameSession, deleteSessionCb, printer, filament, _setFilament, flashDropdowns, dropdownFlashKey])
 
 	return (
 		<SessionContext.Provider value={value}>

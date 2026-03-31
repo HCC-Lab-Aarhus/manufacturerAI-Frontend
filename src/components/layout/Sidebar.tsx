@@ -6,8 +6,8 @@ import { type ReactElement, useCallback, useEffect, useRef, useState } from 'rea
 import ColorPicker from '@/components/ui/ColorPicker'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { usePipeline } from '@/contexts/PipelineContext'
-import { getStoredPrinterId, useSession } from '@/contexts/SessionContext'
-import { listPrinters, listFilaments, setSessionPrinter } from '@/lib/api'
+import { getStoredPrinterId, getStoredFilamentId, useSession } from '@/contexts/SessionContext'
+import { listPrinters, listFilaments, setSessionPrinter, setSessionFilament } from '@/lib/api'
 import type { Filament, Printer } from '@/types/models'
 
 export default function Sidebar (): ReactElement {
@@ -57,6 +57,16 @@ export default function Sidebar (): ReactElement {
 		if (defaultPrinter) { setPrinter(defaultPrinter) }
 	}, [printers, printer, setPrinter])
 
+	useEffect(() => {
+		if (filaments.length === 0 || filament) { return }
+		const sessionFilamentId = currentSession?.filament_id
+		const storedId = getStoredFilamentId()
+		const match = sessionFilamentId
+			? filaments.find(f => f.id === sessionFilamentId)
+			: storedId ? filaments.find(f => f.id === storedId) : null
+		if (match) { setFilament(match) }
+	}, [filaments, filament, currentSession?.filament_id, setFilament])
+
 	const handleNewSession = useCallback(() => {
 		clearAll()
 		clearSession()
@@ -80,6 +90,19 @@ export default function Sidebar (): ReactElement {
 			})
 		}
 	}, [currentSession, printers, setPrinter, patchSession])
+
+	const handleFilamentChange = useCallback(async (filamentId: string) => {
+		const found = filaments.find(f => f.id === filamentId) ?? null
+		setFilament(found)
+		if (currentSession) {
+			const result = await setSessionFilament(currentSession.id, filamentId)
+			patchSession({
+				invalidated_steps: result.invalidated_steps,
+				artifacts: result.artifacts,
+				pipeline_errors: result.pipeline_errors,
+			})
+		}
+	}, [currentSession, filaments, setFilament, patchSession])
 
 	useEffect(() => {
 		if (!menuOpenId) { return }
@@ -153,8 +176,8 @@ export default function Sidebar (): ReactElement {
 					<label className="text-xs text-fg-secondary">{'Filament'}</label>
 					<select
 						title="Select filament"
-						value={filament?.id ?? ''}
-						onChange={e => { setFilament(filaments.find(f => f.id === e.target.value) ?? null) }}
+						value={filament?.id ?? currentSession?.filament_id ?? ''}
+						onChange={e => { handleFilamentChange(e.target.value) }}
 						className={`mt-1 w-full rounded-lg border border-border bg-surface-card px-2 py-1.5 text-sm text-fg-secondary outline-none ${!filament ? flashClass : ''}`}
 					>
 						<option value="">{'Select filament…'}</option>
