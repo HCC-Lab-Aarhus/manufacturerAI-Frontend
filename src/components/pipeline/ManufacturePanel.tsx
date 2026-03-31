@@ -7,7 +7,7 @@ import { usePipeline } from '@/contexts/PipelineContext'
 import { useSession } from '@/contexts/SessionContext'
 import type { StepStatus, ManufactureStepState } from '@/hooks/useManufacture'
 import { useManufacture } from '@/hooks/useManufacture'
-import { getBundleDownloadUrl, getGCodeDownloadUrl, getBitmapDownloadUrl, getPrintJobDownloadUrl, getStlDownloadUrl } from '@/lib/api'
+import { getBundleDownloadUrl, getGCodeDownloadUrl, getBitmapDownloadUrl, getPrintJobDownloadUrl, getStlDownloadUrl, getExtrasStlDownloadUrl } from '@/lib/api'
 import type { ManufactureStep } from '@/types/models'
 
 const PlacementViewport = dynamic(() => import('@/components/viewport/PlacementViewport'), { ssr: false })
@@ -121,7 +121,7 @@ function StepRow ({ s, running, selected, onSelect, onInform, onRetry, onContinu
 	)
 }
 
-type ViewTab = 'placement' | 'routing' | 'bitmap' | 'scad' | 'stl'
+type ViewTab = 'placement' | 'routing' | 'bitmap' | 'scad' | 'stl' | 'extras'
 
 const STEP_TO_TAB: Record<string, ViewTab> = {
 	placement: 'placement',
@@ -283,6 +283,10 @@ export default function ManufacturePanel (): ReactElement {
 								<span className="flex-1 font-medium">{'enclosure.stl'}</span>
 								<span className="text-[10px] text-fg-secondary">{'3D model'}</span>
 							</a>
+							<a href={getExtrasStlDownloadUrl(sessionId)} download className="flex items-center gap-2 rounded-lg bg-surface-card px-3 py-2 text-xs text-fg hover:bg-surface-hover transition-colors">
+								<span className="flex-1 font-medium">{'extras.stl'}</span>
+								<span className="text-[10px] text-fg-secondary">{'Extra parts'}</span>
+							</a>
 							<a href={getBitmapDownloadUrl(sessionId)} download className="flex items-center gap-2 rounded-lg bg-surface-card px-3 py-2 text-xs text-fg hover:bg-surface-hover transition-colors">
 								<span className="flex-1 font-medium">{'trace_bitmap.txt'}</span>
 								<span className="text-[10px] text-fg-secondary">{'Bitmap'}</span>
@@ -300,6 +304,26 @@ export default function ManufacturePanel (): ReactElement {
 
 				{/* Right: Viewport */}
 				<div className="flex-1 flex flex-col overflow-hidden">
+					{(viewTab === 'stl' || viewTab === 'extras') && sessionId && (
+						<div className="flex items-center gap-1 border-b border-border px-3 py-1.5">
+							<button
+								onClick={() => setViewTab('stl')}
+								className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors ${
+									viewTab === 'stl' ? 'bg-surface-active text-fg ring-1 ring-accent/40' : 'text-fg-secondary hover:bg-surface-hover'
+								}`}
+							>
+								{'Enclosure'}
+							</button>
+							<button
+								onClick={() => setViewTab('extras')}
+								className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors ${
+									viewTab === 'extras' ? 'bg-surface-active text-fg ring-1 ring-accent/40' : 'text-fg-secondary hover:bg-surface-hover'
+								}`}
+							>
+								{'Extra Parts'}
+							</button>
+						</div>
+					)}
 					<div className="flex-1 overflow-hidden">
 						{viewTab === 'placement' && placementResult ? (
 							<PlacementViewport placement={placementResult} className="w-full h-full" />
@@ -314,6 +338,11 @@ export default function ManufacturePanel (): ReactElement {
 							placement={placementResult}
 							routing={routingResult}
 							stlUrl={getStlDownloadUrl(sessionId)}
+							className="w-full h-full"
+						/>
+					) : viewTab === 'extras' && sessionId ? (
+						<Scene3D
+							stlUrl={getExtrasStlDownloadUrl(sessionId)}
 							className="w-full h-full"
 						/>
 						) : (
