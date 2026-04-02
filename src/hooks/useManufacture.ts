@@ -167,7 +167,7 @@ export function useManufacture () {
 		cancelRef.current = true
 	}, [])
 
-	const runPipeline = useCallback(async (fromStep?: ManufactureStep, options?: { filament?: string; silverink_only?: boolean; toStep?: ManufactureStep }) => {
+	const runPipeline = useCallback(async (fromStep?: ManufactureStep, options?: { filament?: string; silverink_only?: boolean; two_part?: boolean; toStep?: ManufactureStep }) => {
 		if (!currentSession || running) { return }
 		if (!options?.filament) { return }
 
@@ -245,7 +245,7 @@ export function useManufacture () {
 				activeStep = 'scad'
 				setCurrentStep('scad')
 				updateStep('scad', { status: 'running' })
-				await generateScad(sessionId)
+				await generateScad(sessionId, { two_part: options?.two_part })
 				await waitForStep(sessionId, 'scad', cancelRef)
 				const sr = await getScadResult(sessionId)
 				setScadResult(sr)

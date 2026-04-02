@@ -3,9 +3,15 @@ import apiClient from '../client'
 
 const sid = (id: string) => encodeURIComponent(id)
 
-export async function generateScad (sessionId: string): Promise<{ status: string }> {
+export async function generateScad (sessionId: string, options?: { two_part?: boolean }): Promise<{ status: string }> {
 	const { data } = await apiClient.post<{ status: string }>(
-		`/api/sessions/${sid(sessionId)}/manufacture/scad`
+		`/api/sessions/${sid(sessionId)}/manufacture/scad`,
+		null,
+		{
+			params: {
+				...(options?.two_part ? { two_part: 'true' } : {})
+			}
+		}
 	)
 	return data
 }

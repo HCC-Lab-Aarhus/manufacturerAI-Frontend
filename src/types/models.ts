@@ -48,6 +48,8 @@ export interface Enclosure {
 	bottom_surface?: BottomSurface | null
 	edge_top?: EdgeProfile
 	edge_bottom?: EdgeProfile
+	enclosure_style?: 'solid' | 'two_part'
+	split_z_mm?: number | null
 }
 
 export interface UIPlacement {

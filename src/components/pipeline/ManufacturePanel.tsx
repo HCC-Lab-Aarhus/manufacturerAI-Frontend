@@ -136,6 +136,7 @@ export default function ManufacturePanel (): ReactElement {
 	const { setPendingFeedback } = usePipeline()
 	const { steps, running, allDone, placementResult, routingResult, bitmapResult, runPipeline, stop } = useManufacture()
 	const [silverinkOnly, setSilverinkOnly] = useState(false)
+	const [twoPart, setTwoPart] = useState(false)
 	const [viewTab, setViewTab] = useState<ViewTab>('placement')
 	const prevDoneRef = useRef<Set<string>>(new Set(steps.filter(s => s.status === 'done').map(s => s.step)))
 
@@ -170,7 +171,7 @@ export default function ManufacturePanel (): ReactElement {
 
 	const selectedFilament = filament?.id ?? ''
 
-	const opts = useCallback(() => ({ filament: selectedFilament, silverink_only: silverinkOnly }), [selectedFilament, silverinkOnly])
+	const opts = useCallback(() => ({ filament: selectedFilament, silverink_only: silverinkOnly, two_part: twoPart }), [selectedFilament, silverinkOnly, twoPart])
 
 	const canStart = !!selectedFilament
 
@@ -211,6 +212,7 @@ export default function ManufacturePanel (): ReactElement {
 						<span className="text-xs font-semibold text-fg">{'Steps'}</span>
 						<div className="flex items-center gap-2">
 							{!running && !allDone && (
+								<>
 								<label className="flex items-center gap-1 text-[11px] text-fg-secondary">
 									<input
 										type="checkbox"
@@ -220,6 +222,16 @@ export default function ManufacturePanel (): ReactElement {
 									/>
 									{'SilverInk'}
 								</label>
+								<label className="flex items-center gap-1 text-[11px] text-fg-secondary">
+									<input
+										type="checkbox"
+										checked={twoPart}
+										onChange={e => setTwoPart(e.target.checked)}
+										className="rounded border-border-light"
+									/>
+									{'Two-Part'}
+								</label>
+								</>
 							)}
 							{running ? (
 								<button
