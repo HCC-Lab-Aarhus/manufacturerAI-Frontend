@@ -1,4 +1,4 @@
-import type { Filament, PipelineError, Printer } from '@/types/models'
+import type { Filament, ModelOption, PipelineError, Printer } from '@/types/models'
 
 import apiClient from './client'
 
@@ -25,7 +25,45 @@ export async function setSessionPrinter (
 	return data
 }
 
+interface SetFilamentResponse {
+	filament_id: string
+	label: string
+	invalidated_steps: string[]
+	artifacts: Record<string, boolean>
+	pipeline_errors: Record<string, PipelineError>
+}
+
+export async function setSessionFilament (
+	sessionId: string,
+	filamentId: string
+): Promise<SetFilamentResponse> {
+	const { data } = await apiClient.put<SetFilamentResponse>(`/api/sessions/${encodeURIComponent(sessionId)}/filament`, null, {
+		params: { filament_id: filamentId }
+	})
+	return data
+}
+
 export async function listFilaments (): Promise<Filament[]> {
 	const { data } = await apiClient.get<{ filaments: Filament[] }>('/api/filaments')
 	return data.filaments
+}
+
+export async function listModels (): Promise<ModelOption[]> {
+	const { data } = await apiClient.get<{ models: ModelOption[] }>('/api/models')
+	return data.models
+}
+
+interface SetModelResponse {
+	model_id: string
+	label: string
+}
+
+export async function setSessionModel (
+	sessionId: string,
+	modelId: string
+): Promise<SetModelResponse> {
+	const { data } = await apiClient.put<SetModelResponse>(`/api/sessions/${encodeURIComponent(sessionId)}/model`, null, {
+		params: { model_id: modelId }
+	})
+	return data
 }

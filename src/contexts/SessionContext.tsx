@@ -13,13 +13,20 @@ import {
 } from 'react'
 
 import { deleteSession as apiDeleteSession, getSession, listSessions, renameSession as apiRenameSession } from '@/lib/api'
-import type { Filament, PipelineError, PipelineStage, Printer, SessionMeta } from '@/types/models'
+import type { Filament, ModelOption, PipelineError, PipelineStage, Printer, SessionMeta } from '@/types/models'
 
 const PRINTER_COOKIE = 'printer-id'
+const FILAMENT_COOKIE = 'filament-id'
 
 export function getStoredPrinterId (): string {
 	if (typeof document === 'undefined') { return '' }
 	const match = document.cookie.match(/(?:^|; )printer-id=([^;]*)/)
+	return match ? decodeURIComponent(match[1]) : ''
+}
+
+export function getStoredFilamentId (): string {
+	if (typeof document === 'undefined') { return '' }
+	const match = document.cookie.match(/(?:^|; )filament-id=([^;]*)/)
 	return match ? decodeURIComponent(match[1]) : ''
 }
 
@@ -29,6 +36,14 @@ function storePrinterId (id: string): void {
 		return
 	}
 	document.cookie = `${PRINTER_COOKIE}=${encodeURIComponent(id)};path=/;max-age=31536000;SameSite=Lax`
+}
+
+function storeFilamentId (id: string): void {
+	if (!id) {
+		document.cookie = `${FILAMENT_COOKIE}=;path=/;max-age=0;SameSite=Lax`
+		return
+	}
+	document.cookie = `${FILAMENT_COOKIE}=${encodeURIComponent(id)};path=/;max-age=31536000;SameSite=Lax`
 }
 
 interface SessionContextValue {
@@ -50,6 +65,8 @@ interface SessionContextValue {
 	setPrinter: (p: Printer | null) => void
 	filament: Filament | null
 	setFilament: (f: Filament | null) => void
+	model: ModelOption | null
+	setModel: (m: ModelOption | null) => void
 	flashDropdowns: () => void
 	dropdownFlashKey: number
 }
@@ -73,6 +90,8 @@ const SessionContext = createContext<SessionContextValue>({
 	setPrinter: () => {},
 	filament: null,
 	setFilament: () => {},
+	model: null,
+	setModel: () => {},
 	flashDropdowns: () => {},
 	dropdownFlashKey: 0
 })
@@ -143,6 +162,7 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 	const [loading, setLoading] = useState(false)
 	const [printer, _setPrinter] = useState<Printer | null>(null)
 	const [filament, setFilament] = useState<Filament | null>(null)
+	const [model, setModel] = useState<ModelOption | null>(null)
 	const [pendingInvalidation, setPendingInvalidation] = useState<string[] | null>(null)
 	const [dropdownFlashKey, setDropdownFlashKey] = useState(0)
 
@@ -153,6 +173,11 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 	const setPrinter = useCallback((p: Printer | null) => {
 		_setPrinter(p)
 		storePrinterId(p?.id ?? '')
+	}, [])
+
+	const _setFilament = useCallback((f: Filament | null) => {
+		setFilament(f)
+		storeFilamentId(f?.id ?? '')
 	}, [])
 
 	const refreshSessions = useCallback(async () => {
@@ -275,10 +300,12 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 		printer,
 		setPrinter,
 		filament,
-		setFilament,
+		setFilament: _setFilament,
+		model,
+		setModel,
 		flashDropdowns,
 		dropdownFlashKey
-	}), [sessions, currentSession, activeStage, loading, pendingInvalidation, selectSession, clearSession, refreshSession, refreshSessions, patchSession, clearInvalidation, renameSession, deleteSessionCb, printer, filament, setFilament, flashDropdowns, dropdownFlashKey])
+	}), [sessions, currentSession, activeStage, loading, pendingInvalidation, selectSession, clearSession, refreshSession, refreshSessions, patchSession, clearInvalidation, renameSession, deleteSessionCb, printer, filament, _setFilament, model, flashDropdowns, dropdownFlashKey])
 
 	return (
 		<SessionContext.Provider value={value}>
