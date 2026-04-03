@@ -178,7 +178,7 @@ export default function Sidebar (): ReactElement {
 	}, []) // eslint-disable-line react-hooks/exhaustive-deps
 
 	return (
-		<aside className="flex h-full w-64 shrink-0 flex-col border-r border-border bg-surface-alt">
+		<aside className="flex h-full w-64 shrink-0 flex-col border-r border-divider bg-surface-alt">
 			<div className="p-4 pb-3">
 				<h1 className="text-lg font-bold text-fg">{'ManufacturerAI'}</h1>
 				<p className="text-xs text-fg-secondary">{'Hardware design pipeline'}</p>
@@ -187,7 +187,7 @@ export default function Sidebar (): ReactElement {
 			<div className="px-3 pb-3">
 				<button
 					onClick={handleNewSession}
-					className="w-full rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover transition-colors"
+					className="w-full rounded-lg bg-accent px-3 py-2 text-sm font-medium text-on-accent hover:bg-accent-hover transition-colors"
 				>
 					{'+ New Session'}
 				</button>

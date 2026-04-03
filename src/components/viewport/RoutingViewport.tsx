@@ -86,7 +86,7 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 							<line
 								x1={sx * SCALE} y1={sy * SCALE}
 								x2={ex * SCALE} y2={ey * SCALE}
-								stroke="#ffffff"
+								stroke="var(--color-jumper)"
 								strokeWidth={traceWidth * 0.8}
 								strokeDasharray={`${traceWidth * 2},${traceWidth}`}
 								strokeLinecap="round"
@@ -94,19 +94,19 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 							<rect
 								x={sx * SCALE - traceWidth} y={sy * SCALE - traceWidth}
 								width={traceWidth * 2} height={traceWidth * 2}
-								fill="#ffffff" opacity={0.7}
+								fill="var(--color-jumper)" opacity={0.7}
 							/>
 							<rect
 								x={ex * SCALE - traceWidth} y={ey * SCALE - traceWidth}
 								width={traceWidth * 2} height={traceWidth * 2}
-								fill="#ffffff" opacity={0.7}
+								fill="var(--color-jumper)" opacity={0.7}
 							/>
 						</g>
 					)
 				})}
 			</OutlineSVG>
 
-			<div className="w-40 shrink-0 overflow-y-auto border-l border-border px-3 py-3">
+			<div className="w-40 shrink-0 overflow-y-auto border-l border-divider px-3 py-3">
 				{uniqueNets.length > 0 && (
 					<>
 						<span className="text-[10px] font-semibold text-fg-secondary uppercase tracking-wide">{'Routed Nets'}</span>
@@ -130,7 +130,7 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 							{failedNets.map(netId => (
 								<div key={netId} className="flex items-center gap-2">
 									<svg className="size-2.5 shrink-0" viewBox="0 0 10 10">
-										<circle cx={5} cy={5} r={5} fill="#ef4444" />
+										<circle cx={5} cy={5} r={5} fill="var(--color-danger)" />
 									</svg>
 									<span className="text-[11px] text-danger truncate">{netId}</span>
 								</div>
@@ -147,7 +147,7 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 								return (
 									<div key={i} className="flex items-center gap-2">
 										<svg className="size-2.5 shrink-0" viewBox="0 0 10 10">
-											<rect width={10} height={10} rx={2} fill="#ffffff" />
+											<rect width={10} height={10} rx={2} fill="var(--color-jumper)" />
 										</svg>
 										<span className="text-[11px] text-fg-secondary truncate">{j.net_id} ({j.length_mm.toFixed(1)}mm)</span>
 									</div>

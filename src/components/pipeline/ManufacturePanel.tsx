@@ -90,7 +90,7 @@ function StepRow ({ s, running, selected, onSelect, onInform, onRetry, onContinu
 						{onRetry && (
 							<button
 								onClick={() => onRetry(s.step)}
-								className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
+								className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-on-accent-muted hover:bg-accent-hover transition-colors"
 							>
 								{'Retry'}
 							</button>
@@ -106,7 +106,7 @@ function StepRow ({ s, running, selected, onSelect, onInform, onRetry, onContinu
 						{s.responsibleAgent && onInform && (
 							<button
 								onClick={() => onInform(s.responsibleAgent!, s.message!)}
-								className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
+								className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-on-accent-muted hover:bg-accent-hover transition-colors"
 							>
 								{s.responsibleAgent === 'design' ? 'Inform the Designer' : 'Inform the Circuit'}
 							</button>
@@ -213,7 +213,7 @@ export default function ManufacturePanel (): ReactElement {
 		<div className="flex h-full flex-col">
 			<div className="flex-1 flex overflow-hidden">
 				{/* Left: Steps panel */}
-				<div className="w-72 shrink-0 flex flex-col border-r border-border">
+				<div className="w-72 shrink-0 flex flex-col border-r border-divider">
 					<div className="flex items-center justify-between px-3 py-2 border-b border-border">
 						<span className="text-xs font-semibold text-fg">{'Steps'}</span>
 						<div className="flex items-center gap-2">
@@ -242,7 +242,7 @@ export default function ManufacturePanel (): ReactElement {
 							{running ? (
 								<button
 									onClick={stop}
-									className="rounded-md bg-danger px-2.5 py-1 text-[11px] font-medium text-white hover:bg-danger/80 transition-colors"
+									className="rounded-md bg-danger px-2.5 py-1 text-[11px] font-medium text-on-danger hover:bg-danger/80 transition-colors"
 								>
 									{'Stop'}
 								</button>
@@ -251,7 +251,7 @@ export default function ManufacturePanel (): ReactElement {
 									<span className="text-[11px] font-medium text-success">{'Complete'}</span>
 									<button
 										onClick={() => { if (!requireFilament()) return; runPipeline('placement', { silverink_only: silverinkOnly }) }}
-										className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
+										className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-on-accent-muted hover:bg-accent-hover transition-colors"
 									>
 										{'Re-run'}
 									</button>
@@ -259,14 +259,14 @@ export default function ManufacturePanel (): ReactElement {
 							) : canResume ? (
 								<button
 									onClick={() => { if (!requireFilament()) return; runPipeline(firstIncomplete!.step, { silverink_only: silverinkOnly }) }}
-									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
+									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-on-accent-muted hover:bg-accent-hover transition-colors"
 								>
 									{'Resume'}
 								</button>
 							) : (
 								<button
 									onClick={() => { if (!requireFilament()) return; runPipeline(undefined, { silverink_only: silverinkOnly }) }}
-									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
+									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-on-accent-muted hover:bg-accent-hover transition-colors"
 								>
 									{'Start'}
 								</button>
@@ -319,7 +319,7 @@ export default function ManufacturePanel (): ReactElement {
 								<span className="flex-1 font-medium">{'print_job.json'}</span>
 								<span className="text-[10px] text-fg-secondary">{'Manifest'}</span>
 							</a>
-							<a href={getBundleDownloadUrl(sessionId)} download className="mt-1 flex items-center justify-center rounded-lg bg-success px-4 py-2.5 text-sm font-semibold text-white hover:bg-success/80 transition-colors">
+							<a href={getBundleDownloadUrl(sessionId)} download className="mt-1 flex items-center justify-center rounded-lg bg-success px-4 py-2.5 text-sm font-semibold text-on-success hover:bg-success/80 transition-colors">
 								{'Download Bundle (.zip)'}
 							</a>
 						</div>

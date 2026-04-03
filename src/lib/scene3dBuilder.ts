@@ -1,24 +1,22 @@
 import * as THREE from 'three'
 import { normalizeOutline, normalizeHoles, normaliseOutline, expandOutlineVertices } from './viewport'
 import type { EdgeProfile, HeightGrid, Outline, UIPlacement } from '@/types/models'
+import { SCENE_3D } from '@/lib/theme'
 
-const PALETTE = [
-	0x4ea8d8, 0x52d474, 0xeeb830, 0xee6e6e, 0xb890e8,
-	0x40c0d0, 0x60e090, 0xd8b040, 0xe88080, 0x90d0e0,
-]
+const PALETTE = [...SCENE_3D.componentPalette]
 
 const MAT = {
-	pcb: () => new THREE.MeshPhongMaterial({ color: 0x1c3824, shininess: 10, side: THREE.DoubleSide }),
+	pcb: () => new THREE.MeshPhongMaterial({ color: SCENE_3D.pcb, shininess: 10, side: THREE.DoubleSide }),
 	trace: (col: number) => new THREE.LineBasicMaterial({ color: col, linewidth: 2 }),
 	component: (col: number) => new THREE.MeshPhongMaterial({ color: col, shininess: 60 }),
 	wallFill: () => new THREE.MeshPhongMaterial({
-		color: 0x4a6888, side: THREE.FrontSide,
-		transparent: true, opacity: 0.35, shininess: 0,
+		color: SCENE_3D.wallFill, side: THREE.FrontSide,
+		transparent: true, opacity: SCENE_3D.wallOpacity, shininess: 0,
 		depthWrite: false,
 	}),
 	lidFill: () => new THREE.MeshPhongMaterial({
-		color: 0x5a7898, side: THREE.FrontSide,
-		transparent: true, opacity: 0.18, shininess: 0,
+		color: SCENE_3D.lidFill, side: THREE.FrontSide,
+		transparent: true, opacity: SCENE_3D.lidOpacity, shininess: 0,
 		depthWrite: false,
 		polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
 	}),
@@ -252,7 +250,7 @@ function buildEnclosureShell (
 		group.add(wallMesh)
 	}
 
-	const outlineMat = new THREE.LineBasicMaterial({ color: 0x90c8ff })
+	const outlineMat = new THREE.LineBasicMaterial({ color: SCENE_3D.outline })
 	const defH = enclosure?.height_mm ?? 25
 
 	// Lid
@@ -292,7 +290,7 @@ function buildEnclosureShell (
 		group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(lidLoopPts), outlineMat))
 
 		// Component cutout rings
-		const cutoutMat = new THREE.LineBasicMaterial({ color: 0xffdd66 })
+		const cutoutMat = new THREE.LineBasicMaterial({ color: SCENE_3D.cutoutHighlight })
 		const RING_SEGS = 24
 		const CLR = 0.5
 		for (const comp of (compList ?? [])) {

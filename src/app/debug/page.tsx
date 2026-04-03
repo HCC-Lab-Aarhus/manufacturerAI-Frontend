@@ -157,7 +157,7 @@ export default function DebugPage (): ReactElement {
 							onClick={() => { setTestMode(mode); clearDownloads() }}
 							className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
 								testMode === mode
-									? 'bg-accent text-white'
+									? 'bg-accent text-on-accent'
 									: 'text-fg-secondary hover:text-fg'
 							}`}
 						>
@@ -200,7 +200,7 @@ export default function DebugPage (): ReactElement {
 					<button
 						onClick={handleGenerate}
 						disabled={generating || (needsFilament && !filament)}
-						className="w-full rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
+						className="w-full rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-on-accent hover:bg-accent-hover disabled:opacity-50 transition-colors"
 					>
 						{generating ? 'Generating…' : 'Generate Files'}
 					</button>
@@ -211,18 +211,18 @@ export default function DebugPage (): ReactElement {
 						<div className="flex flex-col gap-3 pt-2">
 							<div className="flex gap-3">
 								{gcodeUrl && (
-									<a href={gcodeUrl} download={gcodeFilename} className="flex-1 rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-accent-hover transition-colors">
+									<a href={gcodeUrl} download={gcodeFilename} className="flex-1 rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-medium text-on-accent hover:bg-accent-hover transition-colors">
 										{'Download G-code'}
 									</a>
 								)}
 							</div>
 							{bitmapUrls.map(b => (
-								<a key={b.filename} href={b.url} download={b.filename} className="rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-accent-hover transition-colors">
+								<a key={b.filename} href={b.url} download={b.filename} className="rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-medium text-on-accent hover:bg-accent-hover transition-colors">
 									{bitmapUrls.length > 1 ? `Download ${b.filename}` : 'Download Bitmap'}
 								</a>
 							))}
 							{contractUrl && (
-								<a href={contractUrl} download="print_job.json" className="rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-accent-hover transition-colors">
+								<a href={contractUrl} download="print_job.json" className="rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-medium text-on-accent hover:bg-accent-hover transition-colors">
 									{'Download Contract (print_job.json)'}
 								</a>
 							)}
@@ -330,13 +330,13 @@ export default function DebugPage (): ReactElement {
 							}
 						}}
 						disabled={bulkGenerating || bulkFilaments.size === 0}
-						className="w-full rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
+						className="w-full rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-on-accent hover:bg-accent-hover disabled:opacity-50 transition-colors"
 					>
 						{bulkGenerating ? 'Generating…' : 'Generate All Test Files'}
 					</button>
 
 					{bulkError && <p className="text-sm text-danger text-center">{bulkError}</p>}
-					{bulkDone && <p className="text-sm text-green-500 text-center">{'Files saved!'}</p>}
+					{bulkDone && <p className="text-sm text-success text-center">{'Files saved!'}</p>}
 				</div>
 
 			</div>

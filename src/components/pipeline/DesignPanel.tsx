@@ -113,7 +113,7 @@ export default function DesignPanel (): ReactElement {
 
 	return (
 		<div ref={containerRef} className="flex h-full">
-			<div className="flex flex-col border-r border-border overflow-hidden" style={{ width: design ? `${chatWidthPct}%` : '100%' }}>
+			<div className="flex flex-col border-r border-divider overflow-hidden" style={{ width: design ? `${chatWidthPct}%` : '100%' }}>
 				{chatColumn}
 			</div>
 

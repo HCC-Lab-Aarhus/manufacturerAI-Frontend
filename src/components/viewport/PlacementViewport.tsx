@@ -23,7 +23,7 @@ export default function PlacementViewport ({ placement, className }: Props): Rea
 				if (!c.body) {
 					return (
 						<g key={c.instance_id}>
-							<circle cx={c.x_mm * 4} cy={c.y_mm * 4} r={6} fill="#5672a0" opacity={0.5} />
+							<circle cx={c.x_mm * 4} cy={c.y_mm * 4} r={6} fill="var(--color-accent)" opacity={0.5} />
 						</g>
 					)
 				}

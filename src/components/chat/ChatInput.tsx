@@ -9,7 +9,7 @@ function TokenRing ({ usage }: { usage: TokenUsage }): ReactElement {
 	const r = 11
 	const circ = 2 * Math.PI * r
 	const offset = circ * (1 - ratio)
-	const color = ratio > 0.9 ? 'var(--color-danger)' : ratio > 0.7 ? 'var(--color-warning, #d29922)' : 'var(--color-accent)'
+	const color = ratio > 0.9 ? 'var(--color-danger)' : ratio > 0.7 ? 'var(--color-warning)' : 'var(--color-accent)'
 
 	return (
 		<div className="relative flex items-center justify-center" title={`${usage.input_tokens.toLocaleString()} / ${usage.budget.toLocaleString()} tokens`}>
@@ -136,7 +136,7 @@ export default function ChatInput ({ onSend, disabled, placeholder, streaming, o
 					<button
 						type="button"
 						onClick={onStop}
-						className="rounded-xl bg-danger px-4 py-2.5 text-sm font-medium text-white hover:bg-danger-hover transition-colors"
+						className="rounded-xl bg-danger px-4 py-2.5 text-sm font-medium text-on-danger hover:bg-danger-hover transition-colors"
 					>
 						{'Stop'}
 					</button>
@@ -145,7 +145,7 @@ export default function ChatInput ({ onSend, disabled, placeholder, streaming, o
 					<button
 						type="submit"
 						disabled={!canSend || !value.trim()}
-						className="rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+						className="rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-on-accent hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
 					>
 						{'Send'}
 					</button>

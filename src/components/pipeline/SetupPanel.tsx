@@ -178,7 +178,7 @@ export default function SetupPanel (): ReactElement {
 						<button
 							onClick={handleGenerate}
 							disabled={!currentSession || !outline.trim()}
-							className="rounded-xl bg-accent px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-accent-hover hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all"
+							className="rounded-xl bg-accent px-6 py-2.5 text-sm font-semibold text-on-accent shadow-md hover:bg-accent-hover hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all"
 						>
 							{'▶ Generate Firmware'}
 						</button>
@@ -272,7 +272,7 @@ export default function SetupPanel (): ReactElement {
 								<button
 									onClick={recompile}
 									disabled={recompiling}
-									className="rounded-lg bg-warning px-3 py-1.5 text-xs font-medium text-white hover:bg-warning/80 disabled:opacity-40 transition-colors"
+									className="rounded-lg bg-warning px-3 py-1.5 text-xs font-medium text-on-warning hover:bg-warning/80 disabled:opacity-40 transition-colors"
 								>
 									{recompiling ? 'Compiling…' : '↻ Compile'}
 								</button>
@@ -280,7 +280,7 @@ export default function SetupPanel (): ReactElement {
 							<button
 								onClick={handleGenerate}
 								disabled={!currentSession}
-								className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-40 transition-colors"
+								className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-on-accent hover:bg-accent-hover disabled:opacity-40 transition-colors"
 							>
 								{'Re-run'}
 							</button>
@@ -302,7 +302,7 @@ export default function SetupPanel (): ReactElement {
 					<button
 						onClick={recompile}
 						disabled={recompiling}
-						className="shrink-0 rounded bg-error px-2.5 py-1 text-[11px] font-medium text-white hover:bg-error/80 disabled:opacity-40 transition-colors"
+						className="shrink-0 rounded bg-error px-2.5 py-1 text-[11px] font-medium text-on-danger hover:bg-error/80 disabled:opacity-40 transition-colors"
 					>
 						{recompiling ? 'Compiling…' : 'Retry Compile'}
 					</button>
@@ -335,7 +335,7 @@ export default function SetupPanel (): ReactElement {
 
 	return (
 		<div className="flex h-full">
-			<div className={`flex flex-col border-r border-border ${showRight ? 'w-1/2' : 'flex-1'}`}>
+			<div className={`flex flex-col border-r border-divider ${showRight ? 'w-1/2' : 'flex-1'}`}>
 				{chatColumn}
 			</div>
 			{rightColumn && (

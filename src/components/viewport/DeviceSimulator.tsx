@@ -370,11 +370,11 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 
 	const statusColor: Record<string, string> = {
 		disconnected: 'bg-fg-muted/30',
-		connecting: 'bg-yellow-400',
-		connected: 'bg-yellow-400',
-		booted: 'bg-green-400',
-		stopped: 'bg-red-400',
-		error: 'bg-red-400',
+		connecting: 'bg-indicator-connecting',
+		connected: 'bg-indicator-connecting',
+		booted: 'bg-indicator-running',
+		stopped: 'bg-indicator-stopped',
+		error: 'bg-indicator-stopped',
 	}
 
 	const isRunning = status === 'booted' || status === 'connecting' || status === 'connected'
@@ -419,7 +419,7 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 						>
 							<span className={`inline-block h-2 w-2 rounded-full ${
 								isActive
-									? p.type === 'ir_output' ? 'bg-purple-400' : p.type === 'led' ? 'bg-green-400' : 'bg-accent'
+									? p.type === 'ir_output' ? 'bg-indicator-ir' : p.type === 'led' ? 'bg-indicator-led' : 'bg-accent'
 									: 'bg-fg-muted/30'
 							}`} />
 							<span>{p.instance_id}</span>
@@ -429,12 +429,12 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 				})}
 			</div>
 			{/* Serial log */}
-			<div className="border-t border-border bg-[#0a0e14] flex flex-col max-h-[30%] min-h-20">
+			<div className="border-t border-border bg-terminal-bg flex flex-col max-h-[30%] min-h-20">
 				<div className="flex items-center justify-between px-3 py-1 bg-surface-alt border-b border-border">
 					<span className="text-[11px] font-medium text-fg-muted">Serial Monitor</span>
 					<button onClick={clearLog} className="text-[10px] text-fg-muted hover:text-fg transition-colors" title="Clear log">🗑</button>
 				</div>
-				<div className="flex-1 overflow-y-auto px-2 py-1 font-mono text-[11px] text-[#8cc265] leading-relaxed">
+				<div className="flex-1 overflow-y-auto px-2 py-1 font-mono text-[11px] text-terminal-fg leading-relaxed">
 					{serialLog.length === 0 ? (
 						<span className="text-fg-muted/40 italic">No serial output yet</span>
 					) : (

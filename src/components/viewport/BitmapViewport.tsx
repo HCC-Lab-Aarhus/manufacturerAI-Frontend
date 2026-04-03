@@ -155,7 +155,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 			<div className="flex-1 overflow-auto p-4 flex items-center justify-center">
 				<svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`}>
 					<rect x={padX} y={padY} width={nominal_bed_width * bedScale} height={nominal_bed_depth * bedScale}
-						fill="none" stroke="#d6d2ca" strokeWidth={1.5} strokeDasharray="8,4" />
+						fill="none" stroke="var(--color-border-light)" strokeWidth={1.5} strokeDasharray="8,4" />
 
 					{(keepout_left > 0 || keepout_right > 0 || keepout_front > 0 || keepout_back > 0) && (
 						<rect
@@ -163,11 +163,11 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 							y={padY + keepout_back * bedScale}
 							width={bed_width * bedScale}
 							height={bed_depth * bedScale}
-							fill="none" stroke="#358045" strokeWidth={1} strokeDasharray="4,3" opacity={0.5}
+							fill="none" stroke="var(--color-pcb-stroke)" strokeWidth={1} strokeDasharray="4,3" opacity={0.5}
 						/>
 					)}
 
-					<text x={padX + nominal_bed_width * bedScale / 2} y={padY - 8} textAnchor="middle" fontSize={10} fill="#6b6560">
+					<text x={padX + nominal_bed_width * bedScale / 2} y={padY - 8} textAnchor="middle" fontSize={10} fill="var(--color-label)">
 						{'Build plate '}{nominal_bed_width}{' × '}{nominal_bed_depth}{' mm'}
 					</text>
 
@@ -175,7 +175,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 						<path
 							d={outlinePathD}
 							fillRule="evenodd"
-							fill="rgba(86,114,160,0.08)" stroke="#5672a0" strokeWidth={1.5}
+								fill="var(--color-outline-fill)" stroke="var(--color-outline-stroke)" strokeWidth={1.5}
 						/>
 					)}
 
@@ -190,7 +190,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 								<rect
 									x={-w / 2} y={-h / 2}
 									width={w} height={h}
-									fill="rgba(86,114,160,0.2)" stroke="#5672a0" strokeWidth={0.8}
+										fill="var(--color-body-fill-hl)" stroke="var(--color-outline-stroke)" strokeWidth={0.8}
 								/>
 							</g>
 						)

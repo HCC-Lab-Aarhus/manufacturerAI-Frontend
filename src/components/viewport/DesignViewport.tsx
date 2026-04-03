@@ -7,6 +7,7 @@ import type { CatalogBody, CatalogPin, DesignSpec, UIPlacement } from '@/types/m
 import { normalizeOutline, normalizeHoles, normaliseOutline, buildOutlinePath, outlineBBox, snapToEdge, nearestEdge, SCALE, PAD } from '@/lib/viewport'
 import { validateUIPlacement, putDesign, submitDesignToConversation } from '@/lib/api/design'
 
+import { SVG_PALETTE } from '@/lib/theme'
 import ComponentIcon from './ComponentIcon'
 
 type EnrichedPlacement = UIPlacement & {
@@ -44,9 +45,9 @@ function stripEnrichment (design: DesignSpec): DesignSpec {
 
 const EDGE_THRESHOLD = 3
 const DRAG_COLORS = {
-	valid:   { fill: 'rgba(52,211,153,0.25)', stroke: '#34d399' },
-	invalid: { fill: 'rgba(239,68,68,0.25)',  stroke: '#ef4444' },
-	pending: { fill: 'rgba(251,191,36,0.20)', stroke: '#fbbf24' },
+	valid:   { fill: 'var(--color-drag-valid-fill)', stroke: 'var(--color-drag-valid)' },
+	invalid: { fill: 'var(--color-drag-invalid-fill)', stroke: 'var(--color-drag-invalid)' },
+	pending: { fill: 'var(--color-drag-pending-fill)', stroke: 'var(--color-drag-pending)' },
 }
 
 function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted, className }: Props): ReactElement {
@@ -390,10 +391,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 	const vb = `${vbState.x} ${vbState.y} ${vbState.w} ${vbState.h}`
 	const path = buildOutlinePath(outline, holes.length > 0 ? holes : undefined)
 
-	const UI_COLORS = [
-		'#58a6ff', '#3fb950', '#d29922', '#f778ba', '#bc8cff',
-		'#79c0ff', '#56d364', '#e3b341', '#ff7b72', '#a5d6ff',
-	]
+	const UI_COLORS = SVG_PALETTE
 
 	return (
 		<div className="flex flex-col w-full h-full">
@@ -409,8 +407,8 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 				>
 					<defs>
 						<pattern id="grid10" width={10 * SCALE} height={10 * SCALE} patternUnits="userSpaceOnUse">
-							<line x1={0} y1={0} x2={0} y2={10 * SCALE} stroke="rgba(255,255,255,0.04)" strokeWidth={0.5} />
-							<line x1={0} y1={0} x2={10 * SCALE} y2={0} stroke="rgba(255,255,255,0.04)" strokeWidth={0.5} />
+							<line x1={0} y1={0} x2={0} y2={10 * SCALE} stroke="var(--color-grid)" strokeWidth={0.5} />
+							<line x1={0} y1={0} x2={10 * SCALE} y2={0} stroke="var(--color-grid)" strokeWidth={0.5} />
 						</pattern>
 					</defs>
 					<rect
@@ -420,7 +418,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 						height={baseVbH}
 						fill="url(#grid10)"
 					/>
-					<path d={path} fill="rgba(86,114,160,0.06)" stroke="#5672a0" strokeWidth={2} fillRule="evenodd" />
+					<path d={path} fill="var(--color-outline-fill)" stroke="var(--color-outline-stroke)" strokeWidth={2} fillRule="evenodd" />
 
 					{design.pcb_contour && design.pcb_contour.length > 2 && (
 						<>
@@ -428,7 +426,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 								d={design.pcb_contour.map((pt, i) =>
 									`${i === 0 ? 'M' : 'L'}${pt[0] * SCALE},${pt[1] * SCALE}`
 								).join(' ') + 'Z'}
-								fill="rgba(0, 180, 0, 0.06)"
+								fill="var(--color-pcb-fill)"
 								stroke="none"
 								pointerEvents="none"
 							/>
@@ -437,7 +435,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 									`${i === 0 ? 'M' : 'L'}${pt[0] * SCALE},${pt[1] * SCALE}`
 								).join(' ') + 'Z'}
 								fill="none"
-								stroke="#00aa44"
+								stroke="var(--color-pcb-stroke)"
 								strokeWidth={1.5}
 								strokeDasharray="6,3"
 								pointerEvents="none"
@@ -508,7 +506,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 											y={p.y_mm * SCALE - 10}
 											textAnchor="middle"
 											fontSize={7}
-											fill="#90c8ff"
+											fill="var(--color-accent)"
 										>
 											{p.instance_id}
 										</text>
@@ -530,7 +528,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 						y={bbox.minY * SCALE - PAD / 2}
 						textAnchor="middle"
 						fontSize={10}
-						fill="#6b6560"
+						fill="var(--color-label)"
 					>
 						{bbox.width.toFixed(1)} mm
 					</text>
@@ -539,7 +537,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 						y={bbox.minY * SCALE + bbox.height * SCALE / 2}
 						textAnchor="middle"
 						fontSize={10}
-						fill="#6b6560"
+						fill="var(--color-label)"
 						transform={`rotate(-90, ${bbox.minX * SCALE - PAD / 2}, ${bbox.minY * SCALE + bbox.height * SCALE / 2})`}
 					>
 						{bbox.height.toFixed(1)} mm
@@ -577,20 +575,20 @@ function SideMountMarker ({ up, verts }: { up: EnrichedPlacement; verts: [number
 	const b1x = cx + dx * arrowW, b1y = cy + dy * arrowW
 	const b2x = cx - dx * arrowW, b2y = cy - dy * arrowW
 
-	return (
+		return (
 		<>
 			<polygon
 				points={`${b1x},${b1y} ${tipX},${tipY} ${b2x},${b2y}`}
-				fill="#58a6ff"
+				fill="var(--color-accent)"
 				opacity={0.7}
 			/>
-			<circle cx={cx} cy={cy} r={3} fill="#90c8ff" />
+			<circle cx={cx} cy={cy} r={3} fill="var(--color-accent)" />
 			<text
 				x={cx + nx * 16}
 				y={cy + ny * 16}
 				textAnchor="middle"
 				fontSize={7}
-				fill="#90c8ff"
+				fill="var(--color-accent)"
 			>
 				{up.instance_id}
 			</text>

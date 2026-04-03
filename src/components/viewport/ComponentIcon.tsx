@@ -18,9 +18,9 @@ interface Props {
 }
 
 const DRAG_FILLS: Record<string, { fill: string; stroke: string }> = {
-	valid:   { fill: 'rgba(52,211,153,0.25)', stroke: '#34d399' },
-	invalid: { fill: 'rgba(239,68,68,0.25)',  stroke: '#ef4444' },
-	pending: { fill: 'rgba(251,191,36,0.20)', stroke: '#fbbf24' },
+	valid:   { fill: 'var(--color-drag-valid-fill)', stroke: 'var(--color-drag-valid)' },
+	invalid: { fill: 'var(--color-drag-invalid-fill)', stroke: 'var(--color-drag-invalid)' },
+	pending: { fill: 'var(--color-drag-pending-fill)', stroke: 'var(--color-drag-pending)' },
 }
 
 export default function ComponentIcon ({ x, y, rotation = 0, body, pins, label, dimmed, highlight, dragValid }: Props): ReactElement {
@@ -29,8 +29,8 @@ export default function ComponentIcon ({ x, y, rotation = 0, body, pins, label, 
 	const opacity = dimmed ? 0.3 : 1
 
 	const dv = dragValid ? DRAG_FILLS[dragValid] : null
-	const bodyFill = dv?.fill ?? (highlight ? 'rgba(86,114,160,0.15)' : 'rgba(61,58,54,0.08)')
-	const bodyStroke = dv?.stroke ?? (highlight ? '#5672a0' : '#6b6560')
+	const bodyFill = dv?.fill ?? (highlight ? 'var(--color-body-fill-hl)' : 'var(--color-body-fill)')
+	const bodyStroke = dv?.stroke ?? (highlight ? 'var(--color-body-stroke-hl)' : 'var(--color-body-stroke)')
 
 	return (
 		<g transform={`translate(${cx},${cy}) rotate(${rotation})`} opacity={opacity}>
@@ -78,7 +78,7 @@ export default function ComponentIcon ({ x, y, rotation = 0, body, pins, label, 
 			{pins.map(pin => {
 				const px = pin.position_mm[0] * SCALE
 				const py = pin.position_mm[1] * SCALE
-				const color = pin.direction === 'in' ? '#5672a0' : pin.direction === 'out' ? '#b05050' : '#d4b462'
+				const color = pin.direction === 'in' ? 'var(--color-pin-input)' : pin.direction === 'out' ? 'var(--color-pin-output)' : 'var(--color-pin-bidir)'
 				return (
 					<g key={pin.id}>
 						<circle cx={px} cy={py} r={2.5} fill={color} />
@@ -88,7 +88,7 @@ export default function ComponentIcon ({ x, y, rotation = 0, body, pins, label, 
 								y={py - 5}
 								textAnchor="middle"
 								fontSize={7}
-								fill="#6b6560"
+								fill="var(--color-label)"
 							>
 								{pin.id}
 							</text>
@@ -104,7 +104,7 @@ export default function ComponentIcon ({ x, y, rotation = 0, body, pins, label, 
 						: (body.length_mm ?? 5) / 2) * SCALE + 12}
 					textAnchor="middle"
 					fontSize={8}
-					fill="#6b6560"
+					fill="var(--color-label)"
 				>
 					{label}
 				</text>
