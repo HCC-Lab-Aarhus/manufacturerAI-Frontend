@@ -16,7 +16,8 @@ import {
 	getPlacementResult,
 	getRoutingResult,
 	getBitmap,
-	getScadResult
+	getScadResult,
+	cancelPipeline
 } from '@/lib/api'
 import type { ManufactureStep, PlacementResult, RoutingResult, BitmapResult, ScadResult, GCodeStatus, PipelineError } from '@/types/models'
 
@@ -180,7 +181,9 @@ export function useManufacture () {
 	}, [currentSession?.id])
 
 	const checkForRunningSteps = useCallback((sessionId: string) => {
+		sseAbortRef.current?.abort()
 		const controller = new AbortController()
+		sseAbortRef.current = controller
 		const run = async () => {
 			try {
 				const response = await fetch(sseUrl(sessionId), { signal: controller.signal })
@@ -193,6 +196,7 @@ export function useManufacture () {
 				let gotRunning = false
 
 				while (true) {
+					if (cancelRef.current) { reader.cancel(); setRunning(false); setCurrentStep(null); return }
 					const { done, value } = await reader.read()
 					if (done) { break }
 
@@ -226,6 +230,8 @@ export function useManufacture () {
 							}
 
 							if (gotRunning) {
+								if (cancelRef.current) { reader.cancel(); setRunning(false); setCurrentStep(null); return }
+
 								setSteps(prev => prev.map(s => {
 									const entry = snapshot[s.step]
 									if (!entry) { return s }
@@ -280,7 +286,12 @@ export function useManufacture () {
 						} catch { /* ignore parse errors */ }
 					}
 				}
-			} catch { /* SSE check failed, not critical */ }
+			} catch {
+				if (cancelRef.current) {
+					setRunning(false)
+					setCurrentStep(null)
+				}
+			}
 		}
 		run()
 		return () => { controller.abort() }
@@ -309,7 +320,10 @@ export function useManufacture () {
 	const stop = useCallback(() => {
 		cancelRef.current = true
 		sseAbortRef.current?.abort()
-	}, [])
+		if (currentSession?.id) {
+			cancelPipeline(currentSession.id).catch(() => {})
+		}
+	}, [currentSession?.id])
 
 	const runPipeline = useCallback(async (fromStep?: ManufactureStep, options?: { filament?: string; silverink_only?: boolean; two_part?: boolean; toStep?: ManufactureStep }) => {
 		if (!currentSession || running) { return }
