@@ -28,3 +28,8 @@ export function getExtrasStlDownloadUrl (sessionId: string): string {
 	const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
 	return `${base}/api/sessions/${sid(sessionId)}/manufacture/extras-stl`
 }
+
+export function getTopStlDownloadUrl (sessionId: string): string {
+	const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+	return `${base}/api/sessions/${sid(sessionId)}/manufacture/stl-top`
+}
