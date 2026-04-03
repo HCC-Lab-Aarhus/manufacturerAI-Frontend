@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, type ReactElement, useEffect, useRef, useState } from 'react'
+import { memo, type ReactElement, useCallback, useEffect, useRef, useState } from 'react'
 
 import { useSession } from '@/contexts/SessionContext'
 import type { CatalogBody, CatalogPin, DesignSpec, UIPlacement } from '@/types/models'
@@ -57,6 +57,11 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 	const norm = normaliseOutline(outline)
 	const { verts } = norm
 	const svgRef = useRef<SVGSVGElement>(null)
+	const [svgEl, setSvgEl] = useState<SVGSVGElement | null>(null)
+	const svgCallbackRef = useCallback((node: SVGSVGElement | null) => {
+		svgRef.current = node
+		setSvgEl(node)
+	}, [])
 
 	const designRef = useRef(design)
 	designRef.current = design
@@ -328,7 +333,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 			svg.removeEventListener('pointermove', onPointerMove)
 			svg.removeEventListener('pointerup', onPointerUp)
 		}
-	}, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [sessionId, svgEl]) // eslint-disable-line react-hooks/exhaustive-deps
 
 	const bbox = outlineBBox(outline)
 	const baseVbX = bbox.minX * SCALE - PAD
@@ -373,7 +378,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 		}
 		svg.addEventListener('wheel', onWheel, { passive: false })
 		return () => { svg.removeEventListener('wheel', onWheel) }
-	}, []) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [svgEl]) // eslint-disable-line react-hooks/exhaustive-deps
 
 	if (outline.length < 3) {
 		return <div className="flex items-center justify-center text-fg-secondary text-sm p-8">No outline data</div>
@@ -397,7 +402,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 			</div>
 			<div className="flex-1 overflow-hidden">
 				<svg
-					ref={svgRef}
+					ref={svgCallbackRef}
 					viewBox={vb}
 					className={className ?? 'w-full h-full'}
 					xmlns="http://www.w3.org/2000/svg"
