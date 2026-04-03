@@ -162,6 +162,12 @@ export interface BitmapResult {
 	bitmap_rows: number
 	bed_width: number
 	bed_depth: number
+	nominal_bed_width: number
+	nominal_bed_depth: number
+	keepout_left: number
+	keepout_right: number
+	keepout_front: number
+	keepout_back: number
 	bed_offset_x: number
 	bed_offset_y: number
 	outline: Outline
