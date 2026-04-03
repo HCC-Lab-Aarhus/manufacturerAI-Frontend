@@ -372,15 +372,20 @@ export function useManufacture () {
 				setCurrentStep('routing')
 				updateStep('routing', { status: 'running' })
 				await runRouting(sessionId)
-				let fetchInFlight = false
 				await waitForStepSSE(sessionId, 'routing', cancelRef, sseAbort, (entry) => {
 					updateStep('routing', { status: 'running', message: entry.message || undefined })
-					if (!fetchInFlight) {
-						fetchInFlight = true
-						getRoutingResult(sessionId)
-							.then(setRoutingResult)
-							.catch(() => {})
-							.finally(() => { fetchInFlight = false })
+					const rd = entry.detail?.routing as { traces?: unknown[]; pin_assignments?: Record<string, unknown>; failed_nets?: string[]; trace_width_mm?: number } | undefined
+					if (rd?.traces && placementResult) {
+						setRoutingResult({
+							traces: rd.traces as RoutingResult['traces'],
+							trace_width_mm: rd.trace_width_mm ?? 1.0,
+							failed_nets: rd.failed_nets ?? [],
+							outline: placementResult.outline,
+							enclosure: placementResult.enclosure,
+							components: placementResult.components,
+							nets: placementResult.nets,
+							pcb_contour: placementResult.pcb_contour,
+						})
 					}
 				})
 				const rr = await getRoutingResult(sessionId)
