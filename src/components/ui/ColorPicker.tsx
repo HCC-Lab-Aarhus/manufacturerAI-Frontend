@@ -180,13 +180,10 @@ export default function ColorPicker (): ReactElement {
 	const [h, setH] = useState(() => hexToHsb(color)[0])
 	const [s, setS] = useState(() => hexToHsb(color)[1])
 	const [b, setB] = useState(() => hexToHsb(color)[2])
-	const internalUpdate = useRef(false)
+	const lastInternalHex = useRef(color)
 
 	useEffect(() => {
-		if (internalUpdate.current) {
-			internalUpdate.current = false
-			return
-		}
+		if (lastInternalHex.current === color) return
 		const [nh, ns, nb] = hexToHsb(color)
 		setH(nh)
 		setS(ns)
@@ -197,8 +194,9 @@ export default function ColorPicker (): ReactElement {
 		setH(nh)
 		setS(ns)
 		setB(nb)
-		internalUpdate.current = true
-		setColor(hsbToHex(nh, ns, nb))
+		const hex = hsbToHex(nh, ns, nb)
+		lastInternalHex.current = hex
+		setColor(hex)
 	}, [setColor])
 
 	const satGradient = useMemo(() =>
@@ -214,7 +212,7 @@ export default function ColorPicker (): ReactElement {
 		setH(nh)
 		setS(ns)
 		setB(nb)
-		internalUpdate.current = true
+		lastInternalHex.current = DEFAULT_COLOR
 		setColor(DEFAULT_COLOR)
 	}, [setColor])
 

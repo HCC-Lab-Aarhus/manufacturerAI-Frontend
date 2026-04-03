@@ -102,14 +102,15 @@ export function deriveThemeVars (hex: string): Record<string, string> {
 	const isDark = l < 50
 	const cd = isDark ? 1 : -1
 
-	const accentS = clamp(s + 30, 30, 70)
+	const satScale = Math.min(s / 20, 1)
+	const accentS = clamp(s + satScale * 30, 0, 70)
 	const accentL = isDark ? clamp(l + 30, 45, 65) : clamp(l - 30, 30, 48)
 
-	const tintS = clamp(accentS * 0.45, 12, 40)
+	const tintS = clamp(accentS * 0.45, 0, 40)
 	const activeL = isDark ? clamp(l + 8, 10, 50) : clamp(l - 6, 60, 94)
 	const chatUserL = isDark ? clamp(l + 10, 12, 45) : clamp(l - 10, 55, 88)
 
-	const statusS = clamp(s + 20, 40, 65)
+	const statusS = clamp(s + satScale * 20, 0, 65)
 	const statusL = isDark ? clamp(l + 25, 40, 55) : clamp(l - 5, 35, 50)
 	const statusHoverL = clamp(statusL - 5, 25, 50)
 
@@ -126,7 +127,7 @@ export function deriveThemeVars (hex: string): Record<string, string> {
 
 		'--color-border': hsl(h, clamp(s * 0.7, 0, 20), clamp(l + cd * 10, 5, 95)),
 		'--color-border-light': hsl(h, clamp(s * 0.6, 0, 15), clamp(l + cd * 14, 5, 95)),
-		'--color-divider': hsl(h, clamp(accentS * 0.3, 5, 25), isDark ? clamp(l + 12, 18, 55) : clamp(l - 10, 50, 80)),
+		'--color-divider': hsl(h, clamp(accentS * 0.3, 0, 25), isDark ? clamp(l + 12, 18, 55) : clamp(l - 10, 50, 80)),
 
 		'--color-fg': isDark
 			? hsl(h, s * 0.2, 88)
@@ -140,10 +141,10 @@ export function deriveThemeVars (hex: string): Record<string, string> {
 
 		'--color-accent': hsl(h, accentS, accentL),
 		'--color-accent-hover': hsl(h, accentS, clamp(accentL - 6, 15, 80)),
-		'--color-accent-muted': hsl(h, clamp(accentS - 10, 15, 55), isDark ? clamp(accentL + 10, 45, 70) : clamp(accentL + 15, 45, 65)),
-		'--color-accent-text': hsl(h, clamp(accentS - 5, 20, 55), isDark ? clamp(accentL + 15, 55, 80) : clamp(accentL - 5, 25, 45)),
+		'--color-accent-muted': hsl(h, clamp(accentS - 10, 0, 55), isDark ? clamp(accentL + 10, 45, 70) : clamp(accentL + 15, 45, 65)),
+		'--color-accent-text': hsl(h, clamp(accentS - 5, 0, 55), isDark ? clamp(accentL + 15, 55, 80) : clamp(accentL - 5, 25, 45)),
 
-		'--color-chat-user': hsl(h, clamp(accentS * 0.55, 15, 45), chatUserL),
+		'--color-chat-user': hsl(h, clamp(accentS * 0.55, 0, 45), chatUserL),
 		'--color-chat-ai': hsl(h, s, clamp(l - 1.5, 2, 98)),
 
 		'--color-code-bg': isDark ? 'hsl(0 0% 100% / 0.08)' : 'hsl(0 0% 0% / 0.05)',
