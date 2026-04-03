@@ -12,7 +12,10 @@ import {
 	stopDesign,
 	getDesignConversation,
 	getDesignResult,
-	getTokenUsage
+	getTokenUsage,
+	setSessionPrinter,
+	setSessionFilament,
+	setSessionModel
 } from '@/lib/api'
 import { createSession } from '@/lib/api/sessions'
 import type { SSEEventType } from '@/types/events'
@@ -30,7 +33,7 @@ export interface ChatEntry {
 }
 
 export function useDesignAgent () {
-	const { currentSession, selectSession, setActiveStage, refreshSession, refreshSessions, patchSession } = useSession()
+	const { currentSession, selectSession, setActiveStage, refreshSession, refreshSessions, patchSession, printer, filament, model } = useSession()
 	const { setDesign } = usePipeline()
 	const { addError } = useError()
 
@@ -192,6 +195,11 @@ export function useDesignAgent () {
 		if (!sessionId) {
 			const { session_id } = await createSession()
 			sessionId = session_id
+			await Promise.all([
+				printer ? setSessionPrinter(sessionId, printer.id) : Promise.resolve(),
+				filament ? setSessionFilament(sessionId, filament.id) : Promise.resolve(),
+				model ? setSessionModel(sessionId, model.id) : Promise.resolve()
+			])
 			refreshSessions()
 			selectSession(sessionId)
 			setActiveStage('design')
@@ -211,7 +219,7 @@ export function useDesignAgent () {
 			streamingRef.current = false
 			setStreaming(false)
 		}
-	}, [streaming, currentSession, appendMessage, subscribeToStream, refreshSessions, selectSession, setActiveStage, addError, nextId])
+	}, [streaming, currentSession, appendMessage, subscribeToStream, refreshSessions, selectSession, setActiveStage, addError, nextId, printer, filament, model])
 
 	const loadConversation = useCallback(async (sessionId: string) => {
 		if (streamingRef.current) {

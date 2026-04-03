@@ -14,7 +14,13 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 	const canvasRef = useRef<HTMLCanvasElement>(null)
 	const [showBitmap, setShowBitmap] = useState(true)
 
-	const { bed_width, bed_depth, bed_offset_x, bed_offset_y, bitmap_cols, bitmap_rows, bitmap_b64 } = bitmap
+	const {
+		nominal_bed_width, nominal_bed_depth,
+		keepout_left, keepout_right, keepout_front, keepout_back,
+		bed_width, bed_depth,
+		bed_offset_x, bed_offset_y,
+		bitmap_cols, bitmap_rows, bitmap_b64,
+	} = bitmap
 	const outline = normalizeOutline(bitmap.outline)
 	const holes = normalizeHoles(bitmap.outline)
 	const components = bitmap.components ?? []
@@ -24,10 +30,12 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 	const uniqueNets = [...new Set(traces.map(t => t.net_id))]
 
 	const bedScale = 2
-	const svgW = bed_width * bedScale + 60
-	const svgH = bed_depth * bedScale + 60
+	const svgW = nominal_bed_width * bedScale + 60
+	const svgH = nominal_bed_depth * bedScale + 60
 	const padX = 30
 	const padY = 30
+
+	const bedY = (y: number): number => padY + (nominal_bed_depth - y) * bedScale
 
 	useEffect(() => {
 		if (!canvasRef.current || !bitmap_b64 || !showBitmap) { return }
@@ -46,7 +54,8 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 				const byteIdx = r * byteCols + Math.floor(c / 8)
 				const bitIdx = 7 - (c % 8)
 				const on = (raw.charCodeAt(byteIdx) >> bitIdx) & 1
-				const idx = (r * bitmap_cols + c) * 4
+				const canvasRow = bitmap_rows - 1 - r
+				const idx = (canvasRow * bitmap_cols + c) * 4
 				if (on) {
 					imgData.data[idx] = 53
 					imgData.data[idx + 1] = 128
@@ -57,14 +66,6 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 		}
 		ctx.putImageData(imgData, 0, 0)
 	}, [bitmap_b64, bitmap_cols, bitmap_rows, showBitmap])
-
-	const outlinePts = outline.map(p => [p.x, p.y])
-	const minX = outlinePts.length > 0 ? Math.min(...outlinePts.map(p => p[0])) : 0
-	const minY = outlinePts.length > 0 ? Math.min(...outlinePts.map(p => p[1])) : 0
-	const maxX = outlinePts.length > 0 ? Math.max(...outlinePts.map(p => p[0])) : 0
-	const maxY = outlinePts.length > 0 ? Math.max(...outlinePts.map(p => p[1])) : 0
-	const partW = maxX - minX
-	const partH = maxY - minY
 
 	// Build Bézier-expanded outline path matching other viewports
 	const outlinePathD = (() => {
@@ -81,7 +82,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 			const eIn = corners[i].ease_in ?? 0
 			const eOut = corners[i].ease_out ?? 0
 			const cx = padX + (C[0] + bed_offset_x) * bedScale
-			const cy = padY + (C[1] + bed_offset_y) * bedScale
+			const cy = bedY(C[1] + bed_offset_y)
 			if (eIn === 0 && eOut === 0) {
 				parts.push(i === 0 ? `M${cx},${cy}` : `L${cx},${cy}`)
 				continue
@@ -93,9 +94,9 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 			const tIn = Math.min(eIn / lenP, 0.5)
 			const tOut = Math.min(eOut / lenN, 0.5)
 			const ax = padX + (C[0] + dPx * tIn + bed_offset_x) * bedScale
-			const ay = padY + (C[1] + dPy * tIn + bed_offset_y) * bedScale
+			const ay = bedY(C[1] + dPy * tIn + bed_offset_y)
 			const bx = padX + (C[0] + dNx * tOut + bed_offset_x) * bedScale
-			const by = padY + (C[1] + dNy * tOut + bed_offset_y) * bedScale
+			const by = bedY(C[1] + dNy * tOut + bed_offset_y)
 			if (i === 0) parts.push(`M${ax},${ay}`)
 			else parts.push(`L${ax},${ay}`)
 			parts.push(`Q${cx},${cy} ${bx},${by}`)
@@ -114,7 +115,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 				const eIn = hc[j].ease_in ?? 0
 				const eOut = hc[j].ease_out ?? 0
 				const cx = padX + (C[0] + bed_offset_x) * bedScale
-				const cy = padY + (C[1] + bed_offset_y) * bedScale
+				const cy = bedY(C[1] + bed_offset_y)
 				if (eIn === 0 && eOut === 0) {
 					parts.push(j === 0 ? `M${cx},${cy}` : `L${cx},${cy}`)
 					continue
@@ -126,9 +127,9 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 				const tIn = Math.min(eIn / lenP, 0.5)
 				const tOut = Math.min(eOut / lenN, 0.5)
 				const ax = padX + (C[0] + dPx * tIn + bed_offset_x) * bedScale
-				const ay = padY + (C[1] + dPy * tIn + bed_offset_y) * bedScale
+				const ay = bedY(C[1] + dPy * tIn + bed_offset_y)
 				const bx = padX + (C[0] + dNx * tOut + bed_offset_x) * bedScale
-				const by = padY + (C[1] + dNy * tOut + bed_offset_y) * bedScale
+				const by = bedY(C[1] + dNy * tOut + bed_offset_y)
 				if (j === 0) parts.push(`M${ax},${ay}`)
 				else parts.push(`L${ax},${ay}`)
 				parts.push(`Q${cx},${cy} ${bx},${by}`)
@@ -147,16 +148,26 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 					{'Show bitmap overlay'}
 				</label>
 				<span>{bitmap_cols}{' × '}{bitmap_rows}{' px'}</span>
-				<span>{bed_width}{' × '}{bed_depth}{' mm bed'}</span>
+				<span>{nominal_bed_width}{' × '}{nominal_bed_depth}{' mm bed'}</span>
 			</div>
 
 			<div className="flex-1 overflow-auto p-4 flex items-center justify-center">
 				<svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`}>
-					<rect x={padX} y={padY} width={bed_width * bedScale} height={bed_depth * bedScale}
+					<rect x={padX} y={padY} width={nominal_bed_width * bedScale} height={nominal_bed_depth * bedScale}
 						fill="none" stroke="#d6d2ca" strokeWidth={1.5} strokeDasharray="8,4" />
 
-					<text x={padX + bed_width * bedScale / 2} y={padY - 8} textAnchor="middle" fontSize={10} fill="#6b6560">
-						{'Build plate '}{bed_width}{' × '}{bed_depth}{' mm'}
+					{(keepout_left > 0 || keepout_right > 0 || keepout_front > 0 || keepout_back > 0) && (
+						<rect
+							x={padX + keepout_left * bedScale}
+							y={padY + keepout_back * bedScale}
+							width={bed_width * bedScale}
+							height={bed_depth * bedScale}
+							fill="none" stroke="#358045" strokeWidth={1} strokeDasharray="4,3" opacity={0.5}
+						/>
+					)}
+
+					<text x={padX + nominal_bed_width * bedScale / 2} y={padY - 8} textAnchor="middle" fontSize={10} fill="#6b6560">
+						{'Build plate '}{nominal_bed_width}{' × '}{nominal_bed_depth}{' mm'}
 					</text>
 
 					{outlinePathD && (
@@ -167,16 +178,19 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 						/>
 					)}
 
-					{components.map(c => (
-						<rect
-							key={c.instance_id}
-							x={padX + (c.x_mm + bed_offset_x - (c.body?.width_mm ?? 4) / 2) * bedScale}
-							y={padY + (c.y_mm + bed_offset_y - (c.body?.length_mm ?? 4) / 2) * bedScale}
-							width={(c.body?.width_mm ?? 4) * bedScale}
-							height={(c.body?.length_mm ?? 4) * bedScale}
-							fill="rgba(86,114,160,0.2)" stroke="#5672a0" strokeWidth={0.8}
-						/>
-					))}
+					{components.map(c => {
+						const compH = (c.body?.length_mm ?? 4)
+						return (
+							<rect
+								key={c.instance_id}
+								x={padX + (c.x_mm + bed_offset_x - (c.body?.width_mm ?? 4) / 2) * bedScale}
+								y={bedY(c.y_mm + bed_offset_y + compH / 2)}
+								width={(c.body?.width_mm ?? 4) * bedScale}
+								height={compH * bedScale}
+								fill="rgba(86,114,160,0.2)" stroke="#5672a0" strokeWidth={0.8}
+							/>
+						)
+					})}
 
 					{traces.map((trace, i) => {
 						const color = netColor(uniqueNets.indexOf(trace.net_id), uniqueNets.length)
@@ -184,7 +198,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 							<polyline
 								key={i}
 								points={trace.path.map(([x, y]) =>
-									`${padX + (x + bed_offset_x) * bedScale},${padY + (y + bed_offset_y) * bedScale}`
+									`${padX + (x + bed_offset_x) * bedScale},${bedY(y + bed_offset_y)}`
 								).join(' ')}
 								fill="none" stroke={color} strokeWidth={traceWidth / SCALE * bedScale}
 								opacity={0.4} strokeLinecap="round"
@@ -194,10 +208,10 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 
 					{showBitmap && bitmap_b64 && (
 						<foreignObject
-							x={padX + bed_offset_x * bedScale + (minX) * bedScale}
-							y={padY + bed_offset_y * bedScale + (minY) * bedScale}
-							width={partW * bedScale}
-							height={partH * bedScale}
+							x={padX}
+							y={padY}
+							width={nominal_bed_width * bedScale}
+							height={nominal_bed_depth * bedScale}
 						>
 							<canvas
 								ref={canvasRef}

@@ -53,6 +53,27 @@ export default function Sidebar (): ReactElement {
 		listModels().then(setModels).catch(() => {})
 	}, [])
 
+	const prevSessionIdRef = useRef<string | undefined>(undefined)
+
+	useEffect(() => {
+		const sid = currentSession?.id
+		if (sid && sid !== prevSessionIdRef.current) {
+			prevSessionIdRef.current = sid
+			if (printers.length > 0 && currentSession?.printer_id) {
+				const match = printers.find(p => p.id === currentSession.printer_id)
+				if (match) { setPrinter(match) }
+			}
+			if (filaments.length > 0 && currentSession?.filament_id) {
+				const match = filaments.find(f => f.id === currentSession.filament_id)
+				if (match) { setFilament(match) }
+			}
+			if (models.length > 0 && currentSession?.model_id) {
+				const match = models.find(m => m.id === currentSession.model_id)
+				if (match) { setModel(match) }
+			}
+		}
+	}, [currentSession?.id, currentSession?.printer_id, currentSession?.filament_id, currentSession?.model_id, printers, filaments, models, setPrinter, setFilament, setModel])
+
 	useEffect(() => {
 		if (printers.length === 0 || printer) { return }
 		const storedId = getStoredPrinterId()
@@ -63,22 +84,16 @@ export default function Sidebar (): ReactElement {
 
 	useEffect(() => {
 		if (filaments.length === 0 || filament) { return }
-		const sessionFilamentId = currentSession?.filament_id
 		const storedId = getStoredFilamentId()
-		const match = sessionFilamentId
-			? filaments.find(f => f.id === sessionFilamentId)
-			: storedId ? filaments.find(f => f.id === storedId) : null
+		const match = storedId ? filaments.find(f => f.id === storedId) : null
 		if (match) { setFilament(match) }
-	}, [filaments, filament, currentSession?.filament_id, setFilament])
+	}, [filaments, filament, setFilament])
 
 	useEffect(() => {
 		if (models.length === 0 || model) { return }
-		const sessionModelId = currentSession?.model_id
-		const match = sessionModelId
-			? models.find(m => m.id === sessionModelId)
-			: models.find(m => m.id === 'medium')
-		if (match) { setModel(match) }
-	}, [models, model, currentSession?.model_id, setModel])
+		const defaultMatch = models.find(m => m.id === 'medium')
+		if (defaultMatch) { setModel(defaultMatch) }
+	}, [models, model, setModel])
 
 	const handleNewSession = useCallback(() => {
 		clearAll()
@@ -97,6 +112,7 @@ export default function Sidebar (): ReactElement {
 		if (currentSession) {
 			const result = await setSessionPrinter(currentSession.id, printerId)
 			patchSession({
+				printer_id: result.printer_id,
 				invalidated_steps: result.invalidated_steps,
 				artifacts: result.artifacts,
 				pipeline_errors: result.pipeline_errors,
@@ -110,6 +126,7 @@ export default function Sidebar (): ReactElement {
 		if (currentSession) {
 			const result = await setSessionFilament(currentSession.id, filamentId)
 			patchSession({
+				filament_id: result.filament_id,
 				invalidated_steps: result.invalidated_steps,
 				artifacts: result.artifacts,
 				pipeline_errors: result.pipeline_errors,
@@ -121,9 +138,10 @@ export default function Sidebar (): ReactElement {
 		const found = models.find(m => m.id === modelId) ?? null
 		setModel(found)
 		if (currentSession) {
-			await setSessionModel(currentSession.id, modelId)
+			const result = await setSessionModel(currentSession.id, modelId)
+			patchSession({ model_id: result.model_id })
 		}
-	}, [currentSession, models, setModel])
+	}, [currentSession, models, setModel, patchSession])
 
 	useEffect(() => {
 		if (!menuOpenId) { return }
