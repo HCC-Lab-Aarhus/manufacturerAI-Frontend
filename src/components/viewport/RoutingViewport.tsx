@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactElement } from 'react'
+import { type ReactElement, useState } from 'react'
 
 import { SCALE, netColor, normalizeOutline, normalizeHoles } from '@/lib/viewport'
 import type { JumperEndpoint, RoutingResult } from '@/types/models'
@@ -28,6 +28,7 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 	const traceWidth = (routing.trace_width_mm ?? 0.3) * SCALE
 
 	const uniqueNets = [...new Set(traces.map(t => t.net_id))]
+	const [hoveredNet, setHoveredNet] = useState<string | null>(null)
 
 	return (
 		<div className={`flex ${className ?? ''}`}>
@@ -50,21 +51,39 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 				{traces.map((trace, ti) => {
 					const color = netColor(uniqueNets.indexOf(trace.net_id), uniqueNets.length)
 					const points = trace.path.map(([x, y]) => `${x * SCALE},${y * SCALE}`).join(' ')
+					const dimmed = hoveredNet !== null && hoveredNet !== trace.net_id
 					return (
-						<polyline
+						<g
 							key={`trace-${ti}`}
-							points={points}
-							fill="none"
-							stroke={color}
-							strokeWidth={traceWidth}
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						/>
+							onPointerEnter={() => setHoveredNet(trace.net_id)}
+							onPointerLeave={() => setHoveredNet(null)}
+							className={`transition-opacity duration-150 ${dimmed ? 'opacity-[0.15]' : ''}`}
+						>
+							<polyline
+								points={points}
+								fill="none"
+								stroke="transparent"
+								strokeWidth={traceWidth * 4}
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								className="pointer-events-[stroke]"
+							/>
+							<polyline
+								points={points}
+								fill="none"
+								stroke={color}
+								strokeWidth={traceWidth}
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								className="pointer-events-none"
+							/>
+						</g>
 					)
 				})}
 
 				{traces.map((trace, ti) => {
 					const color = netColor(uniqueNets.indexOf(trace.net_id), uniqueNets.length)
+					const dimmed = hoveredNet !== null && hoveredNet !== trace.net_id
 					return trace.path.map(([x, y], pi) => (
 						(pi === 0 || pi === trace.path.length - 1) && (
 							<circle
@@ -73,6 +92,7 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 								cy={y * SCALE}
 								r={traceWidth * 0.8}
 								fill={color}
+								className={`transition-opacity duration-150 ${dimmed ? 'opacity-[0.15]' : ''}`}
 							/>
 						)
 					))
@@ -111,14 +131,22 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 					<>
 						<span className="text-[10px] font-semibold text-fg-secondary uppercase tracking-wide">{'Routed Nets'}</span>
 						<div className="mt-1.5 flex flex-col gap-1">
-							{uniqueNets.map((netId, i) => (
-								<div key={netId} className="flex items-center gap-2">
-									<svg className="size-2.5 shrink-0" viewBox="0 0 10 10">
-										<circle cx={5} cy={5} r={5} fill={netColor(i, uniqueNets.length)} />
-									</svg>
-									<span className="text-[11px] text-fg-secondary truncate">{netId}</span>
-								</div>
-							))}
+							{uniqueNets.map((netId, i) => {
+								const dimmed = hoveredNet !== null && hoveredNet !== netId
+								return (
+									<div
+										key={netId}
+										className={`flex items-center gap-2 cursor-pointer transition-opacity duration-150 ${dimmed ? 'opacity-30' : ''}`}
+										onPointerEnter={() => setHoveredNet(netId)}
+										onPointerLeave={() => setHoveredNet(null)}
+									>
+										<svg className="size-2.5 shrink-0" viewBox="0 0 10 10">
+											<circle cx={5} cy={5} r={5} fill={netColor(i, uniqueNets.length)} />
+										</svg>
+										<span className="text-[11px] text-fg-secondary truncate">{netId}</span>
+									</div>
+								)
+							})}
 						</div>
 					</>
 				)}
