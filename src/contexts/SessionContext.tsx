@@ -57,7 +57,7 @@ interface SessionContextValue {
 	clearSession: () => void
 	refreshSession: () => Promise<void>
 	refreshSessions: () => Promise<void>
-	patchSession: (data: { artifacts?: Record<string, boolean>; pipeline_errors?: Record<string, PipelineError>; invalidated_steps?: string[] }) => void
+	patchSession: (data: { artifacts?: Record<string, boolean>; pipeline_errors?: Record<string, PipelineError>; invalidated_steps?: string[]; printer_id?: string; filament_id?: string; model_id?: string }) => void
 	clearInvalidation: () => void
 	renameSession: (id: string, name: string) => Promise<void>
 	deleteSession: (id: string) => Promise<void>
@@ -216,7 +216,7 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 		window.history.replaceState(null, '', url.toString())
 	}, [])
 
-	const patchSession = useCallback((data: { artifacts?: Record<string, boolean>; pipeline_errors?: Record<string, PipelineError>; invalidated_steps?: string[] }) => {
+	const patchSession = useCallback((data: { artifacts?: Record<string, boolean>; pipeline_errors?: Record<string, PipelineError>; invalidated_steps?: string[]; printer_id?: string; filament_id?: string; model_id?: string }) => {
 		const { invalidated_steps, ...sessionPatch } = data
 		if (Object.keys(sessionPatch).length > 0) {
 			setCurrentSession(prev => prev ? { ...prev, ...sessionPatch } : prev)
