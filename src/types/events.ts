@@ -16,6 +16,7 @@ export type SSEEventType =
 	| 'session_named'
 	| 'error'
 	| 'done'
+	| 'pipeline_status'
 
 export interface SSEEvent {
 	type: SSEEventType
