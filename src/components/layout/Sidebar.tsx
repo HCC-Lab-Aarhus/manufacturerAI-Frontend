@@ -91,7 +91,7 @@ export default function Sidebar (): ReactElement {
 
 	useEffect(() => {
 		if (models.length === 0 || model) { return }
-		const defaultMatch = models.find(m => m.id === 'medium')
+		const defaultMatch = models.find(m => m.id === 'low')
 		if (defaultMatch) { setModel(defaultMatch) }
 	}, [models, model, setModel])
 
