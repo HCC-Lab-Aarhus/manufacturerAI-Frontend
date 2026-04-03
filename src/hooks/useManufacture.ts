@@ -279,10 +279,6 @@ export function useManufacture () {
 								}
 							}
 
-							if (!hasRunning && !gotRunning) {
-								reader.cancel()
-								return
-							}
 						} catch { /* ignore parse errors */ }
 					}
 				}
@@ -351,6 +347,14 @@ export function useManufacture () {
 			return true
 		}
 
+		if (shouldRun('placement')) { setPlacementResult(null) }
+		if (shouldRun('routing')) { setRoutingResult(null) }
+		if (shouldRun('bitmap')) { setBitmapResult(null) }
+		if (shouldRun('scad')) { setScadResult(null) }
+		if (shouldRun('gcode')) { setGcodeStatus(null) }
+
+		let latestPlacement = placementResult
+
 		try {
 			if (cancelRef.current) { throw new CancelError() }
 			if (shouldRun('placement')) {
@@ -361,6 +365,7 @@ export function useManufacture () {
 				await waitForStepSSE(sessionId, 'placement', cancelRef, sseAbort)
 				const pr = await getPlacementResult(sessionId)
 				setPlacementResult(pr)
+				latestPlacement = pr
 				updateStep('placement', { status: 'done' })
 			} else {
 				updateStep('placement', { status: 'done', message: 'Using existing' })
@@ -375,16 +380,16 @@ export function useManufacture () {
 				await waitForStepSSE(sessionId, 'routing', cancelRef, sseAbort, (entry) => {
 					updateStep('routing', { status: 'running', message: entry.message || undefined })
 					const rd = entry.detail?.routing as { traces?: unknown[]; pin_assignments?: Record<string, unknown>; failed_nets?: string[]; trace_width_mm?: number } | undefined
-					if (rd?.traces && placementResult) {
+					if (rd?.traces && latestPlacement) {
 						setRoutingResult({
 							traces: rd.traces as RoutingResult['traces'],
 							trace_width_mm: rd.trace_width_mm ?? 1.0,
 							failed_nets: rd.failed_nets ?? [],
-							outline: placementResult.outline,
-							enclosure: placementResult.enclosure,
-							components: placementResult.components,
-							nets: placementResult.nets,
-							pcb_contour: placementResult.pcb_contour,
+							outline: latestPlacement.outline,
+							enclosure: latestPlacement.enclosure,
+							components: latestPlacement.components,
+							nets: latestPlacement.nets,
+							pcb_contour: latestPlacement.pcb_contour,
 						})
 					}
 				})
