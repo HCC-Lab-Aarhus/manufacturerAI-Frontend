@@ -36,6 +36,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 	const padY = 30
 
 	const bedY = (y: number): number => padY + (nominal_bed_depth - y) * bedScale
+	const bedYm = (modelY: number): number => bedY(-modelY + bed_offset_y)
 
 	useEffect(() => {
 		if (!canvasRef.current || !bitmap_b64 || !showBitmap) { return }
@@ -82,7 +83,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 			const eIn = corners[i].ease_in ?? 0
 			const eOut = corners[i].ease_out ?? 0
 			const cx = padX + (C[0] + bed_offset_x) * bedScale
-			const cy = bedY(C[1] + bed_offset_y)
+			const cy = bedYm(C[1])
 			if (eIn === 0 && eOut === 0) {
 				parts.push(i === 0 ? `M${cx},${cy}` : `L${cx},${cy}`)
 				continue
@@ -94,9 +95,9 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 			const tIn = Math.min(eIn / lenP, 0.5)
 			const tOut = Math.min(eOut / lenN, 0.5)
 			const ax = padX + (C[0] + dPx * tIn + bed_offset_x) * bedScale
-			const ay = bedY(C[1] + dPy * tIn + bed_offset_y)
+			const ay = bedYm(C[1] + dPy * tIn)
 			const bx = padX + (C[0] + dNx * tOut + bed_offset_x) * bedScale
-			const by = bedY(C[1] + dNy * tOut + bed_offset_y)
+			const by = bedYm(C[1] + dNy * tOut)
 			if (i === 0) parts.push(`M${ax},${ay}`)
 			else parts.push(`L${ax},${ay}`)
 			parts.push(`Q${cx},${cy} ${bx},${by}`)
@@ -115,7 +116,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 				const eIn = hc[j].ease_in ?? 0
 				const eOut = hc[j].ease_out ?? 0
 				const cx = padX + (C[0] + bed_offset_x) * bedScale
-				const cy = bedY(C[1] + bed_offset_y)
+				const cy = bedYm(C[1])
 				if (eIn === 0 && eOut === 0) {
 					parts.push(j === 0 ? `M${cx},${cy}` : `L${cx},${cy}`)
 					continue
@@ -127,9 +128,9 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 				const tIn = Math.min(eIn / lenP, 0.5)
 				const tOut = Math.min(eOut / lenN, 0.5)
 				const ax = padX + (C[0] + dPx * tIn + bed_offset_x) * bedScale
-				const ay = bedY(C[1] + dPy * tIn + bed_offset_y)
+				const ay = bedYm(C[1] + dPy * tIn)
 				const bx = padX + (C[0] + dNx * tOut + bed_offset_x) * bedScale
-				const by = bedY(C[1] + dNy * tOut + bed_offset_y)
+				const by = bedYm(C[1] + dNy * tOut)
 				if (j === 0) parts.push(`M${ax},${ay}`)
 				else parts.push(`L${ax},${ay}`)
 				parts.push(`Q${cx},${cy} ${bx},${by}`)
@@ -179,16 +180,19 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 					)}
 
 					{components.map(c => {
-						const compH = (c.body?.length_mm ?? 4)
+						const w = (c.body?.width_mm ?? 4) * bedScale
+						const h = (c.body?.length_mm ?? 4) * bedScale
+						const compCx = padX + (c.x_mm + bed_offset_x) * bedScale
+						const compCy = bedYm(c.y_mm)
+						const rot = -(c.rotation_deg ?? 0)
 						return (
-							<rect
-								key={c.instance_id}
-								x={padX + (c.x_mm + bed_offset_x - (c.body?.width_mm ?? 4) / 2) * bedScale}
-								y={bedY(c.y_mm + bed_offset_y + compH / 2)}
-								width={(c.body?.width_mm ?? 4) * bedScale}
-								height={compH * bedScale}
-								fill="rgba(86,114,160,0.2)" stroke="#5672a0" strokeWidth={0.8}
-							/>
+							<g key={c.instance_id} transform={`translate(${compCx},${compCy}) rotate(${rot})`}>
+								<rect
+									x={-w / 2} y={-h / 2}
+									width={w} height={h}
+									fill="rgba(86,114,160,0.2)" stroke="#5672a0" strokeWidth={0.8}
+								/>
+							</g>
 						)
 					})}
 
@@ -198,7 +202,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 							<polyline
 								key={i}
 								points={trace.path.map(([x, y]) =>
-									`${padX + (x + bed_offset_x) * bedScale},${bedY(y + bed_offset_y)}`
+									`${padX + (x + bed_offset_x) * bedScale},${bedYm(y)}`
 								).join(' ')}
 								fill="none" stroke={color} strokeWidth={traceWidth / SCALE * bedScale}
 								opacity={0.4} strokeLinecap="round"
