@@ -115,7 +115,7 @@ function StepRow ({ s, running, selected, onSelect, onInform, onRetry, onContinu
 				</div>
 			)}
 			{s.status !== 'error' && s.message && (
-				<span className="ml-9 text-[11px] text-fg-secondary">{s.message}</span>
+				<pre className="ml-9 text-[11px] text-fg-secondary whitespace-pre-wrap font-sans leading-relaxed">{s.message}</pre>
 			)}
 		</div>
 	)
