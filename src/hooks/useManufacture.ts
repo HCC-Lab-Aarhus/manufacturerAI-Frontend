@@ -360,20 +360,7 @@ export function useManufacture () {
 				await runRouting(sessionId)
 				let fetchInFlight = false
 				await waitForStepSSE(sessionId, 'routing', cancelRef, sseAbort, (entry) => {
-					const d = entry.detail
-					const routingDetail: RoutingProgressDetail | undefined = d ? {
-						iteration: d.iteration as number ?? 0,
-						maxIterations: d.max_iterations as number ?? 0,
-						phase: d.phase as string ?? '',
-						routed: d.routed as number ?? 0,
-						totalNets: d.total_nets as number ?? 0,
-						failedNets: (d.failed_nets as string[]) ?? [],
-						totalLengthMm: d.total_length_mm as number ?? 0,
-						traceLengths: (d.trace_lengths as Record<string, number>) ?? {},
-						stall: d.stall as number ?? 0,
-						stallLimit: d.stall_limit as number ?? 0,
-					} : undefined
-					updateStep('routing', { status: 'running', message: entry.message, routingDetail })
+					updateStep('routing', { status: 'running', message: entry.message || undefined })
 					if (!fetchInFlight) {
 						fetchInFlight = true
 						getRoutingResult(sessionId)
