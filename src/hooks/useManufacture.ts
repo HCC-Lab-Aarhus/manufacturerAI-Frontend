@@ -68,7 +68,8 @@ function waitForStepSSE (
 	sessionId: string,
 	step: ManufactureStep,
 	cancelRef: React.RefObject<boolean>,
-	abortController: AbortController
+	abortController: AbortController,
+	onProgress?: (entry: { status: string; message?: string; detail?: Record<string, unknown> }) => void
 ): Promise<{ status: string; message?: string; detail?: Record<string, unknown> }> {
 	return new Promise((resolve, reject) => {
 		const onAbort = () => reject(new CancelError())
@@ -111,6 +112,9 @@ function waitForStepSSE (
 									reader.cancel()
 									reject(new StepError(entry.message ?? `${step} failed`, entry.detail))
 									return
+								}
+								if (onProgress && entry.status === 'running') {
+									onProgress(entry)
 								}
 							} catch { /* ignore parse errors */ }
 						}
@@ -354,7 +358,17 @@ export function useManufacture () {
 				setCurrentStep('routing')
 				updateStep('routing', { status: 'running' })
 				await runRouting(sessionId)
-				await waitForStepSSE(sessionId, 'routing', cancelRef, sseAbort)
+				let fetchInFlight = false
+				await waitForStepSSE(sessionId, 'routing', cancelRef, sseAbort, (entry) => {
+					updateStep('routing', { status: 'running', message: entry.message })
+					if (!fetchInFlight) {
+						fetchInFlight = true
+						getRoutingResult(sessionId)
+							.then(setRoutingResult)
+							.catch(() => {})
+							.finally(() => { fetchInFlight = false })
+					}
+				})
 				const rr = await getRoutingResult(sessionId)
 				setRoutingResult(rr)
 				updateStep('routing', { status: 'done' })

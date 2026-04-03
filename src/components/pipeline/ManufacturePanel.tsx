@@ -134,7 +134,7 @@ const STEP_TO_TAB: Record<string, ViewTab> = {
 export default function ManufacturePanel (): ReactElement {
 	const { currentSession, setActiveStage, filament, flashDropdowns } = useSession()
 	const { setPendingFeedback } = usePipeline()
-	const { steps, running, allDone, placementResult, routingResult, bitmapResult, runPipeline, stop } = useManufacture()
+	const { steps, running, allDone, currentStep, placementResult, routingResult, bitmapResult, runPipeline, stop } = useManufacture()
 	const [silverinkOnly, setSilverinkOnly] = useState(false)
 	const [twoPart, setTwoPart] = useState(false)
 	const [viewTab, setViewTab] = useState<ViewTab>('placement')
@@ -154,6 +154,12 @@ export default function ManufacturePanel (): ReactElement {
 		}
 		prevDoneRef.current = nowDone
 	}, [steps])
+
+	useEffect(() => {
+		if (currentStep && currentStep in STEP_TO_TAB) {
+			setViewTab(STEP_TO_TAB[currentStep])
+		}
+	}, [currentStep])
 
 	const sessionId = currentSession?.id
 
