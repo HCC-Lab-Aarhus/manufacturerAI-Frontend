@@ -1,5 +1,6 @@
 export { runPlacement, pollPlacement, getPlacementResult } from './placement'
 export { runRouting, pollRouting, getRoutingResult } from './routing'
+export { runInflation, pollInflation, getInflationResult } from './inflation'
 export { generateBitmap, pollBitmap, getBitmap, getBitmapDownloadUrl } from './bitmap'
 export { generateScad, pollScad, getScadResult } from './scad'
 export { startCompile, pollCompile, getStlDownloadUrl, getExtrasStlDownloadUrl, getTopStlDownloadUrl } from './compile'

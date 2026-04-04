@@ -12,10 +12,11 @@ import type { ManufactureStep } from '@/types/models'
 
 const PlacementViewport = dynamic(() => import('@/components/viewport/PlacementViewport'), { ssr: false })
 const RoutingViewport = dynamic(() => import('@/components/viewport/RoutingViewport'), { ssr: false })
+const InflationViewport = dynamic(() => import('@/components/viewport/InflationViewport'), { ssr: false })
 const BitmapViewport = dynamic(() => import('@/components/viewport/BitmapViewport'), { ssr: false })
 const Scene3D = dynamic(() => import('@/components/viewport/Scene3D'), { ssr: false })
 
-const ALL_STEPS: ManufactureStep[] = ['placement', 'routing', 'bitmap', 'scad', 'compile', 'gcode']
+const ALL_STEPS: ManufactureStep[] = ['placement', 'routing', 'inflation', 'bitmap', 'scad', 'compile', 'gcode']
 
 const STATUS_STYLES: Record<StepStatus, string> = {
 	pending: 'text-fg-secondary',
@@ -36,6 +37,7 @@ const STATUS_BADGE: Record<StepStatus, string> = {
 const STEP_ICONS: Record<string, string> = {
 	placement: 'PLC',
 	routing: 'RTE',
+	inflation: 'INF',
 	bitmap: 'BMP',
 	scad: 'CAD',
 	compile: 'CMP',
@@ -121,11 +123,12 @@ function StepRow ({ s, running, selected, onSelect, onInform, onRetry, onContinu
 	)
 }
 
-type ViewTab = 'placement' | 'routing' | 'bitmap' | 'scad' | 'stl' | 'stl-top' | 'extras'
+type ViewTab = 'placement' | 'routing' | 'inflation' | 'bitmap' | 'scad' | 'stl' | 'stl-top' | 'extras'
 
 const STEP_TO_TAB: Record<string, ViewTab> = {
 	placement: 'placement',
 	routing: 'routing',
+	inflation: 'inflation',
 	bitmap: 'bitmap',
 	scad: 'scad',
 	compile: 'stl'
@@ -363,6 +366,8 @@ export default function ManufacturePanel (): ReactElement {
 							<PlacementViewport placement={placementResult} className="w-full h-full" />
 						) : viewTab === 'routing' && routingResult ? (
 							<RoutingViewport routing={routingResult} className="w-full h-full" />
+						) : viewTab === 'inflation' && routingResult ? (
+							<InflationViewport routing={routingResult} className="w-full h-full" />
 						) : viewTab === 'bitmap' && bitmapResult ? (
 							<BitmapViewport bitmap={bitmapResult} className="w-full h-full" />
 					) : viewTab === 'scad' && placementResult ? (

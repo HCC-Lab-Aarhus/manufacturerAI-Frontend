@@ -8,6 +8,7 @@ import { useSession } from '@/contexts/SessionContext'
 import {
 	runPlacement,
 	runRouting,
+	runInflation,
 	generateBitmap,
 	generateScad,
 	startCompile,
@@ -15,6 +16,7 @@ import {
 	pollGCode,
 	getPlacementResult,
 	getRoutingResult,
+	getInflationResult,
 	getBitmap,
 	getScadResult,
 	cancelPipeline
@@ -34,13 +36,14 @@ export interface ManufactureStepState {
 const STEP_DEFS: { step: ManufactureStep; label: string; artifact: string }[] = [
 	{ step: 'placement', label: 'Component Placement', artifact: 'placement' },
 	{ step: 'routing', label: 'Trace Routing', artifact: 'routing' },
+	{ step: 'inflation', label: 'Trace Inflation', artifact: 'inflation' },
 	{ step: 'bitmap', label: 'Trace Bitmap', artifact: 'bitmap' },
 	{ step: 'scad', label: 'Enclosure Generation', artifact: 'scad' },
 	{ step: 'compile', label: 'STL Compilation', artifact: '' },
 	{ step: 'gcode', label: 'G-Code Pipeline', artifact: 'gcode' }
 ]
 
-const ALL_STEPS: ManufactureStep[] = ['placement', 'routing', 'bitmap', 'scad', 'compile', 'gcode']
+const ALL_STEPS: ManufactureStep[] = ['placement', 'routing', 'inflation', 'bitmap', 'scad', 'compile', 'gcode']
 
 type PipelineSnapshot = Record<string, { status: string; message?: string; detail?: Record<string, unknown> }>
 
@@ -266,6 +269,9 @@ export function useManufacture () {
 									if (finalSnapshot.routing?.status === 'done') {
 										getRoutingResult(sessionId).then(setRoutingResult).catch(() => {})
 									}
+									if (finalSnapshot.inflation?.status === 'done') {
+										getInflationResult(sessionId).then(setRoutingResult).catch(() => {})
+									}
 									if (finalSnapshot.bitmap?.status === 'done') {
 										getBitmap(sessionId).then(setBitmapResult).catch(() => {})
 									}
@@ -302,6 +308,7 @@ export function useManufacture () {
 		))
 		if (pendingInvalidation.includes('placement')) { setPlacementResult(null) }
 		if (pendingInvalidation.includes('routing')) { setRoutingResult(null) }
+		if (pendingInvalidation.includes('inflation')) { setRoutingResult(null) }
 		if (pendingInvalidation.includes('bitmap')) { setBitmapResult(null) }
 		if (pendingInvalidation.includes('scad')) { setScadResult(null) }
 		clearInvalidation()
@@ -348,7 +355,7 @@ export function useManufacture () {
 		}
 
 		if (shouldRun('placement')) { setPlacementResult(null) }
-		if (shouldRun('routing')) { setRoutingResult(null) }
+		if (shouldRun('routing') || shouldRun('inflation')) { setRoutingResult(null) }
 		if (shouldRun('bitmap')) { setBitmapResult(null) }
 		if (shouldRun('scad')) { setScadResult(null) }
 		if (shouldRun('gcode')) { setGcodeStatus(null) }
@@ -398,6 +405,20 @@ export function useManufacture () {
 				updateStep('routing', { status: 'done' })
 			} else {
 				updateStep('routing', { status: 'done', message: 'Using existing' })
+			}
+
+			if (cancelRef.current) { throw new CancelError() }
+			if (shouldRun('inflation')) {
+				activeStep = 'inflation'
+				setCurrentStep('inflation')
+				updateStep('inflation', { status: 'running' })
+				await runInflation(sessionId)
+				await waitForStepSSE(sessionId, 'inflation', cancelRef, sseAbort)
+				const ir = await getInflationResult(sessionId)
+				setRoutingResult(ir)
+				updateStep('inflation', { status: 'done' })
+			} else {
+				updateStep('inflation', { status: 'done', message: 'Using existing' })
 			}
 
 			if (cancelRef.current) { throw new CancelError() }
