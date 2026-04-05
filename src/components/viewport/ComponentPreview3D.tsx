@@ -66,9 +66,15 @@ function buildComponent (comp: CatalogComponent): THREE.Group {
 		const color = PIN_COLORS[pin.direction] ?? 0x888888
 		const pinMat = new THREE.MeshPhongMaterial({ color, emissive: color, emissiveIntensity: 0.3 })
 
-		const pinR = pin.hole_diameter_mm / 2
 		const pinH = body.height_mm + 2
-		const pinGeo = new THREE.CylinderGeometry(pinR, pinR, pinH, 12)
+		const isRect = pin.shape?.type === 'rect' && pin.shape.width_mm && pin.shape.length_mm
+		let pinGeo: THREE.BufferGeometry
+		if (isRect) {
+			pinGeo = new THREE.BoxGeometry(pin.shape!.width_mm!, pinH, pin.shape!.length_mm!)
+		} else {
+			const pinR = pin.hole_diameter_mm / 2
+			pinGeo = new THREE.CylinderGeometry(pinR, pinR, pinH, 12)
+		}
 		const pinMesh = new THREE.Mesh(pinGeo, pinMat)
 		pinMesh.position.set(px, pinH / 2 - 1, pz)
 		group.add(pinMesh)

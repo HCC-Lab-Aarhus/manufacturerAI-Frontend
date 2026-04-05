@@ -79,9 +79,21 @@ export default function ComponentIcon ({ x, y, rotation = 0, body, pins, label, 
 				const px = pin.position_mm[0] * SCALE
 				const py = pin.position_mm[1] * SCALE
 				const color = pin.direction === 'in' ? 'var(--color-pin-input)' : pin.direction === 'out' ? 'var(--color-pin-output)' : 'var(--color-pin-bidir)'
+				const isRect = pin.shape?.type === 'rect' && pin.shape.width_mm && pin.shape.length_mm
+				const MIN_PIN_PX = 5
 				return (
 					<g key={pin.id}>
-						<circle cx={px} cy={py} r={2.5} fill={color} />
+						{isRect ? (
+							<rect
+								x={px - Math.max(pin.shape!.width_mm! * SCALE, MIN_PIN_PX) / 2}
+								y={py - Math.max(pin.shape!.length_mm! * SCALE, MIN_PIN_PX) / 2}
+								width={Math.max(pin.shape!.width_mm! * SCALE, MIN_PIN_PX)}
+								height={Math.max(pin.shape!.length_mm! * SCALE, MIN_PIN_PX)}
+								fill={color}
+							/>
+						) : (
+							<circle cx={px} cy={py} r={Math.max(pin.hole_diameter_mm / 2 * SCALE, MIN_PIN_PX / 2)} fill={color} />
+						)}
 						{pins.length <= 6 && (
 							<text
 								x={px}
