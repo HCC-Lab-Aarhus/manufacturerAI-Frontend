@@ -137,7 +137,8 @@ const STEP_TO_TAB: Record<string, ViewTab> = {
 export default function ManufacturePanel (): ReactElement {
 	const { currentSession, setActiveStage, filament, flashDropdowns } = useSession()
 	const { setPendingFeedback } = usePipeline()
-	const { steps, running, allDone, currentStep, placementResult, routingResult, bitmapResult, runPipeline, stop } = useManufacture()
+	const { steps, running, allDone, currentStep, placementResult, routingResult, inflationResult, bitmapResult, runPipeline, stop } = useManufacture()
+	const compileReady = steps.find(s => s.step === 'compile')?.status !== 'running'
 	const [silverinkOnly, setSilverinkOnly] = useState(false)
 	const [twoPart, setTwoPart] = useState(false)
 	const [viewTab, setViewTab] = useState<ViewTab>('placement')
@@ -366,25 +367,25 @@ export default function ManufacturePanel (): ReactElement {
 							<PlacementViewport placement={placementResult} className="w-full h-full" />
 						) : viewTab === 'routing' && routingResult ? (
 							<RoutingViewport routing={routingResult} className="w-full h-full" />
-						) : viewTab === 'inflation' && routingResult ? (
-							<InflationViewport routing={routingResult} className="w-full h-full" />
+						) : viewTab === 'inflation' && (inflationResult || routingResult) ? (
+							<InflationViewport routing={inflationResult ?? routingResult!} className="w-full h-full" />
 						) : viewTab === 'bitmap' && bitmapResult ? (
 							<BitmapViewport bitmap={bitmapResult} className="w-full h-full" />
 					) : viewTab === 'scad' && placementResult ? (
 						<Scene3D placement={placementResult} routing={routingResult} className="w-full h-full" />
-					) : viewTab === 'stl' && sessionId ? (
+					) : viewTab === 'stl' && sessionId && compileReady ? (
 						<Scene3D
 							placement={placementResult}
 							routing={routingResult}
 							stlUrl={getStlDownloadUrl(sessionId)}
 							className="w-full h-full"
 						/>
-					) : viewTab === 'stl-top' && sessionId ? (
+					) : viewTab === 'stl-top' && sessionId && compileReady ? (
 						<Scene3D
 							stlUrl={getTopStlDownloadUrl(sessionId)}
 							className="w-full h-full"
 						/>
-					) : viewTab === 'extras' && sessionId ? (
+					) : viewTab === 'extras' && sessionId && compileReady ? (
 						<Scene3D
 							stlUrl={getExtrasStlDownloadUrl(sessionId)}
 							className="w-full h-full"

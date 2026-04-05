@@ -147,6 +147,7 @@ export function useManufacture () {
 	const [currentStep, setCurrentStep] = useState<ManufactureStep | null>(null)
 	const [placementResult, setPlacementResult] = useState<PlacementResult | null>(null)
 	const [routingResult, setRoutingResult] = useState<RoutingResult | null>(null)
+	const [inflationResult, setInflationResult] = useState<RoutingResult | null>(null)
 	const [bitmapResult, setBitmapResult] = useState<BitmapResult | null>(null)
 	const [scadResult, setScadResult] = useState<ScadResult | null>(null)
 	const [gcodeStatus, setGcodeStatus] = useState<GCodeStatus | null>(null)
@@ -157,6 +158,7 @@ export function useManufacture () {
 		setSteps(initSteps(currentSession?.artifacts ?? {}, currentSession?.pipeline_errors))
 		setPlacementResult(null)
 		setRoutingResult(null)
+		setInflationResult(null)
 		setBitmapResult(null)
 		setScadResult(null)
 		setGcodeStatus(null)
@@ -169,6 +171,9 @@ export function useManufacture () {
 			}
 			if (a.routing || errors.routing) {
 				fetches.push(getRoutingResult(currentSession.id).then(setRoutingResult).catch(() => {}))
+			}
+			if (a.inflation) {
+				fetches.push(getInflationResult(currentSession.id).then(setInflationResult).catch(() => {}))
 			}
 			if (a.routing && !errors.routing) {
 				fetches.push(getBitmap(currentSession.id).then(setBitmapResult).catch(() => {}))
@@ -270,7 +275,7 @@ export function useManufacture () {
 										getRoutingResult(sessionId).then(setRoutingResult).catch(() => {})
 									}
 									if (finalSnapshot.inflation?.status === 'done') {
-										getInflationResult(sessionId).then(setRoutingResult).catch(() => {})
+										getInflationResult(sessionId).then(setInflationResult).catch(() => {})
 									}
 									if (finalSnapshot.bitmap?.status === 'done') {
 										getBitmap(sessionId).then(setBitmapResult).catch(() => {})
@@ -308,7 +313,7 @@ export function useManufacture () {
 		))
 		if (pendingInvalidation.includes('placement')) { setPlacementResult(null) }
 		if (pendingInvalidation.includes('routing')) { setRoutingResult(null) }
-		if (pendingInvalidation.includes('inflation')) { setRoutingResult(null) }
+		if (pendingInvalidation.includes('inflation')) { setInflationResult(null) }
 		if (pendingInvalidation.includes('bitmap')) { setBitmapResult(null) }
 		if (pendingInvalidation.includes('scad')) { setScadResult(null) }
 		clearInvalidation()
@@ -355,12 +360,11 @@ export function useManufacture () {
 		}
 
 		if (shouldRun('placement')) { setPlacementResult(null) }
-		if (shouldRun('routing') || shouldRun('inflation')) { setRoutingResult(null) }
+		if (shouldRun('routing')) { setRoutingResult(null) }
+		if (shouldRun('inflation')) { setInflationResult(null) }
 		if (shouldRun('bitmap')) { setBitmapResult(null) }
 		if (shouldRun('scad')) { setScadResult(null) }
 		if (shouldRun('gcode')) { setGcodeStatus(null) }
-
-		let latestPlacement = placementResult
 
 		try {
 			if (cancelRef.current) { throw new CancelError() }
@@ -372,7 +376,6 @@ export function useManufacture () {
 				await waitForStepSSE(sessionId, 'placement', cancelRef, sseAbort)
 				const pr = await getPlacementResult(sessionId)
 				setPlacementResult(pr)
-				latestPlacement = pr
 				updateStep('placement', { status: 'done' })
 			} else {
 				updateStep('placement', { status: 'done', message: 'Using existing' })
@@ -384,20 +387,13 @@ export function useManufacture () {
 				setCurrentStep('routing')
 				updateStep('routing', { status: 'running' })
 				await runRouting(sessionId)
+				let lastPoll = 0
 				await waitForStepSSE(sessionId, 'routing', cancelRef, sseAbort, (entry) => {
 					updateStep('routing', { status: 'running', message: entry.message || undefined })
-					const rd = entry.detail?.routing as { traces?: unknown[]; pin_assignments?: Record<string, unknown>; failed_nets?: string[]; trace_width_mm?: number } | undefined
-					if (rd?.traces && latestPlacement) {
-						setRoutingResult({
-							traces: rd.traces as RoutingResult['traces'],
-							trace_width_mm: rd.trace_width_mm ?? 1.0,
-							failed_nets: rd.failed_nets ?? [],
-							outline: latestPlacement.outline,
-							enclosure: latestPlacement.enclosure,
-							components: latestPlacement.components,
-							nets: latestPlacement.nets,
-							pcb_contour: latestPlacement.pcb_contour,
-						})
+					const now = Date.now()
+					if (now - lastPoll > 1500) {
+						lastPoll = now
+						getRoutingResult(sessionId).then(setRoutingResult).catch(() => {})
 					}
 				})
 				const rr = await getRoutingResult(sessionId)
@@ -415,7 +411,7 @@ export function useManufacture () {
 				await runInflation(sessionId)
 				await waitForStepSSE(sessionId, 'inflation', cancelRef, sseAbort)
 				const ir = await getInflationResult(sessionId)
-				setRoutingResult(ir)
+				setInflationResult(ir)
 				updateStep('inflation', { status: 'done' })
 			} else {
 				updateStep('inflation', { status: 'done', message: 'Using existing' })
@@ -524,6 +520,7 @@ export function useManufacture () {
 		allDone,
 		placementResult,
 		routingResult,
+		inflationResult,
 		bitmapResult,
 		scadResult,
 		gcodeStatus,
