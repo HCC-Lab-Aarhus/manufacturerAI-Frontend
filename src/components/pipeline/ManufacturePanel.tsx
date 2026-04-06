@@ -363,6 +363,7 @@ export default function ManufacturePanel (): ReactElement {
 						<Scene3D placement={placementResult} routing={routingResult} className="w-full h-full" />
 					) : viewTab === 'stl' && sessionId ? (
 						<Scene3D
+							key="stl-bottom"
 							placement={placementResult}
 							routing={routingResult}
 							stlUrl={getStlDownloadUrl(sessionId)}
@@ -370,11 +371,13 @@ export default function ManufacturePanel (): ReactElement {
 						/>
 					) : viewTab === 'stl-top' && sessionId ? (
 						<Scene3D
+							key="stl-top"
 							stlUrl={getTopStlDownloadUrl(sessionId)}
 							className="w-full h-full"
 						/>
 					) : viewTab === 'extras' && sessionId ? (
 						<Scene3D
+							key="stl-extras"
 							stlUrl={getExtrasStlDownloadUrl(sessionId)}
 							className="w-full h-full"
 						/>
