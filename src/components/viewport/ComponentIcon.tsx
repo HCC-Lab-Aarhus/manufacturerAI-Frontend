@@ -15,6 +15,7 @@ interface Props {
 	dimmed?: boolean
 	highlight?: boolean
 	dragValid?: 'valid' | 'invalid' | 'pending' | null
+	pinClearanceMm?: number
 }
 
 const DRAG_FILLS: Record<string, { fill: string; stroke: string }> = {
@@ -23,7 +24,7 @@ const DRAG_FILLS: Record<string, { fill: string; stroke: string }> = {
 	pending: { fill: 'var(--color-drag-pending-fill)', stroke: 'var(--color-drag-pending)' },
 }
 
-export default function ComponentIcon ({ x, y, rotation = 0, body, pins, label, dimmed, highlight, dragValid }: Props): ReactElement {
+export default function ComponentIcon ({ x, y, rotation = 0, body, pins, label, dimmed, highlight, dragValid, pinClearanceMm }: Props): ReactElement {
 	const cx = x * SCALE
 	const cy = y * SCALE
 	const opacity = dimmed ? 0.3 : 1
@@ -80,19 +81,37 @@ export default function ComponentIcon ({ x, y, rotation = 0, body, pins, label, 
 				const py = pin.position_mm[1] * SCALE
 				const color = pin.direction === 'in' ? 'var(--color-pin-input)' : pin.direction === 'out' ? 'var(--color-pin-output)' : 'var(--color-pin-bidir)'
 				const isRect = pin.shape?.type === 'rect' && pin.shape.width_mm && pin.shape.length_mm
-				const MIN_PIN_PX = 5
 				return (
 					<g key={pin.id}>
+						{pinClearanceMm != null && (
+							isRect ? (
+								<rect
+									x={px - (pin.shape!.width_mm! / 2 + pinClearanceMm) * SCALE}
+									y={py - (pin.shape!.length_mm! / 2 + pinClearanceMm) * SCALE}
+									width={(pin.shape!.width_mm! + pinClearanceMm * 2) * SCALE}
+									height={(pin.shape!.length_mm! + pinClearanceMm * 2) * SCALE}
+									fill="var(--color-danger, red)" opacity={0.10}
+									stroke="var(--color-danger, red)" strokeWidth={0.5} strokeDasharray="2,2"
+								/>
+							) : (
+								<circle
+									cx={px} cy={py}
+									r={(pin.hole_diameter_mm / 2 + pinClearanceMm) * SCALE}
+									fill="var(--color-danger, red)" opacity={0.10}
+									stroke="var(--color-danger, red)" strokeWidth={0.5} strokeDasharray="2,2"
+								/>
+							)
+						)}
 						{isRect ? (
 							<rect
-								x={px - Math.max(pin.shape!.width_mm! * SCALE, MIN_PIN_PX) / 2}
-								y={py - Math.max(pin.shape!.length_mm! * SCALE, MIN_PIN_PX) / 2}
-								width={Math.max(pin.shape!.width_mm! * SCALE, MIN_PIN_PX)}
-								height={Math.max(pin.shape!.length_mm! * SCALE, MIN_PIN_PX)}
+								x={px - pin.shape!.width_mm! / 2 * SCALE}
+								y={py - pin.shape!.length_mm! / 2 * SCALE}
+								width={pin.shape!.width_mm! * SCALE}
+								height={pin.shape!.length_mm! * SCALE}
 								fill={color}
 							/>
 						) : (
-							<circle cx={px} cy={py} r={Math.max(pin.hole_diameter_mm / 2 * SCALE, MIN_PIN_PX / 2)} fill={color} />
+							<circle cx={px} cy={py} r={pin.hole_diameter_mm / 2 * SCALE} fill={color} />
 						)}
 						{pins.length <= 6 && (
 							<text

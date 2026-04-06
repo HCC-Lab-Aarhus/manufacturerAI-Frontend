@@ -185,6 +185,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 						const compCx = padX + (c.x_mm + bed_offset_x) * bedScale
 						const compCy = bedYm(c.y_mm)
 						const rot = -(c.rotation_deg ?? 0)
+						const pinClr = bitmap.pin_clearance_mm ?? 0.9
 						return (
 							<g key={c.instance_id} transform={`translate(${compCx},${compCy}) rotate(${rot})`}>
 								<rect
@@ -192,6 +193,44 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 									width={w} height={h}
 										fill="var(--color-body-fill-hl)" stroke="var(--color-outline-stroke)" strokeWidth={0.8}
 								/>
+								{(c.pins ?? []).map(pin => {
+									const px = pin.position_mm[0] * bedScale
+									const py = -pin.position_mm[1] * bedScale
+									const isRect = pin.shape?.type === 'rect' && pin.shape.width_mm && pin.shape.length_mm
+									const color = pin.direction === 'in' ? 'var(--color-pin-input, #3b82f6)' : pin.direction === 'out' ? 'var(--color-pin-output, #ef4444)' : 'var(--color-pin-bidir, #eab308)'
+									return (
+										<g key={pin.id}>
+											{isRect ? (
+												<>
+													<rect
+														x={px - (pin.shape!.width_mm! / 2 + pinClr) * bedScale}
+														y={py - (pin.shape!.length_mm! / 2 + pinClr) * bedScale}
+														width={(pin.shape!.width_mm! + pinClr * 2) * bedScale}
+														height={(pin.shape!.length_mm! + pinClr * 2) * bedScale}
+														fill="var(--color-danger, red)" opacity={0.10}
+														stroke="var(--color-danger, red)" strokeWidth={0.3} strokeDasharray="1,1"
+													/>
+													<rect
+														x={px - pin.shape!.width_mm! / 2 * bedScale}
+														y={py - pin.shape!.length_mm! / 2 * bedScale}
+														width={pin.shape!.width_mm! * bedScale}
+														height={pin.shape!.length_mm! * bedScale}
+														fill={color}
+													/>
+												</>
+											) : (
+												<>
+													<circle cx={px} cy={py}
+														r={(pin.hole_diameter_mm / 2 + pinClr) * bedScale}
+														fill="var(--color-danger, red)" opacity={0.10}
+														stroke="var(--color-danger, red)" strokeWidth={0.3} strokeDasharray="1,1"
+													/>
+													<circle cx={px} cy={py} r={pin.hole_diameter_mm / 2 * bedScale} fill={color} />
+												</>
+											)}
+										</g>
+									)
+								})}
 							</g>
 						)
 					})}

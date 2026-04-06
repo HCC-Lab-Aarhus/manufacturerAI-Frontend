@@ -38,7 +38,18 @@ function PinDiagram ({ pins, body }: { pins: CatalogPin[]; body: CatalogComponen
 				const px = ox + pin.position_mm[0] * SCALE
 				const py = oy + pin.position_mm[1] * SCALE
 				const color = PIN_COLORS[pin.direction] ?? 'var(--color-fg-muted)'
-				const r = Math.max((pin.hole_diameter_mm / 2) * SCALE * 1.5, 3.5)
+				const isRect = pin.shape?.type === 'rect' && pin.shape.width_mm && pin.shape.length_mm
+				if (isRect) {
+					const w = pin.shape!.width_mm! * SCALE
+					const h = pin.shape!.length_mm! * SCALE
+					return (
+						<g key={pin.id}>
+							<rect x={px - w / 2} y={py - h / 2} width={w} height={h} fill={color} opacity={0.85} />
+							<text x={px} y={py - h / 2 - 3} textAnchor="middle" fontSize={8} fontFamily="monospace" fill="var(--color-fg-secondary)">{pin.id}</text>
+						</g>
+					)
+				}
+				const r = (pin.hole_diameter_mm / 2) * SCALE
 				return (
 					<g key={pin.id}>
 						<circle cx={px} cy={py} r={r} fill={color} opacity={0.85} />

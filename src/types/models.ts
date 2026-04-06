@@ -155,6 +155,7 @@ export interface RoutingResult {
 	traces: Trace[]
 	inflated_traces?: InflatedTrace[]
 	trace_width_mm: number
+	pin_clearance_mm?: number
 	outline: Outline
 	enclosure: Enclosure
 	components: PlacedComponent[]
@@ -182,6 +183,7 @@ export interface BitmapResult {
 	components: PlacedComponent[]
 	traces: Trace[]
 	trace_width_mm: number
+	pin_clearance_mm?: number
 }
 
 export type PipelineStage = 'design' | 'circuit' | 'manufacture' | 'guide' | 'setup'

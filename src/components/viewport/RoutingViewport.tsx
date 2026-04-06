@@ -29,6 +29,7 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 
 	const uniqueNets = [...new Set(traces.map(t => t.net_id))]
 	const [hoveredNet, setHoveredNet] = useState<string | null>(null)
+	const pinClearanceMm = routing.pin_clearance_mm ?? 0.9
 
 	return (
 		<div className={`flex ${className ?? ''}`}>
@@ -43,6 +44,7 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 							rotation={c.rotation_deg}
 							body={c.body}
 							pins={c.pins ?? []}
+							pinClearanceMm={pinClearanceMm}
 							dimmed
 						/>
 					)
