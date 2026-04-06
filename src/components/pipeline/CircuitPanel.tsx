@@ -176,7 +176,7 @@ export default function CircuitPanel (): ReactElement {
 							<button
 								onClick={handleRevalidate}
 								disabled={revalidating}
-								className="rounded-lg bg-accent px-3 py-1 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-40 transition-colors"
+								className="rounded-lg bg-accent px-3 py-1 text-xs font-medium text-on-accent hover:bg-accent-hover disabled:opacity-40 transition-colors"
 							>
 								{revalidating ? 'Validating\u2026' : '\u21bb Re-validate'}
 							</button>
@@ -209,7 +209,7 @@ export default function CircuitPanel (): ReactElement {
 						<button
 							onClick={handleGenerate}
 							disabled={!currentSession || !outline.trim()}
-							className="rounded-xl bg-accent px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-accent-hover hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all"
+							className="rounded-xl bg-accent px-6 py-2.5 text-sm font-semibold text-on-accent shadow-md hover:bg-accent-hover hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all"
 						>
 							{'▶ Generate Circuit'}
 						</button>
@@ -253,7 +253,7 @@ export default function CircuitPanel (): ReactElement {
 							<button
 								onClick={handleGenerate}
 								disabled={!currentSession}
-								className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-40 transition-colors"
+								className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-on-accent hover:bg-accent-hover disabled:opacity-40 transition-colors"
 							>
 								{'Re-run Circuit'}
 							</button>
@@ -299,7 +299,7 @@ export default function CircuitPanel (): ReactElement {
 
 	return (
 		<div className="flex h-full">
-			<div className={`flex flex-col border-r border-border ${circuit?.components ? 'w-1/2' : 'flex-1'}`}>
+			<div className={`flex flex-col border-r border-divider ${circuit?.components ? 'w-1/2' : 'flex-1'}`}>
 				{chatColumn}
 			</div>
 			{detailsColumn && (

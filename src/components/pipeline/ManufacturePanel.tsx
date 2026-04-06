@@ -12,10 +12,11 @@ import type { ManufactureStep } from '@/types/models'
 
 const PlacementViewport = dynamic(() => import('@/components/viewport/PlacementViewport'), { ssr: false })
 const RoutingViewport = dynamic(() => import('@/components/viewport/RoutingViewport'), { ssr: false })
+const InflationViewport = dynamic(() => import('@/components/viewport/InflationViewport'), { ssr: false })
 const BitmapViewport = dynamic(() => import('@/components/viewport/BitmapViewport'), { ssr: false })
 const Scene3D = dynamic(() => import('@/components/viewport/Scene3D'), { ssr: false })
 
-const ALL_STEPS: ManufactureStep[] = ['placement', 'routing', 'bitmap', 'scad', 'compile', 'gcode']
+const ALL_STEPS: ManufactureStep[] = ['placement', 'routing', 'inflation', 'bitmap', 'scad', 'compile', 'gcode']
 
 const STATUS_STYLES: Record<StepStatus, string> = {
 	pending: 'text-fg-secondary',
@@ -36,6 +37,7 @@ const STATUS_BADGE: Record<StepStatus, string> = {
 const STEP_ICONS: Record<string, string> = {
 	placement: 'PLC',
 	routing: 'RTE',
+	inflation: 'INF',
 	bitmap: 'BMP',
 	scad: 'CAD',
 	compile: 'CMP',
@@ -90,7 +92,7 @@ function StepRow ({ s, running, selected, onSelect, onInform, onRetry, onContinu
 						{onRetry && (
 							<button
 								onClick={() => onRetry(s.step)}
-								className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
+								className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-on-accent-muted hover:bg-accent-hover transition-colors"
 							>
 								{'Retry'}
 							</button>
@@ -106,7 +108,7 @@ function StepRow ({ s, running, selected, onSelect, onInform, onRetry, onContinu
 						{s.responsibleAgent && onInform && (
 							<button
 								onClick={() => onInform(s.responsibleAgent!, s.message!)}
-								className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
+								className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-on-accent-muted hover:bg-accent-hover transition-colors"
 							>
 								{s.responsibleAgent === 'design' ? 'Inform the Designer' : 'Inform the Circuit'}
 							</button>
@@ -115,17 +117,18 @@ function StepRow ({ s, running, selected, onSelect, onInform, onRetry, onContinu
 				</div>
 			)}
 			{s.status !== 'error' && s.message && (
-				<span className="ml-9 text-[11px] text-fg-secondary">{s.message}</span>
+				<pre className="ml-9 text-[11px] text-fg-secondary whitespace-pre-wrap font-sans leading-relaxed">{s.message}</pre>
 			)}
 		</div>
 	)
 }
 
-type ViewTab = 'placement' | 'routing' | 'bitmap' | 'scad' | 'stl' | 'stl-top' | 'extras'
+type ViewTab = 'placement' | 'routing' | 'inflation' | 'bitmap' | 'scad' | 'stl' | 'stl-top' | 'extras'
 
 const STEP_TO_TAB: Record<string, ViewTab> = {
 	placement: 'placement',
 	routing: 'routing',
+	inflation: 'inflation',
 	bitmap: 'bitmap',
 	scad: 'scad',
 	compile: 'stl'
@@ -134,7 +137,8 @@ const STEP_TO_TAB: Record<string, ViewTab> = {
 export default function ManufacturePanel (): ReactElement {
 	const { currentSession, setActiveStage, filament, flashDropdowns } = useSession()
 	const { setPendingFeedback } = usePipeline()
-	const { steps, running, allDone, placementResult, routingResult, bitmapResult, runPipeline, stop } = useManufacture()
+	const { steps, running, allDone, currentStep, placementResult, routingResult, inflationResult, bitmapResult, runPipeline, stop } = useManufacture()
+	const compileReady = steps.find(s => s.step === 'compile')?.status !== 'running'
 	const [silverinkOnly, setSilverinkOnly] = useState(false)
 	const [twoPart, setTwoPart] = useState(false)
 	const [viewTab, setViewTab] = useState<ViewTab>('placement')
@@ -154,6 +158,12 @@ export default function ManufacturePanel (): ReactElement {
 		}
 		prevDoneRef.current = nowDone
 	}, [steps])
+
+	useEffect(() => {
+		if (currentStep && currentStep in STEP_TO_TAB) {
+			setViewTab(STEP_TO_TAB[currentStep])
+		}
+	}, [currentStep])
 
 	const sessionId = currentSession?.id
 
@@ -207,7 +217,7 @@ export default function ManufacturePanel (): ReactElement {
 		<div className="flex h-full flex-col">
 			<div className="flex-1 flex overflow-hidden">
 				{/* Left: Steps panel */}
-				<div className="w-72 shrink-0 flex flex-col border-r border-border">
+				<div className="w-72 shrink-0 flex flex-col border-r border-divider">
 					<div className="flex items-center justify-between px-3 py-2 border-b border-border">
 						<span className="text-xs font-semibold text-fg">{'Steps'}</span>
 						<div className="flex items-center gap-2">
@@ -236,7 +246,7 @@ export default function ManufacturePanel (): ReactElement {
 							{running ? (
 								<button
 									onClick={stop}
-									className="rounded-md bg-danger px-2.5 py-1 text-[11px] font-medium text-white hover:bg-danger/80 transition-colors"
+									className="rounded-md bg-danger px-2.5 py-1 text-[11px] font-medium text-on-danger hover:bg-danger/80 transition-colors"
 								>
 									{'Stop'}
 								</button>
@@ -245,7 +255,7 @@ export default function ManufacturePanel (): ReactElement {
 									<span className="text-[11px] font-medium text-success">{'Complete'}</span>
 									<button
 										onClick={() => { if (!requireFilament()) return; runPipeline('placement', { silverink_only: silverinkOnly }) }}
-										className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
+										className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-on-accent-muted hover:bg-accent-hover transition-colors"
 									>
 										{'Re-run'}
 									</button>
@@ -253,14 +263,14 @@ export default function ManufacturePanel (): ReactElement {
 							) : canResume ? (
 								<button
 									onClick={() => { if (!requireFilament()) return; runPipeline(firstIncomplete!.step, { silverink_only: silverinkOnly }) }}
-									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
+									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-on-accent-muted hover:bg-accent-hover transition-colors"
 								>
 									{'Resume'}
 								</button>
 							) : (
 								<button
 									onClick={() => { if (!requireFilament()) return; runPipeline(undefined, { silverink_only: silverinkOnly }) }}
-									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
+									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-on-accent-muted hover:bg-accent-hover transition-colors"
 								>
 									{'Start'}
 								</button>
@@ -313,7 +323,7 @@ export default function ManufacturePanel (): ReactElement {
 								<span className="flex-1 font-medium">{'print_job.json'}</span>
 								<span className="text-[10px] text-fg-secondary">{'Manifest'}</span>
 							</a>
-							<a href={getBundleDownloadUrl(sessionId)} download className="mt-1 flex items-center justify-center rounded-lg bg-success px-4 py-2.5 text-sm font-semibold text-white hover:bg-success/80 transition-colors">
+							<a href={getBundleDownloadUrl(sessionId)} download className="mt-1 flex items-center justify-center rounded-lg bg-success px-4 py-2.5 text-sm font-semibold text-on-success hover:bg-success/80 transition-colors">
 								{'Download Bundle (.zip)'}
 							</a>
 						</div>
@@ -357,11 +367,13 @@ export default function ManufacturePanel (): ReactElement {
 							<PlacementViewport placement={placementResult} className="w-full h-full" />
 						) : viewTab === 'routing' && routingResult ? (
 							<RoutingViewport routing={routingResult} className="w-full h-full" />
+						) : viewTab === 'inflation' && (inflationResult || routingResult) ? (
+							<InflationViewport routing={inflationResult ?? routingResult!} className="w-full h-full" />
 						) : viewTab === 'bitmap' && bitmapResult ? (
 							<BitmapViewport bitmap={bitmapResult} className="w-full h-full" />
 					) : viewTab === 'scad' && placementResult ? (
 						<Scene3D placement={placementResult} routing={routingResult} className="w-full h-full" />
-					) : viewTab === 'stl' && sessionId ? (
+					) : viewTab === 'stl' && sessionId && compileReady ? (
 						<Scene3D
 							key="stl-bottom"
 							placement={placementResult}
@@ -369,13 +381,13 @@ export default function ManufacturePanel (): ReactElement {
 							stlUrl={getStlDownloadUrl(sessionId)}
 							className="w-full h-full"
 						/>
-					) : viewTab === 'stl-top' && sessionId ? (
+					) : viewTab === 'stl-top' && sessionId && compileReady ? (
 						<Scene3D
 							key="stl-top"
 							stlUrl={getTopStlDownloadUrl(sessionId)}
 							className="w-full h-full"
 						/>
-					) : viewTab === 'extras' && sessionId ? (
+					) : viewTab === 'extras' && sessionId && compileReady ? (
 						<Scene3D
 							key="stl-extras"
 							stlUrl={getExtrasStlDownloadUrl(sessionId)}

@@ -8,21 +8,19 @@ import { useSession } from '@/contexts/SessionContext'
 import {
 	runPlacement,
 	runRouting,
+	runInflation,
 	generateBitmap,
 	generateScad,
 	startCompile,
-	pollCompile,
 	startGCode,
 	pollGCode,
 	getPlacementResult,
 	getRoutingResult,
+	getInflationResult,
 	getBitmap,
-	getScadResult
+	getScadResult,
+	cancelPipeline
 } from '@/lib/api'
-import { pollBitmap } from '@/lib/api/pipeline/bitmap'
-import { pollPlacement } from '@/lib/api/pipeline/placement'
-import { pollRouting } from '@/lib/api/pipeline/routing'
-import { pollScad } from '@/lib/api/pipeline/scad'
 import type { ManufactureStep, PlacementResult, RoutingResult, BitmapResult, ScadResult, GCodeStatus, PipelineError } from '@/types/models'
 
 export type StepStatus = 'pending' | 'running' | 'done' | 'error' | 'skipped'
@@ -38,22 +36,16 @@ export interface ManufactureStepState {
 const STEP_DEFS: { step: ManufactureStep; label: string; artifact: string }[] = [
 	{ step: 'placement', label: 'Component Placement', artifact: 'placement' },
 	{ step: 'routing', label: 'Trace Routing', artifact: 'routing' },
+	{ step: 'inflation', label: 'Trace Inflation', artifact: 'inflation' },
 	{ step: 'bitmap', label: 'Trace Bitmap', artifact: 'bitmap' },
 	{ step: 'scad', label: 'Enclosure Generation', artifact: 'scad' },
 	{ step: 'compile', label: 'STL Compilation', artifact: '' },
 	{ step: 'gcode', label: 'G-Code Pipeline', artifact: 'gcode' }
 ]
 
-type PollFn = (sessionId: string) => Promise<{ status: string; message?: string; detail?: Record<string, unknown> }>
+const ALL_STEPS: ManufactureStep[] = ['placement', 'routing', 'inflation', 'bitmap', 'scad', 'compile', 'gcode']
 
-const POLL_MAP: Record<ManufactureStep, PollFn> = {
-	placement: pollPlacement,
-	routing: pollRouting,
-	bitmap: pollBitmap as PollFn,
-	scad: pollScad,
-	compile: pollCompile as PollFn,
-	gcode: pollGCode as PollFn
-}
+type PipelineSnapshot = Record<string, { status: string; message?: string; detail?: Record<string, unknown> }>
 
 function initSteps (artifacts: Record<string, boolean>, errors?: Record<string, PipelineError>): ManufactureStepState[] {
 	let upstreamFailed = false
@@ -71,32 +63,77 @@ function initSteps (artifacts: Record<string, boolean>, errors?: Record<string, 
 	})
 }
 
-async function waitForStep (
+function sseUrl (sessionId: string): string {
+	const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+	return `${base}/api/sessions/${encodeURIComponent(sessionId)}/manufacture/pipeline/events`
+}
+
+function waitForStepSSE (
 	sessionId: string,
 	step: ManufactureStep,
 	cancelRef: React.RefObject<boolean>,
-	interval: number = 500,
-	maxAttempts: number = 1200
+	abortController: AbortController,
+	onProgress?: (entry: { status: string; message?: string; detail?: Record<string, unknown> }) => void
 ): Promise<{ status: string; message?: string; detail?: Record<string, unknown> }> {
-	const poll = POLL_MAP[step]
-	if (!poll) {
-		return { status: 'done' }
-	}
+	return new Promise((resolve, reject) => {
+		const onAbort = () => reject(new CancelError())
+		if (cancelRef.current) { reject(new CancelError()); return }
+		abortController.signal.addEventListener('abort', onAbort, { once: true })
 
-	for (let attempt = 0; attempt < maxAttempts; attempt++) {
-		if (cancelRef.current) {
-			throw new CancelError()
+		const run = async () => {
+			try {
+				const response = await fetch(sseUrl(sessionId), { signal: abortController.signal })
+				if (!response.ok) {
+					throw new StepError(`SSE connect failed (${response.status})`)
+				}
+				const reader = response.body?.getReader()
+				if (!reader) { throw new StepError('No response body') }
+
+				const decoder = new TextDecoder()
+				let buffer = ''
+
+				while (true) {
+					if (cancelRef.current) { reader.cancel(); reject(new CancelError()); return }
+					const { done, value } = await reader.read()
+					if (done) { break }
+
+					buffer += decoder.decode(value, { stream: true })
+					const lines = buffer.split('\n')
+					buffer = lines.pop() ?? ''
+
+					for (const line of lines) {
+						if (line.startsWith('data: ')) {
+							try {
+								const snapshot: PipelineSnapshot = JSON.parse(line.slice(6))
+								const entry = snapshot[step]
+								if (!entry) { continue }
+								if (entry.status === 'done') {
+									reader.cancel()
+									resolve(entry)
+									return
+								}
+								if (entry.status === 'error') {
+									reader.cancel()
+									reject(new StepError(entry.message ?? `${step} failed`, entry.detail))
+									return
+								}
+								if (onProgress && entry.status === 'running') {
+									onProgress(entry)
+								}
+							} catch { /* ignore parse errors */ }
+						}
+					}
+				}
+				reject(new StepError(`SSE stream ended before ${step} completed`))
+			} catch (err) {
+				if ((err as Error).name === 'AbortError') { reject(new CancelError()); return }
+				if (err instanceof CancelError || err instanceof StepError) { reject(err); return }
+				reject(new StepError(`SSE error: ${(err as Error).message}`))
+			}
 		}
-		const s = await poll(sessionId)
-		if (s.status === 'done') {
-			return s
-		}
-		if (s.status === 'error') {
-			throw new StepError(s.message ?? `${step} failed`, s.detail)
-		}
-		await new Promise(resolve => setTimeout(resolve, interval))
-	}
-	throw new StepError(`${step} timed out after ${maxAttempts} polls`)
+
+		run()
+	})
 }
 
 export function useManufacture () {
@@ -110,15 +147,18 @@ export function useManufacture () {
 	const [currentStep, setCurrentStep] = useState<ManufactureStep | null>(null)
 	const [placementResult, setPlacementResult] = useState<PlacementResult | null>(null)
 	const [routingResult, setRoutingResult] = useState<RoutingResult | null>(null)
+	const [inflationResult, setInflationResult] = useState<RoutingResult | null>(null)
 	const [bitmapResult, setBitmapResult] = useState<BitmapResult | null>(null)
 	const [scadResult, setScadResult] = useState<ScadResult | null>(null)
 	const [gcodeStatus, setGcodeStatus] = useState<GCodeStatus | null>(null)
 	const cancelRef = useRef(false)
+	const sseAbortRef = useRef<AbortController | null>(null)
 
 	useEffect(() => {
 		setSteps(initSteps(currentSession?.artifacts ?? {}, currentSession?.pipeline_errors))
 		setPlacementResult(null)
 		setRoutingResult(null)
+		setInflationResult(null)
 		setBitmapResult(null)
 		setScadResult(null)
 		setGcodeStatus(null)
@@ -132,6 +172,9 @@ export function useManufacture () {
 			if (a.routing || errors.routing) {
 				fetches.push(getRoutingResult(currentSession.id).then(setRoutingResult).catch(() => {}))
 			}
+			if (a.inflation) {
+				fetches.push(getInflationResult(currentSession.id).then(setInflationResult).catch(() => {}))
+			}
 			if (a.routing && !errors.routing) {
 				fetches.push(getBitmap(currentSession.id).then(setBitmapResult).catch(() => {}))
 			}
@@ -139,9 +182,127 @@ export function useManufacture () {
 				fetches.push(getScadResult(currentSession.id).then(setScadResult).catch(() => {}))
 			}
 			Promise.all(fetches)
+
+			checkForRunningSteps(currentSession.id)
 		}
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [currentSession?.id])
+
+	const checkForRunningSteps = useCallback((sessionId: string) => {
+		sseAbortRef.current?.abort()
+		const controller = new AbortController()
+		sseAbortRef.current = controller
+		const run = async () => {
+			try {
+				const response = await fetch(sseUrl(sessionId), { signal: controller.signal })
+				if (!response.ok) { return }
+				const reader = response.body?.getReader()
+				if (!reader) { return }
+
+				const decoder = new TextDecoder()
+				let buffer = ''
+				let gotRunning = false
+
+				while (true) {
+					if (cancelRef.current) { reader.cancel(); setRunning(false); setCurrentStep(null); return }
+					const { done, value } = await reader.read()
+					if (done) { break }
+
+					buffer += decoder.decode(value, { stream: true })
+					const lines = buffer.split('\n')
+					buffer = lines.pop() ?? ''
+
+					for (const line of lines) {
+						if (!line.startsWith('data: ')) { continue }
+						try {
+							const snapshot: PipelineSnapshot = JSON.parse(line.slice(6))
+							const hasRunning = ALL_STEPS.some(s => {
+								const entry = snapshot[s]
+								return entry && (entry.status === 'running' || entry.status === 'compiling')
+							})
+
+							if (hasRunning && !gotRunning) {
+								gotRunning = true
+								setRunning(true)
+								setSteps(prev => prev.map(s => {
+									const entry = snapshot[s.step]
+									if (!entry) { return s }
+									const status = entry.status === 'compiling' ? 'running' : entry.status as StepStatus
+									return {
+										...s,
+										status,
+										message: entry.message || undefined,
+										responsibleAgent: entry.detail?.responsible_agent as 'design' | 'circuit' | undefined
+									}
+								}))
+							}
+
+							if (gotRunning) {
+								if (cancelRef.current) { reader.cancel(); setRunning(false); setCurrentStep(null); return }
+
+								setSteps(prev => prev.map(s => {
+									const entry = snapshot[s.step]
+									if (!entry) { return s }
+									const status = entry.status === 'compiling' ? 'running' : entry.status as StepStatus
+									return {
+										...s,
+										status,
+										message: entry.message || undefined,
+										responsibleAgent: entry.detail?.responsible_agent as 'design' | 'circuit' | undefined
+									}
+								}))
+
+								const nowRunning = ALL_STEPS.some(s => {
+									const entry = snapshot[s]
+									return entry && (entry.status === 'running' || entry.status === 'compiling')
+								})
+								const firstRunning = ALL_STEPS.find(s => {
+									const entry = snapshot[s]
+									return entry && (entry.status === 'running' || entry.status === 'compiling')
+								})
+								setCurrentStep(firstRunning ?? null)
+
+								if (!nowRunning) {
+									setRunning(false)
+									setCurrentStep(null)
+									reader.cancel()
+									refreshSession().catch(() => {})
+									const finalSnapshot = snapshot
+									if (finalSnapshot.placement?.status === 'done') {
+										getPlacementResult(sessionId).then(setPlacementResult).catch(() => {})
+									}
+									if (finalSnapshot.routing?.status === 'done') {
+										getRoutingResult(sessionId).then(setRoutingResult).catch(() => {})
+									}
+									if (finalSnapshot.inflation?.status === 'done') {
+										getInflationResult(sessionId).then(setInflationResult).catch(() => {})
+									}
+									if (finalSnapshot.bitmap?.status === 'done') {
+										getBitmap(sessionId).then(setBitmapResult).catch(() => {})
+									}
+									if (finalSnapshot.scad?.status === 'done') {
+										getScadResult(sessionId).then(setScadResult).catch(() => {})
+									}
+									if (finalSnapshot.gcode?.status === 'done') {
+										pollGCode(sessionId).then(setGcodeStatus).catch(() => {})
+									}
+									return
+								}
+							}
+
+						} catch { /* ignore parse errors */ }
+					}
+				}
+			} catch {
+				if (cancelRef.current) {
+					setRunning(false)
+					setCurrentStep(null)
+				}
+			}
+		}
+		run()
+		return () => { controller.abort() }
+	}, [refreshSession])
 
 	useEffect(() => {
 		if (!pendingInvalidation?.length) { return }
@@ -152,6 +313,7 @@ export function useManufacture () {
 		))
 		if (pendingInvalidation.includes('placement')) { setPlacementResult(null) }
 		if (pendingInvalidation.includes('routing')) { setRoutingResult(null) }
+		if (pendingInvalidation.includes('inflation')) { setInflationResult(null) }
 		if (pendingInvalidation.includes('bitmap')) { setBitmapResult(null) }
 		if (pendingInvalidation.includes('scad')) { setScadResult(null) }
 		clearInvalidation()
@@ -165,19 +327,24 @@ export function useManufacture () {
 
 	const stop = useCallback(() => {
 		cancelRef.current = true
-	}, [])
+		sseAbortRef.current?.abort()
+		if (currentSession?.id) {
+			cancelPipeline(currentSession.id).catch(() => {})
+		}
+	}, [currentSession?.id])
 
 	const runPipeline = useCallback(async (fromStep?: ManufactureStep, options?: { filament?: string; silverink_only?: boolean; two_part?: boolean; toStep?: ManufactureStep }) => {
 		if (!currentSession || running) { return }
 
 		cancelRef.current = false
+		sseAbortRef.current?.abort()
+		const sseAbort = new AbortController()
+		sseAbortRef.current = sseAbort
 		setRunning(true)
 
 		const sessionId = currentSession.id
-		const artifacts = currentSession.artifacts
-		const allSteps: ManufactureStep[] = ['placement', 'routing', 'bitmap', 'scad', 'compile', 'gcode']
-		const startIdx = fromStep ? allSteps.indexOf(fromStep) : 0
-		const endIdx = options?.toStep ? allSteps.indexOf(options.toStep) : allSteps.length - 1
+		const startIdx = fromStep ? ALL_STEPS.indexOf(fromStep) : 0
+		const endIdx = options?.toStep ? ALL_STEPS.indexOf(options.toStep) : ALL_STEPS.length - 1
 		let activeStep: ManufactureStep | null = null
 
 		setSteps(prev => prev.map((s, i) => {
@@ -187,20 +354,26 @@ export function useManufacture () {
 		}))
 
 		const shouldRun = (step: ManufactureStep): boolean => {
-			const idx = allSteps.indexOf(step)
+			const idx = ALL_STEPS.indexOf(step)
 			if (idx < startIdx || idx > endIdx) { return false }
 			return true
 		}
 
+		if (shouldRun('placement')) { setPlacementResult(null) }
+		if (shouldRun('routing')) { setRoutingResult(null) }
+		if (shouldRun('inflation')) { setInflationResult(null) }
+		if (shouldRun('bitmap')) { setBitmapResult(null) }
+		if (shouldRun('scad')) { setScadResult(null) }
+		if (shouldRun('gcode')) { setGcodeStatus(null) }
+
 		try {
-			// Placement
 			if (cancelRef.current) { throw new CancelError() }
 			if (shouldRun('placement')) {
 				activeStep = 'placement'
 				setCurrentStep('placement')
 				updateStep('placement', { status: 'running' })
 				await runPlacement(sessionId)
-				await waitForStep(sessionId, 'placement', cancelRef)
+				await waitForStepSSE(sessionId, 'placement', cancelRef, sseAbort)
 				const pr = await getPlacementResult(sessionId)
 				setPlacementResult(pr)
 				updateStep('placement', { status: 'done' })
@@ -208,14 +381,21 @@ export function useManufacture () {
 				updateStep('placement', { status: 'done', message: 'Using existing' })
 			}
 
-			// Routing
 			if (cancelRef.current) { throw new CancelError() }
 			if (shouldRun('routing')) {
 				activeStep = 'routing'
 				setCurrentStep('routing')
 				updateStep('routing', { status: 'running' })
 				await runRouting(sessionId)
-				await waitForStep(sessionId, 'routing', cancelRef)
+				let lastPoll = 0
+				await waitForStepSSE(sessionId, 'routing', cancelRef, sseAbort, (entry) => {
+					updateStep('routing', { status: 'running', message: entry.message || undefined })
+					const now = Date.now()
+					if (now - lastPoll > 1500) {
+						lastPoll = now
+						getRoutingResult(sessionId).then(setRoutingResult).catch(() => {})
+					}
+				})
 				const rr = await getRoutingResult(sessionId)
 				setRoutingResult(rr)
 				updateStep('routing', { status: 'done' })
@@ -223,14 +403,27 @@ export function useManufacture () {
 				updateStep('routing', { status: 'done', message: 'Using existing' })
 			}
 
-			// Bitmap
+			if (cancelRef.current) { throw new CancelError() }
+			if (shouldRun('inflation')) {
+				activeStep = 'inflation'
+				setCurrentStep('inflation')
+				updateStep('inflation', { status: 'running' })
+				await runInflation(sessionId)
+				await waitForStepSSE(sessionId, 'inflation', cancelRef, sseAbort)
+				const ir = await getInflationResult(sessionId)
+				setInflationResult(ir)
+				updateStep('inflation', { status: 'done' })
+			} else {
+				updateStep('inflation', { status: 'done', message: 'Using existing' })
+			}
+
 			if (cancelRef.current) { throw new CancelError() }
 			if (shouldRun('bitmap')) {
 				activeStep = 'bitmap'
 				setCurrentStep('bitmap')
 				updateStep('bitmap', { status: 'running' })
 				await generateBitmap(sessionId)
-				await waitForStep(sessionId, 'bitmap', cancelRef)
+				await waitForStepSSE(sessionId, 'bitmap', cancelRef, sseAbort)
 				const br = await getBitmap(sessionId)
 				setBitmapResult(br)
 				updateStep('bitmap', { status: 'done' })
@@ -238,14 +431,13 @@ export function useManufacture () {
 				updateStep('bitmap', { status: 'done', message: 'Using existing' })
 			}
 
-			// SCAD
 			if (cancelRef.current) { throw new CancelError() }
 			if (shouldRun('scad')) {
 				activeStep = 'scad'
 				setCurrentStep('scad')
 				updateStep('scad', { status: 'running' })
 				await generateScad(sessionId, { two_part: options?.two_part })
-				await waitForStep(sessionId, 'scad', cancelRef)
+				await waitForStepSSE(sessionId, 'scad', cancelRef, sseAbort)
 				const sr = await getScadResult(sessionId)
 				setScadResult(sr)
 				updateStep('scad', { status: 'done' })
@@ -253,20 +445,18 @@ export function useManufacture () {
 				updateStep('scad', { status: 'done', message: 'Using existing' })
 			}
 
-			// Compile
 			if (cancelRef.current) { throw new CancelError() }
 			if (shouldRun('compile')) {
 				activeStep = 'compile'
 				setCurrentStep('compile')
 				updateStep('compile', { status: 'running' })
 				await startCompile(sessionId, true)
-				await waitForStep(sessionId, 'compile', cancelRef)
+				await waitForStepSSE(sessionId, 'compile', cancelRef, sseAbort)
 				updateStep('compile', { status: 'done' })
 			} else {
 				updateStep('compile', { status: 'done', message: 'Using existing' })
 			}
 
-			// G-code
 			if (cancelRef.current) { throw new CancelError() }
 			if (shouldRun('gcode')) {
 				activeStep = 'gcode'
@@ -276,7 +466,7 @@ export function useManufacture () {
 					force: true,
 					silverink_only: options?.silverink_only
 				})
-				await waitForStep(sessionId, 'gcode', cancelRef)
+				await waitForStepSSE(sessionId, 'gcode', cancelRef, sseAbort)
 				const gs = await pollGCode(sessionId)
 				setGcodeStatus(gs)
 				updateStep('gcode', { status: 'done' })
@@ -293,15 +483,12 @@ export function useManufacture () {
 				const { message, responsibleAgent } = extractPipelineError(err)
 				if (activeStep) {
 					updateStep(activeStep, { status: 'error', message, responsibleAgent })
-					// Reset all downstream steps to pending so they don't stay
-					// green from a previous successful run.
-					const failedIdx = allSteps.indexOf(activeStep)
+					const failedIdx = ALL_STEPS.indexOf(activeStep)
 					setSteps(prev => prev.map((s, i) =>
 						i > failedIdx && s.status === 'done'
 							? { ...s, status: 'pending' as StepStatus, message: undefined, responsibleAgent: undefined }
 							: s
 					))
-					// Fetch partial routing result so the viewport can show what was routed
 					if (activeStep === 'routing') {
 						getRoutingResult(sessionId).then(setRoutingResult).catch(() => {})
 					}
@@ -313,8 +500,6 @@ export function useManufacture () {
 		} finally {
 			setRunning(false)
 			setCurrentStep(null)
-			// Always refresh session so currentSession.artifacts and pipeline_errors
-			// are up-to-date for the next pipeline run.
 			refreshSession().catch(() => {})
 		}
 	}, [currentSession, running, updateStep, refreshSession, addError])
@@ -322,6 +507,7 @@ export function useManufacture () {
 	useEffect(() => {
 		return () => {
 			cancelRef.current = true
+			sseAbortRef.current?.abort()
 		}
 	}, [])
 
@@ -334,6 +520,7 @@ export function useManufacture () {
 		allDone,
 		placementResult,
 		routingResult,
+		inflationResult,
 		bitmapResult,
 		scadResult,
 		gcodeStatus,

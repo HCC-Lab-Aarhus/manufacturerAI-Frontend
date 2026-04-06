@@ -32,8 +32,8 @@ export default function OutlineSVG ({ outline, holes, pcbContour, children, clas
 		<svg viewBox={vb} className={className ?? 'w-full h-full'} xmlns="http://www.w3.org/2000/svg">
 			<defs>
 				<pattern id="grid10" width={10 * SCALE} height={10 * SCALE} patternUnits="userSpaceOnUse">
-					<line x1={0} y1={0} x2={0} y2={10 * SCALE} stroke="#d6d2ca" strokeWidth={0.5} />
-					<line x1={0} y1={0} x2={10 * SCALE} y2={0} stroke="#d6d2ca" strokeWidth={0.5} />
+					<line x1={0} y1={0} x2={0} y2={10 * SCALE} stroke="var(--color-grid)" strokeWidth={0.5} />
+					<line x1={0} y1={0} x2={10 * SCALE} y2={0} stroke="var(--color-grid)" strokeWidth={0.5} />
 				</pattern>
 			</defs>
 
@@ -45,20 +45,20 @@ export default function OutlineSVG ({ outline, holes, pcbContour, children, clas
 				fill="url(#grid10)"
 			/>
 
-			<path d={path} fill="rgba(86,114,160,0.06)" stroke="#5672a0" strokeWidth={2} fillRule="evenodd" />
+			<path d={path} fill="var(--color-outline-fill)" stroke="var(--color-outline-stroke)" strokeWidth={2} fillRule="evenodd" />
 
 			{pcbContour && pcbContour.length > 2 && (
 				<polyline
 					points={pcbContour.map(([x, y]) => `${x * SCALE},${y * SCALE}`).join(' ')}
 					fill="none"
-					stroke="#358045"
+					stroke="var(--color-pcb-stroke)"
 					strokeWidth={1.5}
 					strokeDasharray="6,3"
 					opacity={0.7}
 				/>
 			)}
 
-			<text x={minX * SCALE + width * SCALE / 2} y={minY * SCALE - PAD / 2} textAnchor="middle" fontSize={10} fill="#6b6560">
+			<text x={minX * SCALE + width * SCALE / 2} y={minY * SCALE - PAD / 2} textAnchor="middle" fontSize={10} fill="var(--color-label)">
 				{width.toFixed(1)}{' mm'}
 			</text>
 			<text
@@ -66,7 +66,7 @@ export default function OutlineSVG ({ outline, holes, pcbContour, children, clas
 				y={minY * SCALE + height * SCALE / 2}
 				textAnchor="middle"
 				fontSize={10}
-				fill="#6b6560"
+				fill="var(--color-label)"
 				transform={`rotate(-90, ${minX * SCALE - PAD / 2}, ${minY * SCALE + height * SCALE / 2})`}
 			>
 				{height.toFixed(1)}{' mm'}

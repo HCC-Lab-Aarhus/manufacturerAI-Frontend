@@ -329,7 +329,7 @@ function PlacementSvg ({ components, outline, highlightIndices, onClickComponent
 				const cx = comp.x_mm
 				const cy = comp.y_mm
 
-				const fill = isCur ? 'rgba(88,166,255,0.25)' : 'rgba(110,118,129,0.15)'
+				const fill = isCur ? 'var(--color-guide-active)' : 'var(--color-guide-default)'
 				const stroke = isCur ? 'var(--color-accent)' : 'var(--color-border)'
 				const sw = isCur ? 1.2 : 0.6
 				const fontSize = Math.max(2, Math.min(4, Math.min(bw, bh) * 0.35))
@@ -448,7 +448,7 @@ export default function GuidePanel (): ReactElement {
 			{/* Body */}
 			<div className="flex flex-1 overflow-hidden">
 				{/* Sidebar */}
-				<aside className="flex w-56 shrink-0 flex-col border-r border-border bg-surface-alt">
+				<aside className="flex w-56 shrink-0 flex-col border-r border-divider bg-surface-alt">
 					<nav className="flex-1 overflow-y-auto p-2">
 						{sections.map((sec, i) => (
 							<button
@@ -489,7 +489,7 @@ export default function GuidePanel (): ReactElement {
 
 						{/* Placement SVG */}
 						{step.showPlacementView && placement && (
-							<div className="flex w-80 shrink-0 flex-col border-l border-border bg-surface-alt">
+							<div className="flex w-80 shrink-0 flex-col border-l border-divider bg-surface-alt">
 								<div className="border-b border-border px-4 py-2 text-sm font-semibold text-fg">
 									{'Component Placement'}
 								</div>

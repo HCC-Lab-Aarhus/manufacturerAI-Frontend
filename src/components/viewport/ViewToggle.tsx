@@ -17,7 +17,7 @@ export default function ViewToggle ({ view2D, view3D, default3D }: Props): React
 				<button
 					onClick={() => setIs3D(false)}
 					className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-						!is3D ? 'bg-accent text-white' : 'text-fg-secondary hover:bg-surface-hover'
+						!is3D ? 'bg-accent text-on-accent' : 'text-fg-secondary hover:bg-surface-hover'
 					}`}
 				>
 					2D
@@ -25,7 +25,7 @@ export default function ViewToggle ({ view2D, view3D, default3D }: Props): React
 				<button
 					onClick={() => setIs3D(true)}
 					className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-						is3D ? 'bg-accent text-white' : 'text-fg-secondary hover:bg-surface-hover'
+						is3D ? 'bg-accent text-on-accent' : 'text-fg-secondary hover:bg-surface-hover'
 					}`}
 				>
 					3D

@@ -130,6 +130,13 @@ export interface Trace {
 	path: [number, number][]
 }
 
+export interface InflatedTrace {
+	net_id: string
+	centreline: [number, number][]
+	polygon: [number, number][]
+	holes?: [number, number][][]
+}
+
 export interface JumperEndpoint {
 	x: number
 	y: number
@@ -146,6 +153,7 @@ export interface JumperWire {
 
 export interface RoutingResult {
 	traces: Trace[]
+	inflated_traces?: InflatedTrace[]
 	trace_width_mm: number
 	outline: Outline
 	enclosure: Enclosure
@@ -178,7 +186,7 @@ export interface BitmapResult {
 
 export type PipelineStage = 'design' | 'circuit' | 'manufacture' | 'guide' | 'setup'
 
-export type ManufactureStep = 'placement' | 'routing' | 'bitmap' | 'scad' | 'compile' | 'gcode'
+export type ManufactureStep = 'placement' | 'routing' | 'inflation' | 'bitmap' | 'scad' | 'compile' | 'gcode'
 
 export type StageStatus = 'pending' | 'complete' | 'done' | 'error'
 

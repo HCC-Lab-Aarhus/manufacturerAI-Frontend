@@ -7,7 +7,7 @@ import ComponentPreview3D from '@/components/viewport/ComponentPreview3D'
 import { useCatalog } from '@/hooks/useCatalog'
 import type { CatalogComponent, CatalogPin } from '@/types/models'
 
-const PIN_COLORS = { in: '#3b82f6', out: '#ef4444', bidirectional: '#eab308' } as const
+const PIN_COLORS = { in: 'var(--color-pin-input)', out: 'var(--color-pin-output)', bidirectional: 'var(--color-pin-bidir)' } as const
 const SCALE = 10
 const PAD = 30
 
@@ -30,28 +30,28 @@ function PinDiagram ({ pins, body }: { pins: CatalogPin[]; body: CatalogComponen
 	return (
 		<svg viewBox={`0 0 ${Math.max(svgW, 120)} ${Math.max(svgH, 80)}`} className="w-full max-w-80">
 			{body.shape === 'circle' ? (
-				<circle cx={ox} cy={oy} r={(bodyW / 2) * SCALE} fill="none" stroke="#888" strokeWidth={1.5} strokeDasharray="4,3" />
+				<circle cx={ox} cy={oy} r={(bodyW / 2) * SCALE} fill="none" stroke="var(--color-fg-muted)" strokeWidth={1.5} strokeDasharray="4,3" />
 			) : (
-				<rect x={ox + (-bodyW / 2) * SCALE} y={oy + (-bodyH / 2) * SCALE} width={bodyW * SCALE} height={bodyH * SCALE} rx={2} fill="none" stroke="#888" strokeWidth={1.5} strokeDasharray="4,3" />
+				<rect x={ox + (-bodyW / 2) * SCALE} y={oy + (-bodyH / 2) * SCALE} width={bodyW * SCALE} height={bodyH * SCALE} rx={2} fill="none" stroke="var(--color-fg-muted)" strokeWidth={1.5} strokeDasharray="4,3" />
 			)}
 			{pins.map(pin => {
 				const px = ox + pin.position_mm[0] * SCALE
 				const py = oy + pin.position_mm[1] * SCALE
-				const color = PIN_COLORS[pin.direction] ?? '#888'
+				const color = PIN_COLORS[pin.direction] ?? 'var(--color-fg-muted)'
 				const r = Math.max((pin.hole_diameter_mm / 2) * SCALE * 1.5, 3.5)
 				return (
 					<g key={pin.id}>
 						<circle cx={px} cy={py} r={r} fill={color} opacity={0.85} />
-						<text x={px} y={py - r - 3} textAnchor="middle" fontSize={8} fontFamily="monospace" fill="#555">{pin.id}</text>
+						<text x={px} y={py - r - 3} textAnchor="middle" fontSize={8} fontFamily="monospace" fill="var(--color-fg-secondary)">{pin.id}</text>
 					</g>
 				)
 			})}
 			<circle cx={10} cy={svgH - 10} r={3.5} fill={PIN_COLORS.in} />
-			<text x={18} y={svgH - 7} fontSize={8} fill="#888">{'in'}</text>
+			<text x={18} y={svgH - 7} fontSize={8} fill="var(--color-fg-muted)">{'in'}</text>
 			<circle cx={38} cy={svgH - 10} r={3.5} fill={PIN_COLORS.out} />
-			<text x={46} y={svgH - 7} fontSize={8} fill="#888">{'out'}</text>
+			<text x={46} y={svgH - 7} fontSize={8} fill="var(--color-fg-muted)">{'out'}</text>
 			<circle cx={68} cy={svgH - 10} r={3.5} fill={PIN_COLORS.bidirectional} />
-			<text x={76} y={svgH - 7} fontSize={8} fill="#888">{'bidir'}</text>
+			<text x={76} y={svgH - 7} fontSize={8} fill="var(--color-fg-muted)">{'bidir'}</text>
 		</svg>
 	)
 }
@@ -97,8 +97,8 @@ function ComponentDetail ({ component, onClose }: { component: CatalogComponent;
 
 				<div className="mt-3 flex flex-wrap gap-1.5">
 					<span className="rounded bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent-text">{m.style}{' mount'}</span>
-					{component.ui_placement && <span className="rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">{'UI placement'}</span>}
-					{m.blocks_routing && <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-danger">{'blocks routing'}</span>}
+					{component.ui_placement && <span className="rounded bg-info-bg px-2 py-0.5 text-xs font-medium text-info-fg">{'UI placement'}</span>}
+					{m.blocks_routing && <span className="rounded bg-error-bg px-2 py-0.5 text-xs font-medium text-error-fg">{'blocks routing'}</span>}
 				</div>
 
 				<div className="mt-4">
@@ -199,7 +199,7 @@ function ComponentDetail ({ component, onClose }: { component: CatalogComponent;
 											<td className="py-1 pr-2 text-fg-secondary">{pin.label}</td>
 											<td className="py-1 pr-2 font-mono text-fg-muted">{'['}{pin.position_mm[0]}{', '}{pin.position_mm[1]}{']'}</td>
 											<td className="py-1 pr-2">
-												<span className={`inline-block size-2 rounded-full mr-1 align-middle ${pin.direction === 'in' ? 'bg-blue-500' : pin.direction === 'out' ? 'bg-red-500' : 'bg-yellow-500'}`} />
+												<span className={`inline-block size-2 rounded-full mr-1 align-middle ${pin.direction === 'in' ? 'bg-pin-input' : pin.direction === 'out' ? 'bg-pin-output' : 'bg-pin-bidir'}`} />
 												{pin.direction}
 											</td>
 											<td className="py-1 pr-2 text-fg-muted">{pin.voltage_v != null ? `${pin.voltage_v}V` : '\u2014'}</td>
