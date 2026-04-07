@@ -221,28 +221,26 @@ export default function ManufacturePanel (): ReactElement {
 					<div className="flex items-center justify-between px-3 py-2 border-b border-border">
 						<span className="text-xs font-semibold text-fg">{'Steps'}</span>
 						<div className="flex items-center gap-2">
-							{!running && !allDone && (
-								<>
-								<label className="flex items-center gap-1 text-[11px] text-fg-secondary">
-									<input
-										type="checkbox"
-										checked={silverinkOnly}
-										onChange={e => setSilverinkOnly(e.target.checked)}
-										className="rounded border-border-light"
-									/>
-									{'SilverInk'}
-								</label>
-								<label className="flex items-center gap-1 text-[11px] text-fg-secondary">
-									<input
-										type="checkbox"
-										checked={twoPart}
-										onChange={e => setTwoPart(e.target.checked)}
-										className="rounded border-border-light"
-									/>
-									{'Two-Part'}
-								</label>
-								</>
-							)}
+							<label className="flex items-center gap-1 text-[11px] text-fg-secondary">
+								<input
+									type="checkbox"
+									checked={silverinkOnly}
+									onChange={e => setSilverinkOnly(e.target.checked)}
+									className="rounded border-border-light"
+									disabled={running}
+								/>
+								{'SilverInk'}
+							</label>
+							<label className="flex items-center gap-1 text-[11px] text-fg-secondary">
+								<input
+									type="checkbox"
+									checked={twoPart}
+									onChange={e => setTwoPart(e.target.checked)}
+									className="rounded border-border-light"
+									disabled={running}
+								/>
+								{'Two-Part'}
+							</label>
 							{running ? (
 								<button
 									onClick={stop}
