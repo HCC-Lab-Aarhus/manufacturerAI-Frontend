@@ -554,6 +554,9 @@ function extractPipelineError (err: unknown): { message: string; responsibleAgen
 	const axiosErr = err as AxiosError<Record<string, unknown>>
 	const data = axiosErr?.response?.data
 	if (data) {
+		if (typeof data.detail === 'string') {
+			return { message: data.detail }
+		}
 		const detail = typeof data.detail === 'object' && data.detail !== null
 			? data.detail as Record<string, unknown>
 			: data
