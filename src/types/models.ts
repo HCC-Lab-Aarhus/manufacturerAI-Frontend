@@ -191,7 +191,7 @@ export type PipelineStage = 'design' | 'circuit' | 'manufacture' | 'guide' | 'se
 
 export type ManufactureStep = 'placement' | 'routing' | 'inflation' | 'bitmap' | 'scad' | 'compile' | 'gcode'
 
-export type StageStatus = 'pending' | 'complete' | 'done' | 'error'
+export type StageStatus = 'pending' | 'complete' | 'error'
 
 export type PipelineState = Record<string, StageStatus | string>
 

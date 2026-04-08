@@ -120,19 +120,19 @@ export function isStageAccessible (
 	if (stage === 'design') { return true }
 	if (stage === 'circuit') {
 		const s = pipelineState.design
-		return s === 'complete' || s === 'done'
+		return s === 'complete'
 	}
 	if (stage === 'manufacture') {
 		const s = pipelineState.circuit
-		return s === 'complete' || s === 'done'
+		return s === 'complete'
 	}
 	if (stage === 'guide') {
 		const s = pipelineState.placement
-		return s === 'complete' || s === 'done'
+		return s === 'complete'
 	}
 	if (stage === 'setup') {
 		const s = pipelineState.gcode
-		return s === 'complete' || s === 'done'
+		return s === 'complete'
 	}
 	return true
 }

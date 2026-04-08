@@ -106,8 +106,7 @@ export default function SetupPanel (): ReactElement {
 		getSimConfig(currentSession.id).then(setSimConfig).catch(() => {})
 	}, [currentSession?.id, firmwareCode, compiled])
 
-	const hasManufacture = currentSession?.pipeline_state.gcode === 'complete' ||
-		currentSession?.pipeline_state.gcode === 'done'
+	const hasManufacture = currentSession?.pipeline_state.gcode === 'complete'
 	const hasConversation = messages.length > 0 || streaming
 	const hasSimulator = !!placement && !!simConfig && simConfig.peripherals.length > 0 && !!simConfig.elf_path
 

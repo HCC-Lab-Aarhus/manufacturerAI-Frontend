@@ -114,7 +114,6 @@ export default function CircuitPanel (): ReactElement {
 			!conversationLoading &&
 			currentSession.artifacts?.circuit_pending &&
 			currentSession.pipeline_state.circuit !== 'complete' &&
-			currentSession.pipeline_state.circuit !== 'done' &&
 			!autoRevalidatedSessions.has(currentSession.id)
 		) {
 			autoRevalidatedSessions.add(currentSession.id)

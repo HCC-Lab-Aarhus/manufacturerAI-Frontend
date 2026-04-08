@@ -23,7 +23,7 @@ export default function PipelineTabs (): ReactElement {
 				const accessible = isStageAccessible(stage.id, pipelineState)
 				const isActive = activeStage === stage.id
 				const status = pipelineState[stage.id]
-				const isComplete = status === 'complete' || status === 'done'
+				const isComplete = status === 'complete'
 
 				return (
 					<button
