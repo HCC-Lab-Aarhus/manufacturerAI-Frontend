@@ -443,7 +443,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 						</>
 					)}
 
-					{placements.map((p, idx) => {
+                    {placements.map((p, idx) => {
 						const color = UI_COLORS[idx % UI_COLORS.length]
 						const isSide = p.edge_index != null
 
@@ -455,6 +455,18 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 									data-drag-idx={idx}
 									style={{ cursor: 'grab' }}
 								>
+									{p.button_outline && (
+										<polygon
+											points={p.button_outline.map(([bx, by]) =>
+												`${(snapInfo.x + bx) * SCALE},${(snapInfo.y + by) * SCALE}`
+											).join(' ')}
+											fill="var(--color-accent)"
+											fillOpacity={0.10}
+											stroke="var(--color-accent)"
+											strokeWidth={1}
+											pointerEvents="none"
+										/>
+									)}
 									{p.body ? (
 										<ComponentIcon
 											x={snapInfo.x}
@@ -484,6 +496,18 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 								data-drag-idx={idx}
 								style={{ cursor: 'grab' }}
 							>
+								{p.button_outline && (
+									<polygon
+										points={p.button_outline.map(([bx, by]) =>
+											`${(p.x_mm + bx) * SCALE},${(p.y_mm + by) * SCALE}`
+										).join(' ')}
+										fill="var(--color-accent)"
+										fillOpacity={0.10}
+										stroke="var(--color-accent)"
+										strokeWidth={1}
+										pointerEvents="none"
+									/>
+								)}
 								{p.body ? (
 									<ComponentIcon
 										x={p.x_mm}

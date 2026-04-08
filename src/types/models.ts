@@ -59,6 +59,7 @@ export interface UIPlacement {
 	y_mm: number
 	edge_index?: number | null
 	conform_to_surface?: boolean
+	button_outline?: [number, number][] | null
 }
 
 export interface ComponentInstance {
