@@ -235,9 +235,7 @@ export function snapToEdge (
 	const z0 = zTops[i] ?? defaultZ
 	const z1 = zTops[(i + 1) % n] ?? defaultZ
 	const z = z0 + t * (z1 - z0)
-	const angle = Math.atan2(ey, ex) * 180 / Math.PI
-	const normalAngle = angle - 90
-	const rot = ((Math.round(normalAngle / 90) * 90) % 360 + 360) % 360
+	const rot = ((Math.atan2(ey, ex) * 180 / Math.PI) % 360 + 360) % 360
 
 	return { x, y, z, rot }
 }

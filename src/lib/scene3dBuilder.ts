@@ -79,10 +79,18 @@ export function buildSceneContent (data: SceneData): THREE.Group {
 
 	const uiPos: Record<string, { x_mm: number; y_mm: number; rotation_deg: number; body?: { shape?: string; width_mm?: number; length_mm?: number; height_mm?: number; diameter_mm?: number }; ui_placement?: boolean; cap_diameter_mm?: number; cap_clearance_mm?: number }> = {}
 	for (const up of (data.ui_placements ?? [])) {
+		let rotation_deg = 0
+		if (up.edge_index != null && verts.length >= 2) {
+			const v0 = verts[up.edge_index]
+			const v1 = verts[(up.edge_index + 1) % verts.length]
+			const ex = v1[0] - v0[0]
+			const ey = v1[1] - v0[1]
+			rotation_deg = ((Math.atan2(ey, ex) * 180 / Math.PI) % 360 + 360) % 360
+		}
 		uiPos[up.instance_id] = {
 			x_mm: up.x_mm,
 			y_mm: up.y_mm,
-			rotation_deg: 0,
+			rotation_deg,
 			body: (up as Record<string, unknown>).body as typeof uiPos[string]['body'],
 			ui_placement: (up as Record<string, unknown>).ui_placement as boolean | undefined,
 			cap_diameter_mm: (up as Record<string, unknown>).cap_diameter_mm as number | undefined,
