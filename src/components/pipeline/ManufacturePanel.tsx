@@ -159,12 +159,6 @@ export default function ManufacturePanel (): ReactElement {
 		prevDoneRef.current = nowDone
 	}, [steps])
 
-	useEffect(() => {
-		if (currentStep && currentStep in STEP_TO_TAB) {
-			setViewTab(STEP_TO_TAB[currentStep])
-		}
-	}, [currentStep])
-
 	const sessionId = currentSession?.id
 
 	const firstIncomplete = steps.find(s => s.status !== 'done')
