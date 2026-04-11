@@ -127,3 +127,10 @@ export async function getTokenUsage (sessionId: string): Promise<TokenUsage> {
 	)
 	return data
 }
+
+export async function replayDesign (sessionId: string): Promise<{ status: string }> {
+	const { data } = await apiClient.post<{ status: string }>(
+		`/api/sessions/${encodeURIComponent(sessionId)}/design/replay`
+	)
+	return data
+}

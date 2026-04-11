@@ -13,6 +13,7 @@ import {
 	getDesignConversation,
 	getDesignResult,
 	getTokenUsage,
+	replayDesign,
 	setSessionPrinter,
 	setSessionFilament,
 	setSessionModel
@@ -41,6 +42,8 @@ export function useDesignAgent () {
 	const [streaming, setStreaming] = useState(false)
 	const [_conversationLoading, setConversationLoading] = useState(false)
 	const [tokenUsage, setTokenUsage] = useState<TokenUsage | null>(null)
+	const [replayTypingText, setReplayTypingText] = useState<string | undefined>(undefined)
+	const skipNextUserMessageRef = useRef(false)
 	const loadedSessionRef = useRef<string | null>(null)
 	const abortRef = useRef<AbortController | null>(null)
 	const streamingRef = useRef(false)
@@ -83,6 +86,17 @@ export function useDesignAgent () {
 		eventCursor.current++
 		const d = data as Record<string, unknown>
 		switch (type) {
+			case 'user_message':
+				if (skipNextUserMessageRef.current) {
+					skipNextUserMessageRef.current = false
+					break
+				}
+				appendMessage({
+					id: nextId('user'),
+					role: 'user',
+					content: (d.text as string) ?? ''
+				})
+				break
 			case 'thinking_start':
 				appendMessage({
 					id: nextId('thinking'),
@@ -368,15 +382,64 @@ export function useDesignAgent () {
 		})
 	}, [nextId])
 
+	const replayConversation = useCallback(async () => {
+		if (streaming || !currentSession?.id) { return }
+
+		setMessages([])
+		setDesign(null)
+		idCounter.current = 0
+		eventCursor.current = 0
+
+		let firstUserText = ''
+		try {
+			const convo = await getDesignConversation(currentSession.id)
+			for (const msg of convo) {
+				if (msg.role !== 'user' || !Array.isArray(msg.content)) continue
+				for (const block of msg.content) {
+					if (block.type === 'text' && block.text && !block.text.startsWith('<!-- design-context -->')) {
+						firstUserText = block.text
+						break
+					}
+				}
+				if (firstUserText) break
+			}
+		} catch { /* proceed without typing animation */ }
+
+		if (firstUserText) {
+			for (let i = 1; i <= firstUserText.length; i++) {
+				setReplayTypingText(firstUserText.slice(0, i))
+				await new Promise(r => setTimeout(r, 20))
+			}
+			await new Promise(r => setTimeout(r, 400))
+			setReplayTypingText(undefined)
+			appendMessage({ id: nextId('user'), role: 'user', content: firstUserText })
+			skipNextUserMessageRef.current = true
+		}
+
+		setStreaming(true)
+		streamingRef.current = true
+
+		try {
+			await replayDesign(currentSession.id)
+			subscribeToStream(currentSession.id, 0)
+		} catch (err) {
+			addError(err)
+			streamingRef.current = false
+			setStreaming(false)
+		}
+	}, [streaming, currentSession, subscribeToStream, addError, setDesign, appendMessage, nextId])
+
 	return {
 		messages,
 		streaming,
 		conversationLoading,
 		tokenUsage,
+		replayTypingText,
 		sendMessage,
 		loadConversation,
 		resetConversation,
 		notifyDesignEdited,
+		replayConversation,
 		cancel
 	}
 }

@@ -13,7 +13,8 @@ import {
 	getCircuitConversation,
 	getCircuitResult,
 	getCircuitTokenUsage,
-	revalidateCircuit
+	revalidateCircuit,
+	replayCircuit
 } from '@/lib/api'
 import type { SSEEventType } from '@/types/events'
 import type { CircuitSpec, TokenUsage } from '@/types/models'
@@ -72,6 +73,13 @@ export function useCircuitAgent () {
 		eventCursor.current++
 		const d = data as Record<string, unknown>
 		switch (type) {
+			case 'user_message':
+				appendMessage({
+					id: nextId('user'),
+					role: 'user',
+					content: (d.text as string) ?? ''
+				})
+				break
 			case 'thinking_start':
 				appendMessage({
 					id: nextId('thinking'),
@@ -381,6 +389,28 @@ export function useCircuitAgent () {
 		}
 	}, [currentSession, setCircuit, patchSession, refreshSession, appendMessage, nextId])
 
+	const replayConversation = useCallback(async () => {
+		if (streaming || !currentSession?.id) { return }
+
+		setMessages([])
+		setCircuit(null)
+		setStreaming(true)
+		streamingRef.current = true
+		circuitReceivedRef.current = false
+		designFeedbackRef.current = false
+		idCounter.current = 0
+		eventCursor.current = 0
+
+		try {
+			await replayCircuit(currentSession.id)
+			subscribeToStream(currentSession.id, 0)
+		} catch (err) {
+			addError(err)
+			streamingRef.current = false
+			setStreaming(false)
+		}
+	}, [streaming, currentSession, subscribeToStream, addError, setCircuit])
+
 	return {
 		messages,
 		streaming,
@@ -391,6 +421,7 @@ export function useCircuitAgent () {
 		loadConversation,
 		resetConversation,
 		revalidate,
+		replayConversation,
 		cancel
 	}
 }

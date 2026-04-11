@@ -7,6 +7,7 @@ export type SSEEventType =
 	| 'block_stop'
 	| 'tool_call'
 	| 'tool_result'
+	| 'user_message'
 	| 'design'
 	| 'circuit'
 	| 'firmware'

@@ -60,6 +60,7 @@ export default function CircuitPanel (): ReactElement {
 		loadConversation,
 		resetConversation,
 		revalidate,
+		replayConversation,
 		cancel
 	} = useCircuitAgent()
 
@@ -160,7 +161,15 @@ export default function CircuitPanel (): ReactElement {
 	}
 
 	const chatColumn = (
-		<div className="flex h-full flex-col">
+		<div className="relative flex h-full flex-col">
+			{hasConversation && !streaming && (
+				<button
+					onClick={replayConversation}
+					className="absolute top-1 right-1 z-10 px-1.5 py-0.5 text-[9px] text-fg-muted/40 hover:text-fg-muted transition-colors"
+				>
+					{'↻'}
+				</button>
+			)}
 			{conversationLoading ? (
 				<div className="flex flex-1 items-center justify-center">
 					<LoadingSpinner size="md" />

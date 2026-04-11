@@ -100,3 +100,10 @@ export async function revalidateCircuit (sessionId: string): Promise<RevalidateR
 	)
 	return data
 }
+
+export async function replayCircuit (sessionId: string): Promise<{ status: string }> {
+	const { data } = await apiClient.post<{ status: string }>(
+		`/api/sessions/${encodeURIComponent(sessionId)}/circuit/replay`
+	)
+	return data
+}

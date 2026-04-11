@@ -32,10 +32,12 @@ interface ChatInputProps {
 	streaming?: boolean
 	onStop?: () => void
 	tokenUsage?: TokenUsage | null
+	forcedValue?: string
 }
 
-export default function ChatInput ({ onSend, disabled, placeholder, streaming, onStop, tokenUsage }: ChatInputProps): ReactElement {
+export default function ChatInput ({ onSend, disabled, placeholder, streaming, onStop, tokenUsage, forcedValue }: ChatInputProps): ReactElement {
 	const [value, setValue] = useState('')
+	const displayValue = forcedValue ?? value
 	const [listening, setListening] = useState(false)
 	const recognitionRef = useRef<SpeechRecognition | null>(null)
 	const textareaRef = useRef<HTMLTextAreaElement | null>(null)
@@ -52,7 +54,7 @@ export default function ChatInput ({ onSend, disabled, placeholder, streaming, o
 
 	useEffect(() => {
 		resizeTextarea()
-	}, [value, resizeTextarea])
+	}, [value, forcedValue, resizeTextarea])
 
 	useEffect(() => {
 		return () => { recognitionRef.current?.abort() }
@@ -110,10 +112,11 @@ export default function ChatInput ({ onSend, disabled, placeholder, streaming, o
 			<div className="relative flex-1">
 				<textarea
 					ref={textareaRef}
-					value={value}
+					value={displayValue}
 					onChange={e => { setValue(e.target.value) }}
 					onKeyDown={handleKeyDown}
 					rows={1}
+					readOnly={forcedValue != null}
 					placeholder={placeholder ?? 'Describe your device…'}
 					className="w-full resize-none rounded-xl border border-border bg-surface-card px-4 py-2.5 pr-10 text-sm text-fg placeholder-fg-muted outline-none focus:border-accent transition-colors"
 				/>

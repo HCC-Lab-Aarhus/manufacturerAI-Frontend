@@ -22,10 +22,12 @@ export default function DesignPanel (): ReactElement {
 		streaming,
 		conversationLoading,
 		tokenUsage,
+		replayTypingText,
 		sendMessage,
 		loadConversation,
 		notifyDesignEdited,
 		resetConversation,
+		replayConversation,
 		cancel
 	} = useDesignAgent()
 
@@ -83,7 +85,15 @@ export default function DesignPanel (): ReactElement {
 	const hasMessages = messages.length > 0
 
 	const chatColumn = (
-		<div className="flex h-full flex-col">
+		<div className="relative flex h-full flex-col">
+			{hasMessages && !streaming && (
+				<button
+					onClick={replayConversation}
+					className="absolute top-1 right-1 z-10 px-1.5 py-0.5 text-[9px] text-fg-muted/40 hover:text-fg-muted transition-colors"
+				>
+					{'↻'}
+				</button>
+			)}
 			{(conversationLoading || loading) ? (
 				<div className="flex flex-1 items-center justify-center">
 					<LoadingSpinner size="md" />
@@ -106,6 +116,7 @@ export default function DesignPanel (): ReactElement {
 					streaming={streaming}
 					onStop={cancel}
 					tokenUsage={tokenUsage}
+					forcedValue={replayTypingText}
 				/>
 			</div>
 		</div>
