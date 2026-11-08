@@ -1,3 +1,4 @@
+
 import type { ConversationMessage, TokenUsage } from '@/types/models'
 
 import apiClient from './client'
@@ -11,8 +12,8 @@ export async function startSetup (
 	outline?: string
 ): Promise<{ status: string; message?: string }> {
 	const body: Record<string, string> = {}
-	if (feedback) body.feedback = feedback
-	if (outline) body.outline = outline
+	if (feedback) { body.feedback = feedback }
+	if (outline) { body.outline = outline }
 	const { data } = await apiClient.post<{ status: string; message?: string }>(
 		`/api/sessions/${encodeURIComponent(sessionId)}/setup`,
 		Object.keys(body).length ? body : undefined

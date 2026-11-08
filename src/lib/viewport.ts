@@ -23,7 +23,7 @@ export interface NormalisedOutline {
 }
 
 export function normaliseOutline (outline: { x: number; y: number; ease_in?: number; ease_out?: number; z_top?: number | null; z_bottom?: number | null }[]): NormalisedOutline {
-	if (!outline || !Array.isArray(outline)) return { verts: [], corners: [], zTops: [], zBottoms: [] }
+	if (!outline || !Array.isArray(outline)) { return { verts: [], corners: [], zTops: [], zBottoms: [] } }
 
 	const verts = outline.map(p => [p.x, p.y] as [number, number])
 	const zTops = outline.map(p => p.z_top ?? null)
@@ -31,8 +31,8 @@ export function normaliseOutline (outline: { x: number; y: number; ease_in?: num
 	const corners = outline.map(p => {
 		let ein = p.ease_in ?? null
 		let eout = p.ease_out ?? null
-		if (ein != null && eout == null) eout = ein
-		if (eout != null && ein == null) ein = eout
+		if (ein != null && eout == null) { eout = ein }
+		if (eout != null && ein == null) { ein = eout }
 		return { ease_in: ein ?? 0, ease_out: eout ?? 0 }
 	})
 	return { verts, corners, zTops, zBottoms }
@@ -112,7 +112,7 @@ export function buildOutlinePath (outline: { x: number; y: number; ease_in?: num
 	const norm = normaliseOutline(outline)
 	const { verts, corners } = norm
 	const n = verts.length
-	if (n < 3) return ''
+	if (n < 3) { return '' }
 
 	const parts: string[] = []
 	for (let i = 0; i < n; i++) {
@@ -139,8 +139,7 @@ export function buildOutlinePath (outline: { x: number; y: number; ease_in?: num
 		const bx = (C[0] + dNx * tOut) * SCALE
 		const by = (C[1] + dNy * tOut) * SCALE
 
-		if (i === 0) parts.push(`M${ax},${ay}`)
-		else parts.push(`L${ax},${ay}`)
+		if (i === 0) { parts.push(`M${ax},${ay}`) } else { parts.push(`L${ax},${ay}`) }
 		parts.push(`Q${C[0] * SCALE},${C[1] * SCALE} ${bx},${by}`)
 	}
 	parts.push('Z')
@@ -149,7 +148,7 @@ export function buildOutlinePath (outline: { x: number; y: number; ease_in?: num
 		for (const hole of holes) {
 			const hn = normaliseOutline(hole)
 			const hv = hn.verts, hc = hn.corners
-			if (hv.length < 3) continue
+			if (hv.length < 3) { continue }
 			for (let i = 0; i < hv.length; i++) {
 				const C = hv[i]
 				const prev = (i - 1 + hv.length) % hv.length
@@ -174,8 +173,7 @@ export function buildOutlinePath (outline: { x: number; y: number; ease_in?: num
 				const bx = (C[0] + dNx * tOut) * SCALE
 				const by = (C[1] + dNy * tOut) * SCALE
 
-				if (i === 0) parts.push(`M${ax},${ay}`)
-				else parts.push(`L${ax},${ay}`)
+				if (i === 0) { parts.push(`M${ax},${ay}`) } else { parts.push(`L${ax},${ay}`) }
 				parts.push(`Q${C[0] * SCALE},${C[1] * SCALE} ${bx},${by}`)
 			}
 			parts.push('Z')
@@ -221,7 +219,7 @@ export function snapToEdge (
 	const ex = v1[0] - v0[0]
 	const ey = v1[1] - v0[1]
 	const edgeLen = Math.hypot(ex, ey)
-	if (edgeLen === 0) return { x: up.x_mm, y: up.y_mm, z: defaultZ, rot: 0 }
+	if (edgeLen === 0) { return { x: up.x_mm, y: up.y_mm, z: defaultZ, rot: 0 } }
 
 	const dx = ex / edgeLen
 	const dy = ey / edgeLen
@@ -247,7 +245,7 @@ export function nearestEdge (x: number, y: number, verts: [number, number][]): {
 		const v0 = verts[i], v1 = verts[(i + 1) % n]
 		const ex = v1[0] - v0[0], ey = v1[1] - v0[1]
 		const lenSq = ex * ex + ey * ey
-		if (lenSq < 1e-12) continue
+		if (lenSq < 1e-12) { continue }
 		let t = ((x - v0[0]) * ex + (y - v0[1]) * ey) / lenSq
 		t = Math.max(0, Math.min(1, t))
 		const sx = v0[0] + t * ex, sy = v0[1] + t * ey

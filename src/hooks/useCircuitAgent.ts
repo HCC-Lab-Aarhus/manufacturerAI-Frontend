@@ -151,7 +151,7 @@ export function useCircuitAgent () {
 				break
 			case 'error': {
 				const msg = String(d.message ?? d)
-				if (msg !== 'Cancelled') addError(msg)
+				if (msg !== 'Cancelled') { addError(msg) }
 				break
 			}
 			case 'token_usage':
@@ -245,13 +245,13 @@ export function useCircuitAgent () {
 		}
 		setConversationLoading(true)
 
-		getCircuitTokenUsage(sessionId).then(t => { if (t) setTokenUsage(t) }).catch(() => {})
+		getCircuitTokenUsage(sessionId).then(t => { if (t) { setTokenUsage(t) } }).catch(() => {})
 
 		try {
 			const [status, convo, circuit] = await Promise.all([
 				getCircuitStatus(sessionId).catch(() => null),
 				getCircuitConversation(sessionId),
-				getCircuitResult(sessionId).catch(() => null),
+				getCircuitResult(sessionId).catch(() => null)
 			])
 			const isRunning = status?.status === 'running'
 
@@ -305,7 +305,7 @@ export function useCircuitAgent () {
 
 			if (!isRunning && entries.length > 0 && circuit) {
 				entries.push({
-					id: `l-status-done`,
+					id: 'l-status-done',
 					role: 'status',
 					content: 'Circuit validated and saved',
 					isCompletion: true

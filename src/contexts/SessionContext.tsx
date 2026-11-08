@@ -240,7 +240,7 @@ export function SessionProvider ({ children }: { children: ReactNode }) {
 		await apiDeleteSession(id)
 		setSessions(prev => prev.filter(s => s.id !== id))
 		setCurrentSession(prev => {
-			if (prev?.id === id) return null
+			if (prev?.id === id) { return null }
 			return prev
 		})
 		const url = new URL(window.location.href)

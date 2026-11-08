@@ -318,13 +318,13 @@ export default function ComponentPreview3D ({ component, className, highlightedF
 
 	useEffect(() => {
 		const scene = sceneRef.current
-		if (!scene) return
+		if (!scene) { return }
 		const highlightMat = new THREE.MeshPhongMaterial({ color: HIGHLIGHT_COLOR, emissive: HIGHLIGHT_COLOR, emissiveIntensity: 0.4, transparent: true, opacity: 0.85, side: THREE.DoubleSide })
 		const scadMat = new THREE.MeshPhongMaterial({ color: FEATURE_COLOR, transparent: true, opacity: 0.45, side: THREE.DoubleSide })
 		const scadThruMat = new THREE.MeshPhongMaterial({ color: FEATURE_THRU_COLOR, transparent: true, opacity: 0.5, side: THREE.DoubleSide })
 
 		scene.traverse(obj => {
-			if (!(obj instanceof THREE.Mesh) || obj.userData.featureIndex === undefined) return
+			if (!(obj instanceof THREE.Mesh) || obj.userData.featureIndex === undefined) { return }
 			const fi = obj.userData.featureIndex as number
 			if (highlightedFeature != null && fi === highlightedFeature) {
 				obj.material = highlightMat

@@ -14,9 +14,7 @@ function hexToHsb (hex: string): [number, number, number] {
 	const d = max - min
 	let h = 0
 	if (d !== 0) {
-		if (max === r) h = ((g - b) / d + 6) % 6
-		else if (max === g) h = (b - r) / d + 2
-		else h = (r - g) / d + 4
+		if (max === r) { h = ((g - b) / d + 6) % 6 } else if (max === g) { h = (b - r) / d + 2 } else { h = (r - g) / d + 4 }
 		h *= 60
 	}
 	const s = max === 0 ? 0 : d / max
@@ -28,12 +26,7 @@ function hsbToHex (h: number, s: number, b: number): string {
 	const x = c * (1 - Math.abs(((h / 60) % 2) - 1))
 	const m = b - c
 	let r = 0, g = 0, bl = 0
-	if (h < 60) { r = c; g = x }
-	else if (h < 120) { r = x; g = c }
-	else if (h < 180) { g = c; bl = x }
-	else if (h < 240) { g = x; bl = c }
-	else if (h < 300) { r = x; bl = c }
-	else { r = c; bl = x }
+	if (h < 60) { r = c; g = x } else if (h < 120) { r = x; g = c } else if (h < 180) { g = c; bl = x } else if (h < 240) { g = x; bl = c } else if (h < 300) { r = x; bl = c } else { r = c; bl = x }
 	const toHex = (v: number) => Math.round((v + m) * 255).toString(16).padStart(2, '0')
 	return `#${toHex(r)}${toHex(g)}${toHex(bl)}`
 }
@@ -81,7 +74,7 @@ function HueWheel ({ hue, sat, bri, onChange }: {
 	}, [hue])
 
 	const onPointerMove = useCallback((e: React.PointerEvent) => {
-		if (!dragRef.current) return
+		if (!dragRef.current) { return }
 		const dx = e.clientX - dragRef.current.startX
 		const newH = (dragRef.current.startHue + dx * 0.5 + 3600) % 360
 		onChange(newH)
@@ -105,7 +98,7 @@ function HueWheel ({ hue, sat, bri, onChange }: {
 				style={{
 					background: `conic-gradient(from 0deg, ${stops.join(', ')})`,
 					mask: `radial-gradient(circle, transparent ${WHEEL_R - RING_WIDTH}px, black ${WHEEL_R - RING_WIDTH}px)`,
-					WebkitMask: `radial-gradient(circle, transparent ${WHEEL_R - RING_WIDTH}px, black ${WHEEL_R - RING_WIDTH}px)`,
+					WebkitMask: `radial-gradient(circle, transparent ${WHEEL_R - RING_WIDTH}px, black ${WHEEL_R - RING_WIDTH}px)`
 				}}
 			/>
 			<div
@@ -115,7 +108,7 @@ function HueWheel ({ hue, sat, bri, onChange }: {
 					width: 4,
 					height: RING_WIDTH - 2,
 					transformOrigin: `50% ${WHEEL_R - 1}px`,
-					transform: `rotate(${hue}deg)`,
+					transform: `rotate(${hue}deg)`
 				}}
 			>
 				<div className="w-full h-full rounded-sm bg-white shadow-[0_0_2px_rgba(0,0,0,0.7)]" />
@@ -127,7 +120,7 @@ function HueWheel ({ hue, sat, bri, onChange }: {
 					left: RING_WIDTH + 2,
 					right: RING_WIDTH + 2,
 					bottom: RING_WIDTH + 2,
-					backgroundColor: hsbToHex(hue, sat, bri),
+					backgroundColor: hsbToHex(hue, sat, bri)
 				}}
 			/>
 		</div>
@@ -183,7 +176,7 @@ export default function ColorPicker (): ReactElement {
 	const lastInternalHex = useRef(color)
 
 	useEffect(() => {
-		if (lastInternalHex.current === color) return
+		if (lastInternalHex.current === color) { return }
 		const [nh, ns, nb] = hexToHsb(color)
 		setH(nh)
 		setS(ns)
@@ -219,14 +212,14 @@ export default function ColorPicker (): ReactElement {
 	return (
 		<div className="flex flex-col gap-1.5">
 			<div className="flex items-center gap-2">
-				<span className="text-xs text-fg-muted">Theme</span>
+				<span className="text-xs text-fg-muted">{'Theme'}</span>
 				{color !== DEFAULT_COLOR && (
 					<button
 						onClick={handleReset}
 						className="ml-auto text-xs text-fg-muted hover:text-fg-secondary transition-colors"
 						title="Reset to default"
 					>
-						Reset
+						{'Reset\r'}
 					</button>
 				)}
 			</div>

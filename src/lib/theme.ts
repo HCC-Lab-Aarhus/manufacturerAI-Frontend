@@ -10,7 +10,7 @@ export function hexToRgb (hex: string): RGB {
 	return {
 		r: parseInt(hex.slice(1, 3), 16),
 		g: parseInt(hex.slice(3, 5), 16),
-		b: parseInt(hex.slice(5, 7), 16),
+		b: parseInt(hex.slice(5, 7), 16)
 	}
 }
 
@@ -24,9 +24,7 @@ function hexToHsl (hex: string): HSL {
 	const d = max - min
 	const s = lRaw > 0.5 ? d / (2 - max - min) : d / (max + min)
 	let h = 0
-	if (max === r) { h = ((g - b) / d + (g < b ? 6 : 0)) / 6 }
-	else if (max === g) { h = ((b - r) / d + 2) / 6 }
-	else { h = ((r - g) / d + 4) / 6 }
+	if (max === r) { h = ((g - b) / d + (g < b ? 6 : 0)) / 6 } else if (max === g) { h = ((b - r) / d + 2) / 6 } else { h = ((r - g) / d + 4) / 6 }
 	return { h: h * 360, s: s * 100, l: lRaw * 100 }
 }
 
@@ -89,8 +87,8 @@ export function isDarkTheme (hex: string): boolean {
 // ── Contrast text for HSL backgrounds ───────────────────────
 
 function onColor (bgL: number, isDark: boolean, h: number, s: number): string {
-	if (bgL > 65) return hsl(h, clamp(s * 0.4, 0, 15), 15)
-	if (bgL < 35) return hsl(h, clamp(s * 0.15, 0, 10), 92)
+	if (bgL > 65) { return hsl(h, clamp(s * 0.4, 0, 15), 15) }
+	if (bgL < 35) { return hsl(h, clamp(s * 0.15, 0, 10), 92) }
 	return bgL > 50 ? hsl(h, clamp(s * 0.3, 0, 12), 12) : hsl(h, clamp(s * 0.1, 0, 8), 95)
 }
 
@@ -220,7 +218,7 @@ export function deriveThemeVars (hex: string): Record<string, string> {
 		'--color-indicator-led': hsl(140, 55, isDark ? 55 : 45),
 		'--color-indicator-ir': hsl(290, 45, isDark ? 60 : 50),
 
-		'--color-jumper': isDark ? hsl(h, 10, 85) : hsl(h, 10, 25),
+		'--color-jumper': isDark ? hsl(h, 10, 85) : hsl(h, 10, 25)
 	}
 }
 
@@ -236,13 +234,13 @@ export const SCENE_3D = {
 	cutoutHighlight: 0xffdd66,
 	componentPalette: [
 		0x4ea8d8, 0x52d474, 0xeeb830, 0xee6e6e, 0xb890e8,
-		0x40c0d0, 0x60e090, 0xd8b040, 0xe88080, 0x90d0e0,
-	],
+		0x40c0d0, 0x60e090, 0xd8b040, 0xe88080, 0x90d0e0
+	]
 } as const
 
 export const SVG_PALETTE = [
 	'#58a6ff', '#3fb950', '#d29922', '#f778ba', '#bc8cff',
-	'#79c0ff', '#56d364', '#e3b341', '#ff7b72', '#a5d6ff',
+	'#79c0ff', '#56d364', '#e3b341', '#ff7b72', '#a5d6ff'
 ] as const
 
 // ── Theme application ───────────────────────────────────────

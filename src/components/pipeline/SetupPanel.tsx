@@ -2,7 +2,6 @@
 
 import dynamic from 'next/dynamic'
 import { type ReactElement, useCallback, useEffect, useMemo, useState } from 'react'
-
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -13,8 +12,8 @@ import { usePipeline } from '@/contexts/PipelineContext'
 import { useSession } from '@/contexts/SessionContext'
 import { useSetupAgent } from '@/hooks/useSetupAgent'
 import { getCircuitResult, getPlacementResult, getSimConfig } from '@/lib/api'
-import type { CircuitSpec, PlacementResult } from '@/types/models'
 import type { SimConfig } from '@/lib/api/setup'
+import type { CircuitSpec, PlacementResult } from '@/types/models'
 
 const DeviceSimulator = dynamic(() => import('@/components/viewport/DeviceSimulator'), { ssr: false })
 
@@ -49,7 +48,7 @@ export default function SetupPanel (): ReactElement {
 	const effectiveCircuit = circuit ?? circuitData
 
 	const defaultOutline = useMemo(() => {
-		if (!effectiveCircuit) return ''
+		if (!effectiveCircuit) { return '' }
 		const lines = [
 			'Generate Arduino firmware for the ATmega328P MCU based on this circuit.',
 			'',
@@ -101,7 +100,7 @@ export default function SetupPanel (): ReactElement {
 	}, [currentSession?.id, effectiveCircuit])
 
 	useEffect(() => {
-		if (!currentSession) return
+		if (!currentSession) { return }
 		getPlacementResult(currentSession.id).then(setPlacement).catch(() => {})
 		getSimConfig(currentSession.id).then(setSimConfig).catch(() => {})
 	}, [currentSession?.id, firmwareCode, compiled])
@@ -111,7 +110,7 @@ export default function SetupPanel (): ReactElement {
 	const hasSimulator = !!placement && !!simConfig && simConfig.peripherals.length > 0 && !!simConfig.elf_path
 
 	const handleDownload = useCallback(() => {
-		if (!firmwareCode) return
+		if (!firmwareCode) { return }
 		const blob = new Blob([firmwareCode], { type: 'text/plain' })
 		const url = URL.createObjectURL(blob)
 		const a = document.createElement('a')
@@ -166,7 +165,7 @@ export default function SetupPanel (): ReactElement {
 				<div className="flex flex-1 flex-col items-center p-2 overflow-hidden">
 					<div className="flex w-full max-w-5xl items-center justify-between mb-2">
 						<div className="flex items-center gap-3">
-							<h2 className="text-lg font-semibold text-fg-secondary">Firmware Outline</h2>
+							<h2 className="text-lg font-semibold text-fg-secondary">{'Firmware Outline'}</h2>
 							<button
 								onClick={() => setEditingOutline(!editingOutline)}
 								className="rounded px-2 py-0.5 text-xs text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"

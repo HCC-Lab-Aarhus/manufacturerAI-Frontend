@@ -3,11 +3,11 @@
 import { memo, type ReactElement, useCallback, useEffect, useRef, useState } from 'react'
 
 import { useSession } from '@/contexts/SessionContext'
-import type { CatalogBody, CatalogPin, DesignSpec, UIPlacement } from '@/types/models'
-import { normalizeOutline, normalizeHoles, normaliseOutline, buildOutlinePath, outlineBBox, snapToEdge, nearestEdge, SCALE, PAD } from '@/lib/viewport'
 import { validateUIPlacement, putDesign, submitDesignToConversation } from '@/lib/api/design'
-
 import { SVG_PALETTE } from '@/lib/theme'
+import { normalizeOutline, normalizeHoles, normaliseOutline, buildOutlinePath, outlineBBox, snapToEdge, nearestEdge, SCALE, PAD } from '@/lib/viewport'
+import type { CatalogBody, CatalogPin, DesignSpec, UIPlacement } from '@/types/models'
+
 import ComponentIcon from './ComponentIcon'
 
 type EnrichedPlacement = UIPlacement & {
@@ -45,9 +45,9 @@ function stripEnrichment (design: DesignSpec): DesignSpec {
 
 const EDGE_THRESHOLD = 3
 const DRAG_COLORS = {
-	valid:   { fill: 'var(--color-drag-valid-fill)', stroke: 'var(--color-drag-valid)' },
+	valid: { fill: 'var(--color-drag-valid-fill)', stroke: 'var(--color-drag-valid)' },
 	invalid: { fill: 'var(--color-drag-invalid-fill)', stroke: 'var(--color-drag-invalid)' },
-	pending: { fill: 'var(--color-drag-pending-fill)', stroke: 'var(--color-drag-pending)' },
+	pending: { fill: 'var(--color-drag-pending-fill)', stroke: 'var(--color-drag-pending)' }
 }
 
 function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted, className }: Props): ReactElement {
@@ -103,7 +103,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 
 	useEffect(() => {
 		const svg = svgRef.current
-		if (!svg) return
+		if (!svg) { return }
 
 		function svgPoint (e: PointerEvent): { x: number; y: number } {
 			const pt = svg!.createSVGPoint()
@@ -119,7 +119,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 
 		function applyDragFeedback (el: SVGGElement, status: 'valid' | 'invalid' | 'pending') {
 			const body = el.querySelector<SVGRectElement | SVGCircleElement>('rect, circle')
-			if (!body) return
+			if (!body) { return }
 			const c = DRAG_COLORS[status]
 			body.setAttribute('fill', c.fill)
 			body.setAttribute('stroke', c.stroke)
@@ -131,16 +131,16 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 
 		function onPointerDown (e: PointerEvent) {
 			const group = (e.target as Element).closest<SVGGElement>('g[data-drag-idx]')
-			if (!group || e.button !== 0) return
+			if (!group || e.button !== 0) { return }
 			const idx = parseInt(group.dataset.dragIdx!, 10)
-			if (isNaN(idx)) return
+			if (isNaN(idx)) { return }
 
 			e.preventDefault()
 			e.stopPropagation()
 
 			const pls = placementsRef.current
 			const up = pls[idx]
-			if (!up) return
+			if (!up) { return }
 			const pt = svgPoint(e)
 			const v = vertsRef.current
 			const n = normRef.current
@@ -168,7 +168,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 				currentEdge: up.edge_index ?? null,
 				groupEl: group,
 				validateTimer: null,
-				pointerId: e.pointerId,
+				pointerId: e.pointerId
 			}
 
 			group.style.cursor = 'grabbing'
@@ -179,7 +179,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 
 		function onPointerMove (e: PointerEvent) {
 			const drag = dragRef.current
-			if (!drag) return
+			if (!drag) { return }
 			const pt = svgPoint(e)
 			const v = vertsRef.current
 
@@ -201,7 +201,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 			const dy = (newY - drag.baseY) * SCALE
 			drag.groupEl?.setAttribute('transform', `translate(${dx}, ${dy})`)
 
-			if (drag.validateTimer) clearTimeout(drag.validateTimer)
+			if (drag.validateTimer) { clearTimeout(drag.validateTimer) }
 			if (sessionId) {
 				const valX = newX, valY = newY, valEdge = drag.currentEdge
 				const instId = drag.instanceId
@@ -212,11 +212,11 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 							instance_id: instId,
 							x_mm: valX,
 							y_mm: valY,
-							...(valEdge != null ? { edge_index: valEdge } : {}),
+							...(valEdge != null ? { edge_index: valEdge } : {})
 						})
-						if (el) applyDragFeedback(el, result.valid ? 'valid' : 'invalid')
+						if (el) { applyDragFeedback(el, result.valid ? 'valid' : 'invalid') }
 					} catch {
-						if (el) applyDragFeedback(el, 'pending')
+						if (el) { applyDragFeedback(el, 'pending') }
 					}
 				}, 100)
 			}
@@ -224,11 +224,11 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 
 		async function onPointerUp (e: PointerEvent) {
 			const drag = dragRef.current
-			if (!drag) return
+			if (!drag) { return }
 			dragRef.current = null
 
 			svg!.releasePointerCapture(drag.pointerId)
-			if (drag.validateTimer) clearTimeout(drag.validateTimer)
+			if (drag.validateTimer) { clearTimeout(drag.validateTimer) }
 			svg!.style.cursor = ''
 
 			const pt = svgPoint(e)
@@ -253,8 +253,8 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 				return
 			}
 
-			if (pendingAbortRef.current) pendingAbortRef.current.abort()
-			if (persistTimerRef.current) clearTimeout(persistTimerRef.current)
+			if (pendingAbortRef.current) { pendingAbortRef.current.abort() }
+			if (persistTimerRef.current) { clearTimeout(persistTimerRef.current) }
 			const seq = ++commitSeqRef.current
 			const abort = new AbortController()
 			pendingAbortRef.current = abort
@@ -264,7 +264,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 			const placementUpdate: UIPlacement = {
 				...ups[drag.idx],
 				x_mm: newX,
-				y_mm: newY,
+				y_mm: newY
 			}
 			if (drag.isSideMount && finalEdge != null) {
 				placementUpdate.edge_index = finalEdge
@@ -278,16 +278,16 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 			drag.groupEl!.style.cursor = 'grab'
 			onDesignUpdateRef.current?.(updated)
 
-			if (!sessionId) return
+			if (!sessionId) { return }
 
 			try {
 				const result = await validateUIPlacement(sessionId, {
 					instance_id: drag.instanceId,
 					x_mm: newX,
 					y_mm: newY,
-					...(drag.isSideMount && finalEdge != null ? { edge_index: finalEdge } : {}),
+					...(drag.isSideMount && finalEdge != null ? { edge_index: finalEdge } : {})
 				})
-				if (abort.signal.aborted) return
+				if (abort.signal.aborted) { return }
 				if (!result.valid) {
 					if (seq === commitSeqRef.current) {
 						onDesignUpdateRef.current?.(designRef.current)
@@ -295,12 +295,12 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 					return
 				}
 			} catch {
-				if (abort.signal.aborted) return
+				if (abort.signal.aborted) { return }
 			}
 
-			if (abort.signal.aborted) return
+			if (abort.signal.aborted) { return }
 			persistTimerRef.current = setTimeout(async () => {
-				if (abort.signal.aborted) return
+				if (abort.signal.aborted) { return }
 				try {
 					const latestDesign = designRef.current
 					const stripped = stripEnrichment(latestDesign)
@@ -312,10 +312,10 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 						patchSession({
 							invalidated_steps: saved.invalidated_steps,
 							artifacts: saved.artifacts,
-							pipeline_errors: saved.pipeline_errors,
+							pipeline_errors: saved.pipeline_errors
 						})
 					}
-					if (abort.signal.aborted || seq !== commitSeqRef.current) return
+					if (abort.signal.aborted || seq !== commitSeqRef.current) { return }
 					await submitDesignToConversation(sessionId, stripped)
 					if (!abort.signal.aborted && seq === commitSeqRef.current) {
 						onDesignSubmittedRef.current?.()
@@ -352,12 +352,12 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 			outlineKeyRef.current = outlineKey
 			setVbState({ x: baseVbX, y: baseVbY, w: baseVbW, h: baseVbH })
 		}
-	}) // eslint-disable-line react-hooks/exhaustive-deps
+	})
 
 	// Wheel zoom handler
 	useEffect(() => {
 		const svg = svgRef.current
-		if (!svg) return
+		if (!svg) { return }
 		function onWheel (e: WheelEvent) {
 			e.preventDefault()
 			const factor = e.deltaY > 0 ? 1.1 : 1 / 1.1
@@ -373,16 +373,16 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 				return {
 					x: Math.max(bx - bw, Math.min(bx + bw, rawX)),
 					y: Math.max(by - bh, Math.min(by + bh, rawY)),
-					w: newW, h: newH,
+					w: newW, h: newH
 				}
 			})
 		}
 		svg.addEventListener('wheel', onWheel, { passive: false })
 		return () => { svg.removeEventListener('wheel', onWheel) }
-	}, [svgEl]) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [svgEl])
 
 	if (outline.length < 3) {
-		return <div className="flex items-center justify-center text-fg-secondary text-sm p-8">No outline data</div>
+		return <div className="flex items-center justify-center text-fg-secondary text-sm p-8">{'No outline data'}</div>
 	}
 
 	// Keep bboxBaseRef current so the wheel effect can read it for clamping
@@ -396,7 +396,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 	return (
 		<div className="flex flex-col w-full h-full">
 			<div className="text-xs text-fg-secondary px-3 py-1 border-b border-border">
-				Outline — drag components to reposition
+				{'Outline — drag components to reposition\r'}
 			</div>
 			<div className="flex-1 overflow-hidden">
 				<svg
@@ -443,7 +443,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 						</>
 					)}
 
-                    {placements.map((p, idx) => {
+					{placements.map((p, idx) => {
 						const color = UI_COLORS[idx % UI_COLORS.length]
 						const isSide = p.edge_index != null
 
@@ -554,7 +554,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 						fontSize={10}
 						fill="var(--color-label)"
 					>
-						{bbox.width.toFixed(1)} mm
+						{bbox.width.toFixed(1)} {'mm\r'}
 					</text>
 					<text
 						x={bbox.minX * SCALE - PAD / 2}
@@ -564,7 +564,7 @@ function DesignViewport ({ design, sessionId, onDesignUpdate, onDesignSubmitted,
 						fill="var(--color-label)"
 						transform={`rotate(-90, ${bbox.minX * SCALE - PAD / 2}, ${bbox.minY * SCALE + bbox.height * SCALE / 2})`}
 					>
-						{bbox.height.toFixed(1)} mm
+						{bbox.height.toFixed(1)} {'mm\r'}
 					</text>
 				</svg>
 			</div>
@@ -582,7 +582,7 @@ function SideMountMarker ({ up, verts }: { up: EnrichedPlacement; verts: [number
 
 	const ex = v1[0] - v0[0], ey = v1[1] - v0[1]
 	const edgeLen = Math.hypot(ex, ey)
-	if (edgeLen === 0) return <></>
+	if (edgeLen === 0) { return <></> }
 
 	const dx = ex / edgeLen, dy = ey / edgeLen
 	const px = up.x_mm - v0[0], py = up.y_mm - v0[1]
@@ -599,7 +599,7 @@ function SideMountMarker ({ up, verts }: { up: EnrichedPlacement; verts: [number
 	const b1x = cx + dx * arrowW, b1y = cy + dy * arrowW
 	const b2x = cx - dx * arrowW, b2y = cy - dy * arrowW
 
-		return (
+	return (
 		<>
 			<polygon
 				points={`${b1x},${b1y} ${tipX},${tipY} ${b2x},${b2y}`}

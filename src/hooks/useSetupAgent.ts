@@ -127,7 +127,7 @@ export function useSetupAgent () {
 			}
 			case 'error': {
 				const msg = String(d.message ?? d)
-				if (msg !== 'Cancelled') addError(msg)
+				if (msg !== 'Cancelled') { addError(msg) }
 				break
 			}
 			case 'token_usage':
@@ -166,7 +166,7 @@ export function useSetupAgent () {
 					refreshSession()
 					// Fetch the generated firmware once streaming is done
 					getSetupFirmware(sessionId)
-						.then(fw => { if (fw?.code) setFirmwareCode(fw.code) })
+						.then(fw => { if (fw?.code) { setFirmwareCode(fw.code) } })
 						.catch(() => {})
 				}
 			},
@@ -175,7 +175,7 @@ export function useSetupAgent () {
 	}, [handleEvent, addError, refreshSession])
 
 	const runSetup = useCallback(async (outline?: string) => {
-		if (!currentSession || streaming) return
+		if (!currentSession || streaming) { return }
 		setMessages([])
 		setFirmwareCode(null)
 		setCompiled(false)
@@ -236,7 +236,7 @@ export function useSetupAgent () {
 			const [status, convo, firmware] = await Promise.all([
 				getSetupStatus(sessionId).catch(() => null),
 				getSetupConversation(sessionId),
-				getSetupFirmware(sessionId).catch(() => null),
+				getSetupFirmware(sessionId).catch(() => null)
 			])
 			const isRunning = status?.status === 'running'
 

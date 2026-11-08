@@ -20,7 +20,7 @@ export default function ViewToggle ({ view2D, view3D, default3D }: Props): React
 						!is3D ? 'bg-accent text-on-accent' : 'text-fg-secondary hover:bg-surface-hover'
 					}`}
 				>
-					2D
+					{'2D\r'}
 				</button>
 				<button
 					onClick={() => setIs3D(true)}
@@ -28,7 +28,7 @@ export default function ViewToggle ({ view2D, view3D, default3D }: Props): React
 						is3D ? 'bg-accent text-on-accent' : 'text-fg-secondary hover:bg-surface-hover'
 					}`}
 				>
-					3D
+					{'3D\r'}
 				</button>
 			</div>
 			<div className="flex-1 overflow-hidden">

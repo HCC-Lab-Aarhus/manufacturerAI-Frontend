@@ -1,4 +1,5 @@
 import type { PlacementResult } from '@/types/models'
+
 import apiClient from '../client'
 
 const sid = (id: string) => encodeURIComponent(id)

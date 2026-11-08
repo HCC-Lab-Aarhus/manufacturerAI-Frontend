@@ -9,7 +9,7 @@ import ComponentIcon from './ComponentIcon'
 import OutlineSVG from './OutlineSVG'
 
 function jumperXY (ep: JumperEndpoint | [number, number]): [number, number] {
-	if (Array.isArray(ep)) return ep
+	if (Array.isArray(ep)) { return ep }
 	return [ep.x, ep.y]
 }
 
@@ -179,7 +179,7 @@ export default function RoutingViewport ({ routing, className }: Props): ReactEl
 										<svg className="size-2.5 shrink-0" viewBox="0 0 10 10">
 											<rect width={10} height={10} rx={2} fill="var(--color-jumper)" />
 										</svg>
-										<span className="text-[11px] text-fg-secondary truncate">{j.net_id} ({j.length_mm.toFixed(1)}mm)</span>
+										<span className="text-[11px] text-fg-secondary truncate">{j.net_id}{' ('}{j.length_mm.toFixed(1)}{'mm)'}</span>
 									</div>
 								)
 							})}

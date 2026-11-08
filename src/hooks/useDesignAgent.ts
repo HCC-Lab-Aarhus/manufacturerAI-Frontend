@@ -150,7 +150,7 @@ export function useDesignAgent () {
 				patchSession({
 					invalidated_steps: d.invalidated_steps as string[],
 					artifacts: d.artifacts as Record<string, boolean>,
-					pipeline_errors: d.pipeline_errors as Record<string, import('@/types/models').PipelineError>,
+					pipeline_errors: d.pipeline_errors as Record<string, import('@/types/models').PipelineError>
 				})
 				break
 			case 'token_usage':
@@ -244,20 +244,20 @@ export function useDesignAgent () {
 		setMessages([])
 		setConversationLoading(true)
 
-		getTokenUsage(sessionId).then(t => { if (t) setTokenUsage(t) }).catch(() => {})
+		getTokenUsage(sessionId).then(t => { if (t) { setTokenUsage(t) } }).catch(() => {})
 
 		try {
 			const [status, convo, design] = await Promise.all([
 				getDesignStatus(sessionId).catch(() => null),
 				getDesignConversation(sessionId),
-				getDesignResult(sessionId).catch(() => null),
+				getDesignResult(sessionId).catch(() => null)
 			])
 			const isRunning = status?.status === 'running'
 
 			const entries: ChatEntry[] = []
 			for (const msg of convo) {
 				if (typeof msg.content === 'string') {
-					if (msg.content.startsWith('<!-- design-context -->')) continue
+					if (msg.content.startsWith('<!-- design-context -->')) { continue }
 					entries.push({
 						id: `l-${msg.role}-${entries.length}`,
 						role: msg.role,
@@ -266,7 +266,7 @@ export function useDesignAgent () {
 				} else if (Array.isArray(msg.content)) {
 					for (const block of msg.content) {
 						if (block.type === 'text' && block.text) {
-							if (block.text.startsWith('<!-- design-context -->')) continue
+							if (block.text.startsWith('<!-- design-context -->')) { continue }
 							let isInteractiveDesigner = false
 							try {
 								const parsed = JSON.parse(block.text)
@@ -322,7 +322,7 @@ export function useDesignAgent () {
 
 			if (!isRunning && entries.length > 0 && design) {
 				entries.push({
-					id: `l-status-done`,
+					id: 'l-status-done',
 					role: 'status',
 					content: 'Design validated and saved',
 					isCompletion: true
@@ -394,14 +394,14 @@ export function useDesignAgent () {
 		try {
 			const convo = await getDesignConversation(currentSession.id)
 			for (const msg of convo) {
-				if (msg.role !== 'user' || !Array.isArray(msg.content)) continue
+				if (msg.role !== 'user' || !Array.isArray(msg.content)) { continue }
 				for (const block of msg.content) {
 					if (block.type === 'text' && block.text && !block.text.startsWith('<!-- design-context -->')) {
 						firstUserText = block.text
 						break
 					}
 				}
-				if (firstUserText) break
+				if (firstUserText) { break }
 			}
 		} catch { /* proceed without typing animation */ }
 

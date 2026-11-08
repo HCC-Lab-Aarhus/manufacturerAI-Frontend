@@ -7,7 +7,7 @@ import {
 	listPrinters, listFilaments,
 	generateCalibration, generateCombined,
 	generateComponents, generateSpacing,
-	generateWidth, generateSurfaceTest, generateAllTests,
+	generateWidth, generateSurfaceTest, generateAllTests
 } from '@/lib/api'
 import type { Printer, Filament } from '@/types/models'
 
@@ -66,7 +66,7 @@ export default function DebugPage (): ReactElement {
 				const data = await generateSurfaceTest({ printer })
 				setBitmapUrls([{
 					url: makeBlobUrl(data.bitmap),
-					filename: String(data.contract.bitmap_file || 'surface_test.txt'),
+					filename: String(data.contract.bitmap_file || 'surface_test.txt')
 				}])
 				setContractUrl(makeBlobUrl(JSON.stringify(data.contract, null, 2), 'application/json'))
 			} else {
@@ -93,7 +93,7 @@ export default function DebugPage (): ReactElement {
 				setGcodeUrl(makeBlobUrl(data.gcode))
 				setBitmapUrls([{
 					url: makeBlobUrl(data.bitmap),
-					filename: String(data.contract.bitmap_file || `${testMode}_bitmap.txt`),
+					filename: String(data.contract.bitmap_file || `${testMode}_bitmap.txt`)
 				}])
 				setContractUrl(makeBlobUrl(JSON.stringify(data.contract, null, 2), 'application/json'))
 			}
@@ -304,11 +304,11 @@ export default function DebugPage (): ReactElement {
 								if (!('showDirectoryPicker' in window)) {
 									throw new Error('Your browser does not support folder picking. Use Chrome or Edge.')
 								}
-								const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' })
+								const dirHandle = await window.showDirectoryPicker!({ mode: 'readwrite' })
 								const selected = [...bulkFilaments].join(',')
 								const files = await generateAllTests({
 									printer,
-									...(selected ? { filaments: selected } : {}),
+									...(selected ? { filaments: selected } : {})
 								})
 								for (const [path, content] of Object.entries(files)) {
 									const parts = path.split('/')
@@ -323,7 +323,7 @@ export default function DebugPage (): ReactElement {
 								}
 								setBulkDone(true)
 							} catch (e) {
-								if (e instanceof DOMException && e.name === 'AbortError') return
+								if (e instanceof DOMException && e.name === 'AbortError') { return }
 								setBulkError(e instanceof Error ? e.message : 'Generation failed')
 							} finally {
 								setBulkGenerating(false)

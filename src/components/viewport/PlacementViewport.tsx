@@ -2,10 +2,11 @@
 
 import type { ReactElement } from 'react'
 
+import { normalizeOutline, normalizeHoles } from '@/lib/viewport'
+import type { PlacementResult } from '@/types/models'
+
 import ComponentIcon from './ComponentIcon'
 import OutlineSVG from './OutlineSVG'
-import type { PlacementResult } from '@/types/models'
-import { normalizeOutline, normalizeHoles } from '@/lib/viewport'
 
 interface Props {
 	placement: PlacementResult

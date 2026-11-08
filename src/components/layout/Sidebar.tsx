@@ -115,7 +115,7 @@ export default function Sidebar (): ReactElement {
 				printer_id: result.printer_id,
 				invalidated_steps: result.invalidated_steps,
 				artifacts: result.artifacts,
-				pipeline_errors: result.pipeline_errors,
+				pipeline_errors: result.pipeline_errors
 			})
 		}
 	}, [currentSession, printers, setPrinter, patchSession])
@@ -129,7 +129,7 @@ export default function Sidebar (): ReactElement {
 				filament_id: result.filament_id,
 				invalidated_steps: result.invalidated_steps,
 				artifacts: result.artifacts,
-				pipeline_errors: result.pipeline_errors,
+				pipeline_errors: result.pipeline_errors
 			})
 		}
 	}, [currentSession, filaments, setFilament, patchSession])
@@ -278,10 +278,10 @@ export default function Sidebar (): ReactElement {
 										</form>
 									) : (
 										<div className={`flex items-center rounded-lg transition-colors ${
-										currentSession?.id === s.id
-									? 'bg-surface-active text-accent-text'
-									: 'text-fg-secondary hover:bg-surface-hover hover:text-fg'
-									}`}>
+											currentSession?.id === s.id
+												? 'bg-surface-active text-accent-text'
+												: 'text-fg-secondary hover:bg-surface-hover hover:text-fg'
+										}`}>
 											<button
 												onClick={() => { handleSelectSession(s.id) }}
 												className="flex-1 min-w-0 px-3 py-2 text-left text-sm"

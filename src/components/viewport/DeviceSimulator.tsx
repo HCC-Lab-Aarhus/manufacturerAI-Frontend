@@ -4,19 +4,19 @@ import { useEffect, useRef, useCallback } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 
-import { normalizeOutline } from '@/lib/viewport'
-import { buildSceneContent } from '@/lib/scene3dBuilder'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useSimulation } from '@/hooks/useSimulation'
-import type { PlacementResult } from '@/types/models'
 import type { SimConfig } from '@/lib/api/setup'
+import { buildSceneContent } from '@/lib/scene3dBuilder'
+import { normalizeOutline } from '@/lib/viewport'
+import type { PlacementResult } from '@/types/models'
 
 /* ── colour helpers ──────────────────────────────────────────────── */
 
 function cssColor (prop: string, fallback: string): THREE.Color {
-	if (typeof document === 'undefined') return new THREE.Color(fallback)
+	if (typeof document === 'undefined') { return new THREE.Color(fallback) }
 	const v = getComputedStyle(document.documentElement).getPropertyValue(prop).trim()
-	if (!v) return new THREE.Color(fallback)
+	if (!v) { return new THREE.Color(fallback) }
 	const m = v.match(/hsl\(\s*([\d.]+)[,\s]+([\d.]+)%[,\s]+([\d.]+)%/)
 	if (m) {
 		const c = new THREE.Color()
@@ -68,7 +68,7 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 	// ── Three.js setup ──────────────────────────────────────────────
 	useEffect(() => {
 		const container = containerRef.current
-		if (!container) return
+		if (!container) { return }
 
 		const w = container.clientWidth || 400
 		const h = container.clientHeight || 400
@@ -122,7 +122,7 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 		const onResize = () => {
 			const nw = container.clientWidth
 			const nh = container.clientHeight
-			if (nw <= 0 || nh <= 0) return
+			if (nw <= 0 || nh <= 0) { return }
 			camera.aspect = nw / nh
 			camera.updateProjectionMatrix()
 			renderer.setSize(nw, nh)
@@ -144,10 +144,10 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 	useEffect(() => {
 		const scene = sceneRef.current
 		const renderer = rendererRef.current
-		if (!scene || !renderer) return
+		if (!scene || !renderer) { return }
 		const bg = cssColor('--color-surface', '#0d1117')
 		scene.background = bg
-		if (scene.fog instanceof THREE.FogExp2) scene.fog.color.copy(bg)
+		if (scene.fog instanceof THREE.FogExp2) { scene.fog.color.copy(bg) }
 		renderer.setClearColor(bg.getHex(), 1)
 	}, [themeColor])
 
@@ -155,18 +155,17 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 	useEffect(() => {
 		const scene = sceneRef.current
 		const camera = cameraRef.current
-		if (!scene || !camera) return
+		if (!scene || !camera) { return }
 
 		// Remove old dynamic children
 		const toRemove = scene.children.filter(c => c.userData.dynamic)
 		toRemove.forEach(c => {
 			scene.remove(c)
 			c.traverse(obj => {
-				if ((obj as THREE.Mesh).geometry) (obj as THREE.Mesh).geometry.dispose()
+				if ((obj as THREE.Mesh).geometry) { (obj as THREE.Mesh).geometry.dispose() }
 				const mat = (obj as THREE.Mesh).material
 				if (mat) {
-					if (Array.isArray(mat)) mat.forEach(m => m.dispose())
-					else mat.dispose()
+					if (Array.isArray(mat)) { mat.forEach(m => m.dispose()) } else { mat.dispose() }
 				}
 			})
 		})
@@ -174,7 +173,7 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 		ledMeshes.current.clear()
 
 		const outlineRaw = normalizeOutline(placement.outline)
-		if (outlineRaw.length < 3) return
+		if (outlineRaw.length < 3) { return }
 
 		// Build base scene (enclosure + PCB + components)
 		const contentGroup = buildSceneContent({
@@ -184,7 +183,7 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 			bottom_height_grid: placement.bottom_height_grid,
 			components: placement.components,
 			ui_placements: [],
-			traces: [],
+			traces: []
 		})
 		contentGroup.userData.dynamic = true
 		contentGroup.traverse(c => { c.userData.dynamic = true })
@@ -200,10 +199,10 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 			const iid = comp.instance_id
 			const x = comp.x_mm
 			const y = comp.y_mm
-			if (x == null || y == null) continue
+			if (x == null || y == null) { continue }
 
 			const body = comp.body
-			if (!body) continue
+			if (!body) { continue }
 
 			let W: number, L: number
 			if (body.shape === 'circle') {
@@ -221,7 +220,7 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 					color: 0x556677,
 					shininess: 80,
 					transparent: true,
-					opacity: 0.7,
+					opacity: 0.7
 				})
 				const mesh = new THREE.Mesh(geo, mat)
 				mesh.position.set(x, FLOOR_Z + H / 2, y)
@@ -244,7 +243,7 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 					emissive: 0x000000,
 					transparent: true,
 					opacity: 0.5,
-					shininess: 100,
+					shininess: 100
 				})
 				const mesh = new THREE.Mesh(geo, mat)
 				mesh.position.set(x, FLOOR_Z + H / 2, y)
@@ -312,7 +311,7 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 	useEffect(() => {
 		const container = containerRef.current
 		const renderer = rendererRef.current
-		if (!container || !renderer) return
+		if (!container || !renderer) { return }
 
 		const onPointerDown = (e: PointerEvent) => {
 			const rect = renderer.domElement.getBoundingClientRect()
@@ -320,7 +319,7 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 			pointer.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
 
 			const camera = cameraRef.current
-			if (!camera) return
+			if (!camera) { return }
 
 			raycaster.current.setFromCamera(pointer.current, camera)
 			const meshes = Array.from(buttonMeshes.current.values())
@@ -365,7 +364,7 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 		connected: 'Connected',
 		booted: 'Running',
 		stopped: 'Stopped',
-		error: error ?? 'Error',
+		error: error ?? 'Error'
 	}
 
 	const statusColor: Record<string, string> = {
@@ -374,7 +373,7 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 		connected: 'bg-indicator-connecting',
 		booted: 'bg-indicator-running',
 		stopped: 'bg-indicator-stopped',
-		error: 'bg-indicator-stopped',
+		error: 'bg-indicator-stopped'
 	}
 
 	const isRunning = status === 'booted' || status === 'connecting' || status === 'connected'
@@ -383,22 +382,22 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 		<div className={`flex flex-col ${className ?? 'w-full h-full'}`}>
 			{/* Status bar */}
 			<div className="flex items-center gap-3 border-b border-border px-3 py-1.5 bg-surface-alt text-xs">
-				<span className="text-fg-muted font-medium">Simulator</span>
+				<span className="text-fg-muted font-medium">{'Simulator'}</span>
 				<span className="flex items-center gap-1.5 text-fg-secondary">
 					<span className={`inline-block h-2 w-2 rounded-full ${statusColor[status]}`} />
 					{statusLabel[status]}
 				</span>
 				<span className="text-fg-secondary">
-					{buttons.length} button{buttons.length !== 1 ? 's' : ''} · {outputs.length} output{outputs.length !== 1 ? 's' : ''}
+					{buttons.length}{' button'}{buttons.length !== 1 ? 's' : ''}{' · '}{outputs.length}{' output'}{outputs.length !== 1 ? 's' : ''}
 				</span>
 				<div className="ml-auto flex items-center gap-1">
 					{!isRunning && (
-						<button onClick={start} className="rounded px-2 py-0.5 text-[11px] font-medium bg-surface-chip text-fg hover:bg-accent/20 transition-colors" title="Start">▶</button>
+						<button onClick={start} className="rounded px-2 py-0.5 text-[11px] font-medium bg-surface-chip text-fg hover:bg-accent/20 transition-colors" title="Start">{'▶'}</button>
 					)}
 					{isRunning && (
-						<button onClick={stop} className="rounded px-2 py-0.5 text-[11px] font-medium bg-surface-chip text-fg hover:bg-error/20 transition-colors" title="Stop">⏹</button>
+						<button onClick={stop} className="rounded px-2 py-0.5 text-[11px] font-medium bg-surface-chip text-fg hover:bg-error/20 transition-colors" title="Stop">{'⏹'}</button>
 					)}
-					<button onClick={restart} className="rounded px-2 py-0.5 text-[11px] font-medium bg-surface-chip text-fg hover:bg-accent/20 transition-colors" title="Restart">↻</button>
+					<button onClick={restart} className="rounded px-2 py-0.5 text-[11px] font-medium bg-surface-chip text-fg hover:bg-accent/20 transition-colors" title="Restart">{'↻'}</button>
 				</div>
 			</div>
 			{/* 3D viewport */}
@@ -431,12 +430,12 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 			{/* Serial log */}
 			<div className="border-t border-border bg-terminal-bg flex flex-col max-h-[30%] min-h-20">
 				<div className="flex items-center justify-between px-3 py-1 bg-surface-alt border-b border-border">
-					<span className="text-[11px] font-medium text-fg-muted">Serial Monitor</span>
-					<button onClick={clearLog} className="text-[10px] text-fg-muted hover:text-fg transition-colors" title="Clear log">🗑</button>
+					<span className="text-[11px] font-medium text-fg-muted">{'Serial Monitor'}</span>
+					<button onClick={clearLog} className="text-[10px] text-fg-muted hover:text-fg transition-colors" title="Clear log">{'🗑'}</button>
 				</div>
 				<div className="flex-1 overflow-y-auto px-2 py-1 font-mono text-[11px] text-terminal-fg leading-relaxed">
 					{serialLog.length === 0 ? (
-						<span className="text-fg-muted/40 italic">No serial output yet</span>
+						<span className="text-fg-muted/40 italic">{'No serial output yet'}</span>
 					) : (
 						serialLog.map((line, i) => <div key={i}>{line}</div>)
 					)}
@@ -451,7 +450,7 @@ export default function DeviceSimulator ({ placement, simConfig, sessionId, clas
 function addLabel (scene: THREE.Scene, text: string, x: number, y: number, z: number) {
 	const canvas = document.createElement('canvas')
 	const ctx = canvas.getContext('2d')
-	if (!ctx) return
+	if (!ctx) { return }
 
 	canvas.width = 256
 	canvas.height = 64
@@ -468,7 +467,7 @@ function addLabel (scene: THREE.Scene, text: string, x: number, y: number, z: nu
 	const spriteMat = new THREE.SpriteMaterial({
 		map: texture,
 		transparent: true,
-		depthTest: false,
+		depthTest: false
 	})
 	const sprite = new THREE.Sprite(spriteMat)
 	sprite.position.set(x, y, z)

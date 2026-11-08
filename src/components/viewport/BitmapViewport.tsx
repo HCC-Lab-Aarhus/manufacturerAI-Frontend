@@ -19,7 +19,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 		keepout_left, keepout_right, keepout_front, keepout_back,
 		bed_width, bed_depth,
 		bed_offset_x, bed_offset_y,
-		bitmap_cols, bitmap_rows, bitmap_b64,
+		bitmap_cols, bitmap_rows, bitmap_b64
 	} = bitmap
 	const outline = normalizeOutline(bitmap.outline)
 	const holes = normalizeHoles(bitmap.outline)
@@ -73,7 +73,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 		const norm = normaliseOutline(outline)
 		const { verts, corners } = norm
 		const n = verts.length
-		if (n < 3) return ''
+		if (n < 3) { return '' }
 		const parts: string[] = []
 		for (let i = 0; i < n; i++) {
 			const C = verts[i]
@@ -98,8 +98,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 			const ay = bedYm(C[1] + dPy * tIn)
 			const bx = padX + (C[0] + dNx * tOut + bed_offset_x) * bedScale
 			const by = bedYm(C[1] + dNy * tOut)
-			if (i === 0) parts.push(`M${ax},${ay}`)
-			else parts.push(`L${ax},${ay}`)
+			if (i === 0) { parts.push(`M${ax},${ay}`) } else { parts.push(`L${ax},${ay}`) }
 			parts.push(`Q${cx},${cy} ${bx},${by}`)
 		}
 		parts.push('Z')
@@ -107,7 +106,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 		for (const hole of holes) {
 			const hn = normaliseOutline(hole)
 			const hv = hn.verts, hc = hn.corners
-			if (hv.length < 3) continue
+			if (hv.length < 3) { continue }
 			for (let j = 0; j < hv.length; j++) {
 				const C = hv[j]
 				const prev = (j - 1 + hv.length) % hv.length
@@ -131,8 +130,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 				const ay = bedYm(C[1] + dPy * tIn)
 				const bx = padX + (C[0] + dNx * tOut + bed_offset_x) * bedScale
 				const by = bedYm(C[1] + dNy * tOut)
-				if (j === 0) parts.push(`M${ax},${ay}`)
-				else parts.push(`L${ax},${ay}`)
+				if (j === 0) { parts.push(`M${ax},${ay}`) } else { parts.push(`L${ax},${ay}`) }
 				parts.push(`Q${cx},${cy} ${bx},${by}`)
 			}
 			parts.push('Z')
@@ -175,7 +173,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 						<path
 							d={outlinePathD}
 							fillRule="evenodd"
-								fill="var(--color-outline-fill)" stroke="var(--color-outline-stroke)" strokeWidth={1.5}
+							fill="var(--color-outline-fill)" stroke="var(--color-outline-stroke)" strokeWidth={1.5}
 						/>
 					)}
 
@@ -191,7 +189,7 @@ export default function BitmapViewport ({ bitmap, className }: Props): ReactElem
 								<rect
 									x={-w / 2} y={-h / 2}
 									width={w} height={h}
-										fill="var(--color-body-fill-hl)" stroke="var(--color-outline-stroke)" strokeWidth={0.8}
+									fill="var(--color-body-fill-hl)" stroke="var(--color-outline-stroke)" strokeWidth={0.8}
 								/>
 								{(c.pins ?? []).map(pin => {
 									const px = pin.position_mm[0] * bedScale

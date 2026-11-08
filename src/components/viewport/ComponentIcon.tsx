@@ -19,9 +19,9 @@ interface Props {
 }
 
 const DRAG_FILLS: Record<string, { fill: string; stroke: string }> = {
-	valid:   { fill: 'var(--color-drag-valid-fill)', stroke: 'var(--color-drag-valid)' },
+	valid: { fill: 'var(--color-drag-valid-fill)', stroke: 'var(--color-drag-valid)' },
 	invalid: { fill: 'var(--color-drag-invalid-fill)', stroke: 'var(--color-drag-invalid)' },
-	pending: { fill: 'var(--color-drag-pending-fill)', stroke: 'var(--color-drag-pending)' },
+	pending: { fill: 'var(--color-drag-pending-fill)', stroke: 'var(--color-drag-pending)' }
 }
 
 export default function ComponentIcon ({ x, y, rotation = 0, body, pins, label, dimmed, highlight, dragValid, pinClearanceMm }: Props): ReactElement {

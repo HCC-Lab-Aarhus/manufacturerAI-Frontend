@@ -289,7 +289,6 @@ export function useManufacture () {
 									return
 								}
 							}
-
 						} catch { /* ignore parse errors */ }
 					}
 				}
@@ -473,7 +472,6 @@ export function useManufacture () {
 			} else {
 				updateStep('gcode', { status: 'done', message: 'Using existing' })
 			}
-
 		} catch (err) {
 			if (err instanceof CancelError) {
 				if (activeStep) {

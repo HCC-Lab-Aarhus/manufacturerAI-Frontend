@@ -16,7 +16,7 @@ const PANELS: { key: PipelineStage; Component: () => ReactElement }[] = [
 	{ key: 'circuit', Component: CircuitPanel },
 	{ key: 'manufacture', Component: ManufacturePanel },
 	{ key: 'guide', Component: GuidePanel },
-	{ key: 'setup', Component: SetupPanel },
+	{ key: 'setup', Component: SetupPanel }
 ]
 
 export default function PipelineContent (): ReactElement {
@@ -27,7 +27,7 @@ export default function PipelineContent (): ReactElement {
 	return (
 		<div className="flex-1 overflow-hidden relative">
 			{PANELS.map(({ key, Component }) => {
-				if (!mountedRef.current.has(key)) return null
+				if (!mountedRef.current.has(key)) { return null }
 				return (
 					<div
 						key={key}

@@ -1,7 +1,9 @@
 import * as THREE from 'three'
-import { normalizeOutline, normalizeHoles, normaliseOutline, expandOutlineVertices } from './viewport'
-import type { EdgeProfile, HeightGrid, Outline, UIPlacement } from '@/types/models'
+
 import { SCENE_3D } from '@/lib/theme'
+import type { EdgeProfile, HeightGrid, Outline, UIPlacement } from '@/types/models'
+
+import { normalizeOutline, normalizeHoles, normaliseOutline, expandOutlineVertices } from './viewport'
 
 const PALETTE = [...SCENE_3D.componentPalette]
 
@@ -12,14 +14,14 @@ const MAT = {
 	wallFill: () => new THREE.MeshPhongMaterial({
 		color: SCENE_3D.wallFill, side: THREE.FrontSide,
 		transparent: true, opacity: SCENE_3D.wallOpacity, shininess: 0,
-		depthWrite: false,
+		depthWrite: false
 	}),
 	lidFill: () => new THREE.MeshPhongMaterial({
 		color: SCENE_3D.lidFill, side: THREE.FrontSide,
 		transparent: true, opacity: SCENE_3D.lidOpacity, shininess: 0,
 		depthWrite: false,
-		polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
-	}),
+		polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1
+	})
 }
 
 interface SceneData {
@@ -53,7 +55,7 @@ interface SceneData {
 
 export function buildSceneContent (data: SceneData): THREE.Group {
 	const group = new THREE.Group()
-	if (!data) return group
+	if (!data) { return group }
 
 	const outline = normalizeOutline(data.outline)
 	const holes = normalizeHoles(data.outline)
@@ -63,7 +65,7 @@ export function buildSceneContent (data: SceneData): THREE.Group {
 	const traces = data.traces ?? []
 
 	const { verts, corners, zTops, zBottoms } = normaliseOutline(outline)
-	if (verts.length < 3) return group
+	if (verts.length < 3) { return group }
 
 	const defaultZ = enclosure.height_mm ?? 25
 	const { pts: expanded, zs: expandedZ, zbots: expandedZBot, cornerIndices } =
@@ -72,7 +74,7 @@ export function buildSceneContent (data: SceneData): THREE.Group {
 	const expandedHoles: [number, number][][] = []
 	for (const hole of holes) {
 		const hn = normaliseOutline(hole)
-		if (hn.verts.length < 3) continue
+		if (hn.verts.length < 3) { continue }
 		const { pts: hPts } = expandOutlineVertices(hn.verts, hn.corners, hn.zTops, defaultZ, hn.zBottoms)
 		expandedHoles.push(hPts)
 	}
@@ -94,7 +96,7 @@ export function buildSceneContent (data: SceneData): THREE.Group {
 			body: (up as unknown as Record<string, unknown>).body as typeof uiPos[string]['body'],
 			ui_placement: (up as unknown as Record<string, unknown>).ui_placement as boolean | undefined,
 			cap_diameter_mm: (up as unknown as Record<string, unknown>).cap_diameter_mm as number | undefined,
-			cap_clearance_mm: (up as unknown as Record<string, unknown>).cap_clearance_mm as number | undefined,
+			cap_clearance_mm: (up as unknown as Record<string, unknown>).cap_clearance_mm as number | undefined
 		}
 	}
 
@@ -122,7 +124,7 @@ export function buildSceneContent (data: SceneData): THREE.Group {
 				body: ui.body,
 				ui_placement: ui.ui_placement,
 				cap_diameter_mm: ui.cap_diameter_mm,
-				cap_clearance_mm: ui.cap_clearance_mm,
+				cap_clearance_mm: ui.cap_clearance_mm
 			})
 		}
 	}
@@ -138,17 +140,17 @@ export function buildSceneContent (data: SceneData): THREE.Group {
 		let x = comp.x_mm, y = comp.y_mm, rot = comp.rotation_deg ?? 0
 		if (x == null || y == null) {
 			const ui = uiPos[comp.instance_id]
-			if (!ui) return
+			if (!ui) { return }
 			x = ui.x_mm; y = ui.y_mm; rot = ui.rotation_deg
 		}
 		const mesh = buildComponentBox({ ...comp, x_mm: x, y_mm: y, rotation_deg: rot }, FLOOR_Z, PALETTE[i % PALETTE.length])
-		if (mesh) group.add(mesh)
+		if (mesh) { group.add(mesh) }
 	})
 
 	const netColors = buildNetColorMap(traces.map(t => t.net_id))
 	traces.forEach(trace => {
 		const lines = buildTraceLine(trace, FLOOR_Z, netColors[trace.net_id] ?? 0xffffff)
-		if (lines) group.add(lines)
+		if (lines) { group.add(lines) }
 	})
 
 	return group
@@ -183,7 +185,7 @@ function edgeProfile (z_top: number, eBot: EdgeProfile | undefined, eTop: EdgePr
 			const a = (k / ARC) * (Math.PI / 2)
 			pts.push({
 				h: (z_top - topS) + topS * Math.sin(a),
-				off: topS * (1 - Math.cos(a)),
+				off: topS * (1 - Math.cos(a))
 			})
 		}
 	} else {
@@ -215,10 +217,10 @@ function buildEnclosureShell (
 	cx /= N; cz /= N
 
 	function insetPt (x: number, y: number, off: number): [number, number] {
-		if (off === 0) return [x, y]
+		if (off === 0) { return [x, y] }
 		const dx = x - cx, dz = y - cz
 		const dist = Math.hypot(dx, dz)
-		if (dist < 0.01) return [x, y]
+		if (dist < 0.01) { return [x, y] }
 		const f = Math.max(0, (dist - off)) / dist
 		return [cx + dx * f, cz + dz * f]
 	}
@@ -302,15 +304,15 @@ function buildEnclosureShell (
 		const RING_SEGS = 24
 		const CLR = 0.5
 		for (const comp of (compList ?? [])) {
-			if (!comp.ui_placement) continue
+			if (!comp.ui_placement) { continue }
 			let x = comp.x_mm, y = comp.y_mm
 			if (x == null || y == null) {
 				const ui = uiPosMap[comp.instance_id]
-				if (!ui) continue
+				if (!ui) { continue }
 				x = ui.x_mm; y = ui.y_mm
 			}
 			const body = comp.body
-			if (!body) continue
+			if (!body) { continue }
 			const rh = lidSampleHeight(x, y, lidPts, expandedZ, heightGrid, defH) + 0.2
 
 			let ringPts: THREE.Vector3[]
@@ -331,7 +333,7 @@ function buildEnclosureShell (
 					new THREE.Vector3(x + hw, rh, y - hh),
 					new THREE.Vector3(x + hw, rh, y + hh),
 					new THREE.Vector3(x - hw, rh, y + hh),
-					new THREE.Vector3(x - hw, rh, y - hh),
+					new THREE.Vector3(x - hw, rh, y - hh)
 				]
 			}
 			group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(ringPts), cutoutMat))
@@ -350,7 +352,7 @@ function buildEnclosureShell (
 	// Vertical pillars
 	const pillarSet = new Set(cornerIndices.length > 0 ? cornerIndices : [])
 	pts.forEach((v, i) => {
-		if (pillarSet.size > 0 ? !pillarSet.has(i) : (i % 7 !== 0)) return
+		if (pillarSet.size > 0 ? !pillarSet.has(i) : (i % 7 !== 0)) { return }
 		const prof = edgeProfile(expandedZ[i], eBot, eTop, expandedZBot[i])
 		const pillarPts = prof.map(({ h, off }) => {
 			const [ix, iz] = insetPt(v[0], v[1], off)
@@ -364,12 +366,12 @@ function buildEnclosureShell (
 
 function lidSampleHeight (x: number, y: number, boundaryPts: [number, number][], boundaryZ: number[], heightGrid: HeightGrid | null, defaultH: number): number {
 	const gridZ = heightGrid ? gridSampleHeight(x, y, heightGrid) : null
-	if (gridZ !== null) return gridZ
+	if (gridZ !== null) { return gridZ }
 
 	let sumW = 0, sumWZ = 0
 	for (let i = 0; i < boundaryPts.length; i++) {
 		const d2 = (x - boundaryPts[i][0]) ** 2 + (y - boundaryPts[i][1]) ** 2
-		if (d2 < 1e-6) return boundaryZ[i]
+		if (d2 < 1e-6) { return boundaryZ[i] }
 		const w = 1.0 / d2
 		sumW += w
 		sumWZ += w * boundaryZ[i]
@@ -385,7 +387,7 @@ function gridSampleHeight (x: number, y: number, hg: HeightGrid): number | null 
 	const tc = fc - c0, tr = fr - r0
 
 	const v = (r: number, c: number): number | null => {
-		if (r < 0 || r >= hg.rows || c < 0 || c >= hg.cols) return null
+		if (r < 0 || r >= hg.rows || c < 0 || c >= hg.cols) { return null }
 		return hg.grid[r]?.[c] ?? null
 	}
 
@@ -399,7 +401,7 @@ function gridSampleHeight (x: number, y: number, hg: HeightGrid): number | null 
 	for (let dr = -1; dr <= 2; dr++) {
 		for (let dc = -1; dc <= 2; dc++) {
 			const val = v(r0 + dr, c0 + dc)
-			if (val == null) continue
+			if (val == null) { continue }
 			const d = (dr - tr) * (dr - tr) + (dc - tc) * (dc - tc)
 			if (d < bestD) { bestD = d; best = val }
 		}
@@ -409,13 +411,13 @@ function gridSampleHeight (x: number, y: number, hg: HeightGrid): number | null 
 
 function floorSampleHeight (x: number, y: number, boundaryPts: [number, number][], boundaryZBot: number[], bottomHeightGrid: HeightGrid | null): number {
 	const gridZ = bottomHeightGrid ? gridSampleHeight(x, y, bottomHeightGrid) : null
-	if (gridZ !== null) return gridZ
+	if (gridZ !== null) { return gridZ }
 
-	if (!boundaryZBot) return 0
+	if (!boundaryZBot) { return 0 }
 	let sumW = 0, sumWZ = 0
 	for (let i = 0; i < boundaryPts.length; i++) {
 		const d2 = (x - boundaryPts[i][0]) ** 2 + (y - boundaryPts[i][1]) ** 2
-		if (d2 < 1e-6) return boundaryZBot[i]
+		if (d2 < 1e-6) { return boundaryZBot[i] }
 		const w = 1.0 / d2
 		sumW += w
 		sumWZ += w * boundaryZBot[i]
@@ -476,7 +478,7 @@ function buildPCBFloor (pts: [number, number][], expandedZBot: number[], bottomH
 	rimPts.push(rimPts[0].clone())
 	const rimLine = new THREE.Line(
 		new THREE.BufferGeometry().setFromPoints(rimPts),
-		new THREE.LineBasicMaterial({ color: 0x4a8a5a }),
+		new THREE.LineBasicMaterial({ color: 0x4a8a5a })
 	)
 
 	const grp = new THREE.Group()
@@ -491,7 +493,7 @@ function buildComponentBox (
 	colorHex: number
 ): THREE.Mesh | null {
 	const body = comp.body
-	if (!body) return null
+	if (!body) { return null }
 
 	let W: number, L: number
 	if (body.shape === 'cylinder' || body.shape === 'circle') {
@@ -523,7 +525,7 @@ function buildComponentBox (
 
 function buildTraceLine (trace: { path: [number, number][] }, floorZ: number, colorHex: number): THREE.Line | null {
 	const path = trace.path
-	if (!path || path.length < 2) return null
+	if (!path || path.length < 2) { return null }
 
 	const tpts = path.map(([x, y]) => new THREE.Vector3(x, floorZ, y))
 	const geo = new THREE.BufferGeometry().setFromPoints(tpts)

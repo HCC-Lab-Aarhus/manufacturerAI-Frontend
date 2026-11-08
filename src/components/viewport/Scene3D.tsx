@@ -5,15 +5,15 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { STLLoader } from 'three/addons/loaders/STLLoader.js'
 
-import { normalizeOutline } from '@/lib/viewport'
-import { buildSceneContent } from '@/lib/scene3dBuilder'
 import { useTheme } from '@/contexts/ThemeContext'
+import { buildSceneContent } from '@/lib/scene3dBuilder'
+import { normalizeOutline } from '@/lib/viewport'
 import type { DesignSpec, PlacementResult, RoutingResult } from '@/types/models'
 
 function cssColor (prop: string, fallback: string): THREE.Color {
-	if (typeof document === 'undefined') return new THREE.Color(fallback)
+	if (typeof document === 'undefined') { return new THREE.Color(fallback) }
 	const v = getComputedStyle(document.documentElement).getPropertyValue(prop).trim()
-	if (!v) return new THREE.Color(fallback)
+	if (!v) { return new THREE.Color(fallback) }
 	const m = v.match(/hsl\(\s*([\d.]+)[,\s]+([\d.]+)%[,\s]+([\d.]+)%/)
 	if (m) {
 		const c = new THREE.Color()
@@ -44,7 +44,7 @@ export default function Scene3D ({ stlUrl, design, placement, routing, className
 
 	useEffect(() => {
 		const container = containerRef.current
-		if (!container) return
+		if (!container) { return }
 
 		const w = container.clientWidth || 400
 		const h = container.clientHeight || 400
@@ -99,7 +99,7 @@ export default function Scene3D ({ stlUrl, design, placement, routing, className
 		const onResize = () => {
 			const nw = container.clientWidth
 			const nh = container.clientHeight
-			if (nw <= 0 || nh <= 0) return
+			if (nw <= 0 || nh <= 0) { return }
 			camera.aspect = nw / nh
 			camera.updateProjectionMatrix()
 			renderer.setSize(nw, nh)
@@ -121,18 +121,17 @@ export default function Scene3D ({ stlUrl, design, placement, routing, className
 		const scene = sceneRef.current
 		const renderer = rendererRef.current
 		const oldGrid = gridRef.current
-		if (!scene || !renderer) return
+		if (!scene || !renderer) { return }
 
 		const bg = cssColor('--color-surface', '#0d1117')
 		scene.background = bg
-		if (scene.fog instanceof THREE.FogExp2) scene.fog.color.copy(bg)
+		if (scene.fog instanceof THREE.FogExp2) { scene.fog.color.copy(bg) }
 		renderer.setClearColor(bg.getHex(), 1)
 
 		if (oldGrid) {
 			scene.remove(oldGrid)
 			oldGrid.geometry.dispose()
-			if (Array.isArray(oldGrid.material)) oldGrid.material.forEach(m => m.dispose())
-			else oldGrid.material.dispose()
+			if (Array.isArray(oldGrid.material)) { oldGrid.material.forEach(m => m.dispose()) } else { oldGrid.material.dispose() }
 		}
 		const gridMain = bg.clone().lerp(new THREE.Color('#ffffff'), 0.08)
 		const gridSub = bg.clone().lerp(new THREE.Color('#ffffff'), 0.04)
@@ -145,17 +144,16 @@ export default function Scene3D ({ stlUrl, design, placement, routing, className
 	useEffect(() => {
 		const scene = sceneRef.current
 		const camera = cameraRef.current
-		if (!scene || !camera) return
+		if (!scene || !camera) { return }
 
 		const toRemove = scene.children.filter(c => c.userData.dynamic)
 		toRemove.forEach(c => {
 			scene.remove(c)
 			c.traverse(obj => {
-				if ((obj as THREE.Mesh).geometry) (obj as THREE.Mesh).geometry.dispose()
+				if ((obj as THREE.Mesh).geometry) { (obj as THREE.Mesh).geometry.dispose() }
 				const mat = (obj as THREE.Mesh).material
 				if (mat) {
-					if (Array.isArray(mat)) mat.forEach(m => m.dispose())
-					else mat.dispose()
+					if (Array.isArray(mat)) { mat.forEach(m => m.dispose()) } else { mat.dispose() }
 				}
 			})
 		})
@@ -184,10 +182,10 @@ export default function Scene3D ({ stlUrl, design, placement, routing, className
 		}
 
 		const data = routing ?? placement ?? design
-		if (!data) return
+		if (!data) { return }
 
 		const outlineRaw = normalizeOutline(data.outline)
-		if (outlineRaw.length < 3) return
+		if (outlineRaw.length < 3) { return }
 
 		const contentGroup = buildSceneContent({
 			outline: outlineRaw,
@@ -196,7 +194,7 @@ export default function Scene3D ({ stlUrl, design, placement, routing, className
 			bottom_height_grid: 'bottom_height_grid' in data ? (data as PlacementResult).bottom_height_grid : null,
 			components: 'components' in data ? data.components : [],
 			ui_placements: 'ui_placements' in data ? (data as DesignSpec).ui_placements : [],
-			traces: 'traces' in data ? (data as RoutingResult).traces : [],
+			traces: 'traces' in data ? (data as RoutingResult).traces : []
 		})
 		contentGroup.userData.dynamic = true
 		contentGroup.traverse(c => { c.userData.dynamic = true })
@@ -208,7 +206,7 @@ export default function Scene3D ({ stlUrl, design, placement, routing, className
 	function fitCamera (scene: THREE.Scene, camera: THREE.PerspectiveCamera) {
 		const box = new THREE.Box3()
 		scene.children.filter(c => c.userData.dynamic).forEach(c => box.expandByObject(c))
-		if (box.isEmpty()) return
+		if (box.isEmpty()) { return }
 
 		const center = box.getCenter(new THREE.Vector3())
 		const size = box.getSize(new THREE.Vector3())

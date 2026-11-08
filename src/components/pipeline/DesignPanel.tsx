@@ -46,7 +46,7 @@ export default function DesignPanel (): ReactElement {
 	const handleDesignUpdate = useCallback((d: DesignSpec | null) => {
 		setDesign(d)
 		scene3dDesignRef.current = d
-		if (scene3dTimerRef.current) clearTimeout(scene3dTimerRef.current)
+		if (scene3dTimerRef.current) { clearTimeout(scene3dTimerRef.current) }
 		scene3dTimerRef.current = setTimeout(() => {
 			setScene3dDesign(scene3dDesignRef.current)
 			scene3dTimerRef.current = null
@@ -139,7 +139,7 @@ export default function DesignPanel (): ReactElement {
 							el.setPointerCapture(e.pointerId)
 							el.onpointermove = (ev: PointerEvent) => {
 								const container = containerRef.current
-								if (!container) return
+								if (!container) { return }
 								const rect = container.getBoundingClientRect()
 								const pct = Math.min(80, Math.max(20, (ev.clientX - rect.left) / rect.width * 100))
 								setChatWidthPct(pct)
@@ -168,7 +168,7 @@ export default function DesignPanel (): ReactElement {
 								el.setPointerCapture(e.pointerId)
 								el.onpointermove = (ev: PointerEvent) => {
 									const col = rightColRef.current
-									if (!col) return
+									if (!col) { return }
 									const rect = col.getBoundingClientRect()
 									const pct = Math.min(80, Math.max(20, (ev.clientY - rect.top) / rect.height * 100))
 									setOutlineHeightPct(pct)

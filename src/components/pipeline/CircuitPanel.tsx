@@ -1,7 +1,6 @@
 'use client'
 
 import { type ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -10,8 +9,8 @@ import ChatLog from '@/components/chat/ChatLog'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { usePipeline } from '@/contexts/PipelineContext'
 import { useSession } from '@/contexts/SessionContext'
-import { getDesignResult } from '@/lib/api'
 import { useCircuitAgent } from '@/hooks/useCircuitAgent'
+import { getDesignResult } from '@/lib/api'
 import type { DesignSpec } from '@/types/models'
 
 // Persists across component remounts so auto-revalidation does not
@@ -206,7 +205,7 @@ export default function CircuitPanel (): ReactElement {
 				<div className="flex flex-1 flex-col items-center p-2 overflow-hidden">
 					<div className="flex w-full max-w-5xl items-center justify-between mb-2">
 						<div className="flex items-center gap-3">
-							<h2 className="text-lg font-semibold text-fg-secondary">Circuit Outline</h2>
+							<h2 className="text-lg font-semibold text-fg-secondary">{'Circuit Outline'}</h2>
 							<button
 								onClick={() => setEditingOutline(!editingOutline)}
 								className="rounded px-2 py-0.5 text-xs text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"
@@ -245,7 +244,7 @@ export default function CircuitPanel (): ReactElement {
 		<div className="overflow-y-auto p-6 h-full">
 			<div className="mx-auto max-w-2xl space-y-6">
 				<div className="flex items-center justify-between">
-					<span className="text-xs font-medium text-fg-secondary">Details</span>
+					<span className="text-xs font-medium text-fg-secondary">{'Details'}</span>
 					<div className="flex items-center gap-2">
 						{streaming ? (
 							<>
@@ -270,7 +269,7 @@ export default function CircuitPanel (): ReactElement {
 				</div>
 				<section>
 					<h3 className="mb-3 text-sm font-semibold text-fg">
-						Components ({circuit.components.length})
+						{'Components ('}{circuit.components.length}{')\r'}
 					</h3>
 					<div className="space-y-2">
 						{circuit.components.map(c => (
@@ -286,7 +285,7 @@ export default function CircuitPanel (): ReactElement {
 				</section>
 				<section>
 					<h3 className="mb-3 text-sm font-semibold text-fg">
-						Nets ({circuit.nets.length})
+						{'Nets ('}{circuit.nets.length}{')\r'}
 					</h3>
 					<div className="space-y-2">
 						{circuit.nets.map(n => (

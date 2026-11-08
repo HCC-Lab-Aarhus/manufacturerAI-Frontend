@@ -206,7 +206,6 @@ export default function ManufacturePanel (): ReactElement {
 		if (step in STEP_TO_TAB) { setViewTab(STEP_TO_TAB[step]) }
 	}, [])
 
-
 	return (
 		<div className="flex h-full flex-col">
 			<div className="flex-1 flex overflow-hidden">
@@ -246,7 +245,7 @@ export default function ManufacturePanel (): ReactElement {
 								<>
 									<span className="text-[11px] font-medium text-success">{'Complete'}</span>
 									<button
-										onClick={() => { if (!requireFilament()) return; runPipeline('placement', { silverink_only: silverinkOnly }) }}
+										onClick={() => { if (!requireFilament()) { return } runPipeline('placement', { silverink_only: silverinkOnly }) }}
 										className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-on-accent-muted hover:bg-accent-hover transition-colors"
 									>
 										{'Re-run'}
@@ -254,14 +253,14 @@ export default function ManufacturePanel (): ReactElement {
 								</>
 							) : canResume ? (
 								<button
-									onClick={() => { if (!requireFilament()) return; runPipeline(firstIncomplete!.step, { silverink_only: silverinkOnly }) }}
+									onClick={() => { if (!requireFilament()) { return } runPipeline(firstIncomplete!.step, { silverink_only: silverinkOnly }) }}
 									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-on-accent-muted hover:bg-accent-hover transition-colors"
 								>
 									{'Resume'}
 								</button>
 							) : (
 								<button
-									onClick={() => { if (!requireFilament()) return; runPipeline(undefined, { silverink_only: silverinkOnly }) }}
+									onClick={() => { if (!requireFilament()) { return } runPipeline(undefined, { silverink_only: silverinkOnly }) }}
 									className="rounded-md bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-on-accent-muted hover:bg-accent-hover transition-colors"
 								>
 									{'Start'}
@@ -363,28 +362,28 @@ export default function ManufacturePanel (): ReactElement {
 							<InflationViewport routing={inflationResult ?? routingResult!} className="w-full h-full" />
 						) : viewTab === 'bitmap' && bitmapResult ? (
 							<BitmapViewport bitmap={bitmapResult} className="w-full h-full" />
-					) : viewTab === 'scad' && placementResult ? (
-						<Scene3D placement={placementResult} routing={routingResult} className="w-full h-full" />
-					) : viewTab === 'stl' && sessionId && compileReady ? (
-						<Scene3D
-							key="stl-bottom"
-							placement={placementResult}
-							routing={routingResult}
-							stlUrl={getStlDownloadUrl(sessionId)}
-							className="w-full h-full"
-						/>
-					) : viewTab === 'stl-top' && sessionId && compileReady ? (
-						<Scene3D
-							key="stl-top"
-							stlUrl={getTopStlDownloadUrl(sessionId)}
-							className="w-full h-full"
-						/>
-					) : viewTab === 'extras' && sessionId && compileReady ? (
-						<Scene3D
-							key="stl-extras"
-							stlUrl={getExtrasStlDownloadUrl(sessionId)}
-							className="w-full h-full"
-						/>
+						) : viewTab === 'scad' && placementResult ? (
+							<Scene3D placement={placementResult} routing={routingResult} className="w-full h-full" />
+						) : viewTab === 'stl' && sessionId && compileReady ? (
+							<Scene3D
+								key="stl-bottom"
+								placement={placementResult}
+								routing={routingResult}
+								stlUrl={getStlDownloadUrl(sessionId)}
+								className="w-full h-full"
+							/>
+						) : viewTab === 'stl-top' && sessionId && compileReady ? (
+							<Scene3D
+								key="stl-top"
+								stlUrl={getTopStlDownloadUrl(sessionId)}
+								className="w-full h-full"
+							/>
+						) : viewTab === 'extras' && sessionId && compileReady ? (
+							<Scene3D
+								key="stl-extras"
+								stlUrl={getExtrasStlDownloadUrl(sessionId)}
+								className="w-full h-full"
+							/>
 						) : (
 							<div className="flex items-center justify-center h-full text-xs text-fg-secondary">
 								{running ? 'Running pipeline…' : 'Start the pipeline to view results'}

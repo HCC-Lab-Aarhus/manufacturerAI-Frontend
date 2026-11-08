@@ -81,7 +81,7 @@ function ToolCallGroup ({ entries }: { entries: ChatEntry[] }): ReactElement {
 				className="flex items-center gap-1.5 text-[11px] text-fg-muted hover:text-fg-secondary transition-colors"
 			>
 				<span className={`text-[9px] transition-transform ${expanded ? 'rotate-90' : ''}`}>{'▶'}</span>
-				<span>{count} tool {count === 1 ? 'call' : 'calls'}</span>
+				<span>{count}{' tool '}{count === 1 ? 'call' : 'calls'}</span>
 				{hasError && <span className="text-danger">{'(error)'}</span>}
 			</button>
 			{expanded && (
@@ -104,7 +104,7 @@ function ThinkingPreview ({ content }: { content: string }): ReactElement {
 			style={{
 				maxHeight: '4.5lh',
 				maskImage: 'linear-gradient(to top, black 60%, transparent 100%)',
-				WebkitMaskImage: 'linear-gradient(to top, black 60%, transparent 100%)',
+				WebkitMaskImage: 'linear-gradient(to top, black 60%, transparent 100%)'
 			}}
 		>
 			<div className="text-[11px] leading-snug text-fg-muted/70 break-words">

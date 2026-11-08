@@ -1,3 +1,4 @@
+
 import type { CircuitSpec, ConversationMessage, PipelineError, TokenUsage } from '@/types/models'
 
 import apiClient from './client'
@@ -11,8 +12,8 @@ export async function startCircuit (
 	outline?: string
 ): Promise<{ status: string }> {
 	const body: Record<string, string> = {}
-	if (feedback) body.feedback = feedback
-	if (outline) body.outline = outline
+	if (feedback) { body.feedback = feedback }
+	if (outline) { body.outline = outline }
 	const { data } = await apiClient.post<{ status: string }>(
 		`/api/sessions/${encodeURIComponent(sessionId)}/circuit`,
 		Object.keys(body).length ? body : undefined
