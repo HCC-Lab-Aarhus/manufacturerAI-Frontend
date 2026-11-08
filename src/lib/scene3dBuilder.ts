@@ -91,10 +91,10 @@ export function buildSceneContent (data: SceneData): THREE.Group {
 			x_mm: up.x_mm,
 			y_mm: up.y_mm,
 			rotation_deg,
-			body: (up as Record<string, unknown>).body as typeof uiPos[string]['body'],
-			ui_placement: (up as Record<string, unknown>).ui_placement as boolean | undefined,
-			cap_diameter_mm: (up as Record<string, unknown>).cap_diameter_mm as number | undefined,
-			cap_clearance_mm: (up as Record<string, unknown>).cap_clearance_mm as number | undefined,
+			body: (up as unknown as Record<string, unknown>).body as typeof uiPos[string]['body'],
+			ui_placement: (up as unknown as Record<string, unknown>).ui_placement as boolean | undefined,
+			cap_diameter_mm: (up as unknown as Record<string, unknown>).cap_diameter_mm as number | undefined,
+			cap_clearance_mm: (up as unknown as Record<string, unknown>).cap_clearance_mm as number | undefined,
 		}
 	}
 

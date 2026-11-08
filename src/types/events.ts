@@ -9,6 +9,7 @@ export type SSEEventType =
 	| 'tool_result'
 	| 'user_message'
 	| 'design'
+	| 'design_feedback'
 	| 'circuit'
 	| 'firmware'
 	| 'sim_config'

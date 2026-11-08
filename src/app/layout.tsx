@@ -36,7 +36,7 @@ export default async function RootLayout ({
 
 	return (
 		<html lang="en" style={style}>
-			<body className={`${inter.className} bg-surface text-fg antialiased`}>
+			<body className={`${inter.className} bg-surface text-fg antialiased`} suppressHydrationWarning>
 				<ClientProviders initialColor={themeColor}>
 					{children}
 				</ClientProviders>

@@ -38,7 +38,6 @@ const eslintConfig = [
 	...compat.extends('plugin:import/warnings'),
 	...compat.extends('plugin:import/typescript'),
 	...compat.extends('plugin:promise/recommended'),
-	...compat.extends('plugin:n/recommended'),
 	{
 		plugins: {
 			'@stylistic': stylistic,
